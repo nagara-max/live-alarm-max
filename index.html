@@ -52,7 +52,8 @@ header.top h1 span{color:var(--accent)}
 .alarm{display:flex;gap:12px;align-items:flex-start}
 .alarm .time{font-size:34px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
 .alarm .meta{flex:1;min-width:0}
-.alarm .meta .ch{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.alarm .meta .ch{font-size:15px;color:var(--text);margin-top:2px;word-break:break-word}
+.alarm .meta .ch b{font-weight:800}
 .alarm.off .time,.alarm.off .meta{opacity:.45}
 .chip{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);margin:2px 4px 2px 0}
 .actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
@@ -91,7 +92,16 @@ input[type=range]{width:100%}
 .topch{display:inline-flex;align-items:center;gap:6px;max-width:100%;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 5px;cursor:pointer;font-size:13px}
 .topch img{width:24px;height:24px;border-radius:50%;flex:none}
 .topch .rk{color:var(--accent2);font-weight:700;font-size:12px;margin-left:4px}
-.topch span.nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+.topch{text-align:left;border-radius:14px}
+.topch span.nm{word-break:break-word}
+.topch .pk{font-size:10.5px;color:#1b0f05;background:var(--accent2);border-radius:6px;padding:1px 5px;margin-left:2px;flex:none}
+.pastecol{display:flex;flex-direction:column;gap:6px;flex:none;align-items:stretch}
+.dupbtn{padding:5px 10px;font-size:12.5px;border-radius:9px}
+.duplist{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.dupitem{text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;line-height:1.5;word-break:break-word;white-space:normal}
+.dupitem b{font-size:15px}
+.dupitem .s{display:block;font-size:12.5px;color:var(--muted)}
+.dupitem .v{display:block;font-size:13px}
 .sleepbtn .t1s{font-size:.62em;font-weight:600;opacity:.85}
 .sleepbtn .t1b{display:block;font-size:15px;font-weight:700;opacity:.85;margin-top:2px}
 .seg button{padding:10px 6px;border-radius:10px;border:1px solid var(--line);background:var(--bg);cursor:pointer;font-size:14px;line-height:1.3}
@@ -259,8 +269,9 @@ html:not(.public) .pubonly{display:none!important}
     <span class="flabel"><span class="step">2</span>チャンネル</span>
     <div class="row">
       <input class="input" id="fChannel" placeholder="チャンネルのリンク または @ハンドル" autocapitalize="off" autocomplete="off" spellcheck="false" enterkeyhint="done">
-      <button class="btn" data-paste="fChannel" style="flex:none">貼り付け</button>
+      <div class="pastecol"><button class="btn" data-paste="fChannel">貼り付け</button><button type="button" class="btn dupbtn" data-dupopen="ch">複製</button></div>
     </div>
+    <div class="duplist" id="dupListCh" style="display:none"></div>
     <div class="hint">YouTube アプリでチャンネルを開き「共有」→「リンクをコピー」して貼り付けるだけでOK。動画のリンクやチャンネル名でも探せます。</div>
     <div id="chTop"></div>
     <div id="chResult"></div>
@@ -270,8 +281,9 @@ html:not(.public) .pubonly{display:none!important}
     <span class="flabel"><span class="step">2</span>動画のリンク</span>
     <div class="row">
       <input class="input" id="fVideo" placeholder="https://youtu.be/… または https://www.youtube.com/watch?v=…" autocapitalize="off" autocomplete="off" spellcheck="false" enterkeyhint="done">
-      <button class="btn" data-paste="fVideo" style="flex:none">貼り付け</button>
+      <div class="pastecol"><button class="btn" data-paste="fVideo">貼り付け</button><button type="button" class="btn dupbtn" data-dupopen="video">複製</button></div>
     </div>
+    <div class="duplist" id="dupListVideo" style="display:none"></div>
     <div class="hint">YouTube アプリで流したい動画を開き「共有」→「リンクをコピー」して貼り付けてください。</div>
     <div id="vResult"></div>
   </div>
@@ -736,6 +748,7 @@ function explain(e) {
     case 'badinput': return { t: 'チャンネルを読み取れませんでした', b: 'YouTube のチャンネルページ・配信・動画のリンク、@ハンドル、チャンネル名のどれかを入れてください。<br>例: <code>https://www.youtube.com/@xxxx</code>、<code>@xxxx</code>' };
     case 'notfound': return { t: 'チャンネルが見つかりませんでした', b: '@ハンドルのつづりを確認するか、YouTube アプリでチャンネルを開いて「共有」→「リンクをコピー」したものを貼り付けてください。' };
     case 'nolive': return { t: '流せる動画が見つかりませんでした', b: 'このチャンネルに公開されている動画・配信が見つかりませんでした（配信予定の枠は対象外）。この場合、時刻になるとアラーム音が鳴ります。' };
+    case 'noLongVideo': return { t: 'このチャンネルには流せる最新の動画がありません', b: 'ショート動画・ライブ配信を除いた、公開されている動画が見つかりませんでした。別のチャンネルを選ぶか、①で「最新のライブ配信」を選んでください。' };
     case 'novideo': return { t: 'このチャンネルには公開されている動画がありません', b: '動画やライブ配信を公開していないチャンネルは設定できません。別のチャンネルを選んでください。' };
     case 'badvideo': return { t: '動画のリンクを読み取れませんでした', b: 'YouTube の動画のリンク（<code>https://youtu.be/…</code> や <code>https://www.youtube.com/watch?v=…</code>）を貼り付けてください。' };
     case 'videogone': return { t: 'この動画は見つからないか、公開されていません', b: '削除された動画や非公開の動画、配信予定の枠は設定できません。別の動画のリンクを貼り付けてください。' };
@@ -951,11 +964,14 @@ async function videoCandidates(ids) {
 async function findLatestVideo(channelId) {
   const suffix = channelId.slice(2);
   let list = [];
+  // UULF = ショート・ライブを除いた動画だけの再生リスト。404 ならショート以外の動画がない
   try { list = await videoCandidates(await playlistIds('UULF' + suffix, 1)); }
-  catch (e) { if (!(e.status === 404 || e.status === 400)) throw e; }
-  if (!list.length) {
+  catch (e) {
+    if (e.status === 404) return null;
+    if (e.status !== 400) throw e;
+    // 古いサーバー（UULF 未対応）の間だけ、全アップロードから探す
     try { list = await videoCandidates(await playlistIds('UU' + suffix, 1)); }
-    catch (e) { if (e.status !== 404) throw e; }
+    catch (e2) { if (e2.status !== 404) throw e2; }
   }
   return list[0] || null;
 }
@@ -987,34 +1003,45 @@ async function resolveVideo(a) {
 }
 const PLAY_LABEL = { live: '最新のライブ配信', video: '最新の動画', fixed: '決まった動画' };
 
-/* ---------- よく選ばれているチャンネル（公開モードのみ・統計から） ---------- */
-let topCache = null;
-async function loadTop(n = 5) {
+/* ---------- よく選ばれているチャンネル（公開モードのみ）----------
+ * 統計のランキング上位 ＋ 足りない分はおすすめ（有名チャンネル）で5件にする。種類（ライブ／動画）別 */
+const topCache = {}, topIndex = {};
+async function loadTop(n = 5, kind = 'live') {
   if (!PUBLIC) return [];
-  if (topCache && Date.now() - topCache.at < 30 * 60 * 1000 && topCache.list.length >= Math.min(n, topCache.max)) return topCache.list.slice(0, n);
+  const c = topCache[kind];
+  if (c && Date.now() - c.at < 30 * 60 * 1000) return c.list.slice(0, n);
   try {
-    const u = new URL(BACKEND); u.searchParams.set('a', 'top'); u.searchParams.set('n', n);
+    const u = new URL(BACKEND); u.searchParams.set('a', 'top'); u.searchParams.set('n', n); u.searchParams.set('k', kind);
     const j = await withTimeout(fetch(u).then(r => r.json()), 10000);
-    const list = j && j.ok && Array.isArray(j.list) ? j.list.filter(c => /^UC[\w-]{22}$/.test(c.id)) : [];
-    topCache = { at: Date.now(), list, max: j && j.max || list.length };
+    const list = j && j.ok && Array.isArray(j.list) ? j.list.filter(x => /^UC[\w-]{22}$/.test(x.id)) : [];
+    list.forEach(x => { topIndex[x.id] = x; });
+    topCache[kind] = { at: Date.now(), list };
     return list.slice(0, n);
   } catch (e) { return []; }
 }
 function topHTML(list, title, exclude) {
   const l = list.filter(c => c.id !== exclude);
   if (!l.length) return '';
-  return `<div class="toplist"><div class="hint" style="margin:0">${esc(title)}</div><div class="chips">${l.map((c, i) =>
-    `<button type="button" class="topch" data-top="${esc(c.id)}" data-rank="${i + 1}"><span class="rk">${i + 1}</span>${c.thumb ? `<img src="${esc(c.thumb)}" alt="">` : ''}<span class="nm">${esc(c.title)}</span></button>`).join('')}</div></div>`;
+  let rank = 0;
+  return `<div class="toplist"><div class="hint" style="margin:0">${esc(title)}</div><div class="chips">${l.map(c => {
+    const isRank = c.source !== 'pick'; if (isRank) rank++;
+    return `<button type="button" class="topch" data-top="${esc(c.id)}" data-rank="${isRank ? rank : 0}">${isRank ? `<span class="rk">${rank}</span>` : '<span class="pk">おすすめ</span>'}${c.thumb ? `<img src="${esc(c.thumb)}" alt="">` : ''}<span class="nm">${esc(c.title)}</span></button>`;
+  }).join('')}</div></div>`;
 }
+const TOP_TITLE = { live: 'ライブ配信でよく選ばれているチャンネル（タップで選択）', video: '最新の動画でよく選ばれているチャンネル（タップで選択）' };
 async function renderTop() {
   const box = $('#chTop'); if (!box) return;
-  const list = await loadTop(5);
-  box.innerHTML = topHTML(list, 'よく選ばれているチャンネル（タップで選択）');
-  if (list.length) track('top_shown', { n: list.length, where: 'editor' });
+  const kind = editPlay === 'video' ? 'video' : 'live';
+  if (editPlay === 'fixed') { box.innerHTML = ''; return; }
+  const list = await loadTop(5, kind);
+  if ((editPlay === 'video' ? 'video' : 'live') !== kind) return; // 読み込み中に切り替わった
+  box.innerHTML = topHTML(list, TOP_TITLE[kind]);
+  if (list.length) track('top_shown', { n: list.length, kind, where: 'editor' });
 }
-async function recommendHTML(exclude) {
-  const list = await loadTop(5);
-  return topHTML(list, '代わりに、よく選ばれているこちらのチャンネルはいかがですか？', exclude);
+async function recommendHTML(exclude, kind, title) {
+  kind = kind || (editPlay === 'video' ? 'video' : 'live');
+  const list = await loadTop(5, kind);
+  return topHTML(list, title || (kind === 'live' ? 'ライブ配信を流したい場合は、こちらのチャンネルはいかがですか？' : '代わりに、こちらのチャンネルはいかがですか？'), exclude);
 }
 const watchUrl = id => `https://www.youtube.com/watch?v=${id}`;
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
@@ -1348,7 +1375,7 @@ function render() {
         <div class="meta">
           <div class="time">${esc(time)}</div>
           <div class="small">${esc(scheduleSummary(a))}</div>
-          <div class="ch small muted">📺 ${esc(a.channelTitle || '（チャンネル未設定）')}${a.label ? ' ・ ' + esc(a.label) : ''}</div>
+          <div class="ch">📺 <b>${esc(a.channelTitle || '（チャンネル未設定）')}</b>${a.label ? `<span class="small muted"> ・ ${esc(a.label)}</span>` : ''}</div>
           <div><span class="chip">${esc(PLAY_LABEL[a.play || 'live'])}</span><span class="chip">音量 ${a.volume}</span>${nx ? `<span class="chip">次: ${esc(fmtDate(nx))}</span>` : ''}</div>
           ${lv ? `<div class="small muted" style="margin-top:4px">${esc(lv.kindUsed ? videoLabel(lv) : (lv.isLive ? '🔴 配信中' : '直近の配信'))}: ${esc(lv.title)}</div>` : ''}
         </div>
@@ -1458,21 +1485,17 @@ function openEditor(a, asCopy) {
   $('#btnDelete').style.visibility = a && !asCopy ? 'visible' : 'hidden';
   $('#fChannel').value = editing.play !== 'fixed' ? (editing.channelInput || editing.channelId || '') : '';
   $('#fVideo').value = editing.play === 'fixed' ? (editing.fixedInput || (editing.fixedVideoId ? watchUrl(editing.fixedVideoId) : '')) : '';
-  $('#fTime').value = editing.time; $('#fVol').value = editing.volume; $('#fVolLabel').textContent = editing.volume;
-  $('#fSkipHol').checked = !!editing.skipHolidays; $('#fPreferLive').checked = editing.preferLive !== false;
+  fillSchedule(editing);
   $('#fLabel').value = editing.label || '';
   $('#volNote').textContent = isIOS ? 'iPhone では YouTube の音量は本体の音量ボタンで調整します。ここの音量はアラーム音に使われます。' : '';
-  $('#dayRows').innerHTML = [1,2,3,4,5,6,0].map(i => `<div class="dayrow">
-      <input type="checkbox" data-dayon="${i}" ${editing.days[i] ? 'checked' : ''} style="width:20px;height:20px">
-      <span class="d ${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}">${DOW[i]}</span>
-      <input type="time" class="input" data-daytime="${i}" value="${esc(editing.days[i] || editing.time)}"></div>`).join('');
   renderEditKeyCard();
   renderChResult();
   renderVideoResult();
   $('#chTop').innerHTML = '';
   renderTop();
   setPlay(editPlay, true);
-  if (editChannel && (editChannel.latest === undefined || (editChannel.latest && !editChannel.latest.kindUsed)) && hasApi()) { editChannel.latest = undefined; renderChResult(); loadLatestPreview(); }
+  if (editChannel && (editChannel.latest === undefined || (editChannel.latest && !editChannel.latest.kindUsed)) && hasApi()) loadLatestPreview();
+  closeDupLists(); updateDupButtons(); updateSaveBtn();
   setMode(editing.mode);
   openModal('mEdit');
   $('#mEdit .sheet').scrollTop = 0;
@@ -1490,14 +1513,18 @@ function setPlay(v, initial) {
   $('#boxVideo').style.display = v === 'fixed' ? '' : 'none';
   $('#boxPreferLive').style.display = v === 'live' ? '' : 'none';
   // ライブ⇔動画を切り替えたら、流す動画を確認し直す
-  if (!initial && prev !== v && v !== 'fixed' && editChannel && hasApi()) { editChannel.latest = undefined; renderChResult(); loadLatestPreview(); }
+  if (!initial && prev !== v && v !== 'fixed' && editChannel && hasApi()) loadLatestPreview();
+  if (!initial && prev !== v) { renderTop(); closeDupLists(); }
+  updateDupButtons();
+  updateSaveBtn();
 }
 $('#fPlay').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { setPlay(b.dataset.v); track('play_select', { play: b.dataset.v }); } });
 
 /* 決まった動画：リンクを確認 */
 function renderVideoResult(html) {
   const box = $('#vResult');
-  if (html !== undefined) { box.innerHTML = html; return; }
+  if (html !== undefined) { box.innerHTML = html; updateSaveBtn(); return; }
+  updateSaveBtn();
   box.innerHTML = editVideo ? `<div class="okline" style="align-items:flex-start">${editVideo.thumb ? `<img src="${esc(editVideo.thumb)}" alt="" style="width:96px;height:auto;border-radius:6px">` : ''}<div style="flex:1;min-width:0">✅ <b>${esc(editVideo.title)}</b><br><span class="small muted">${esc(editVideo.channelTitle || '')}</span></div></div>` : '';
 }
 async function checkVideo(force) {
@@ -1508,9 +1535,10 @@ async function checkVideo(force) {
   const id = parseVideoInput(val);
   if (!id) { editVideo = null; renderVideoResult(errorHTML(mkErr('badvideo'), 'video')); return false; }
   const seq = ++vSeq; vLast = val;
+  vBusy = true;
   renderVideoResult('<div class="hint"><span class="spin"></span>動画を確認しています…</div>');
   try {
-    const v = await fetchVideo(id);
+    const v = await fetchVideo(id).finally(() => { if (seq === vSeq) vBusy = false; });
     if (seq !== vSeq) return false;
     if (!v) { editVideo = null; track('channel_error', { kind: 'videogone', type: 'fixed_video' }); renderVideoResult(errorHTML(mkErr('videogone'), 'video')); return false; }
     editVideo = v;
@@ -1523,9 +1551,67 @@ async function checkVideo(force) {
   }
 }
 let vTimer = null;
-$('#fVideo').addEventListener('input', () => { editVideo = null; clearTimeout(vTimer); if (!$('#fVideo').value.trim()) { renderVideoResult(''); return; } vTimer = setTimeout(() => checkVideo(), 700); });
+$('#fVideo').addEventListener('input', () => { editVideo = null; clearTimeout(vTimer); vSeq++; vBusy = false; if (!$('#fVideo').value.trim()) { renderVideoResult(''); return; } vTimer = setTimeout(() => checkVideo(), 700); });
 $('#fVideo').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(vTimer); checkVideo(true); } });
 $('#fVideo').addEventListener('paste-done', () => { clearTimeout(vTimer); checkVideo(true); });
+
+/* 時刻・曜日・音量などを画面に反映 */
+function fillSchedule(src) {
+  $('#fTime').value = src.time; $('#fVol').value = src.volume; $('#fVolLabel').textContent = src.volume;
+  $('#fSkipHol').checked = !!src.skipHolidays; $('#fPreferLive').checked = src.preferLive !== false;
+  $('#dayRows').innerHTML = [1,2,3,4,5,6,0].map(i => `<div class="dayrow">
+      <input type="checkbox" data-dayon="${i}" ${src.days[i] ? 'checked' : ''} style="width:20px;height:20px">
+      <span class="d ${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}">${DOW[i]}</span>
+      <input type="time" class="input" data-daytime="${i}" value="${esc(src.days[i] || src.time)}"></div>`).join('');
+  if (editing) { editing.mode = src.mode; setMode(src.mode); }
+}
+
+/* ---------- 追加画面の「複製」：一覧のアラームから設定を写す ---------- */
+function dupCandidates(forFixed) {
+  const list = state.alarms.filter(a => a.id !== (editing && editing.id) && a.channelId && ((a.play === 'fixed') === forFixed));
+  if (forFixed) return list;
+  const same = editPlay === 'video' ? 'video' : 'live';
+  return list.sort((x, y) => ((x.play || 'live') === same ? 0 : 1) - ((y.play || 'live') === same ? 0 : 1));
+}
+function updateDupButtons() {
+  $$('[data-dupopen]').forEach(b => { b.style.display = dupCandidates(b.dataset.dupopen === 'video').length ? '' : 'none'; });
+}
+function closeDupLists() { ['#dupListCh', '#dupListVideo'].forEach(id => { const el = $(id); if (el) { el.style.display = 'none'; el.innerHTML = ''; } }); }
+function schedText(a) {
+  const nx = a.enabled ? nextOccurrence(a) : null;
+  const t = a.mode === 'custom' ? '' : ' ' + a.time;
+  return `${scheduleSummary(a)}${t}${nx ? `（次: ${fmtDate(nx)}）` : a.enabled ? '' : '（オフ）'}`;
+}
+$('#mEdit').addEventListener('click', e => {
+  const o = e.target.closest('[data-dupopen]');
+  if (o) {
+    const forFixed = o.dataset.dupopen === 'video';
+    const box = $(forFixed ? '#dupListVideo' : '#dupListCh');
+    if (box.style.display !== 'none') { closeDupLists(); return; }
+    const list = dupCandidates(forFixed);
+    box.innerHTML = `<div class="hint" style="margin:0">一覧のアラームから選ぶと、${forFixed ? '動画' : 'チャンネル'}・時刻・曜日・音量をコピーします</div>` + list.map(a =>
+      `<button type="button" class="dupitem" data-dupfrom="${a.id}"><b>${esc(a.channelTitle || '')}</b>${forFixed ? `<span class="v">🎬 ${esc(a.lastVideo?.title || a.fixedInput || '')}</span>` : `<span class="s">${esc(PLAY_LABEL[a.play || 'live'])}</span>`}<span class="s">⏰ ${esc(schedText(a))}</span>${a.label ? `<span class="s">📝 ${esc(a.label)}</span>` : ''}</button>`).join('');
+    box.style.display = '';
+    track('dup_open', { n: list.length, fixed: forFixed });
+    return;
+  }
+  const f = e.target.closest('[data-dupfrom]');
+  if (f) {
+    const src = state.alarms.find(x => x.id === f.dataset.dupfrom); if (!src) return;
+    fillSchedule(src);
+    if (src.play === 'fixed') {
+      $('#fVideo').value = src.fixedInput || watchUrl(src.fixedVideoId); vLast = $('#fVideo').value;
+      if (src.lastVideo && src.lastVideo.kindUsed === 'fixed') { editVideo = { ...src.lastVideo }; renderVideoResult(); } else checkVideo(true);
+    } else {
+      $('#fChannel').value = src.channelInput || 'https://www.youtube.com/channel/' + src.channelId; lastChecked = $('#fChannel').value;
+      clearTimeout(chTimer); chSeq++; chBusy = false;
+      pickChannel({ id: src.channelId, title: src.channelTitle, thumb: src.channelThumb || '' });
+    }
+    closeDupLists();
+    track('dup_pick', { ch: src.channelId, fixed: src.play === 'fixed' });
+    toast('設定をコピーしました。時刻などを変えて保存してください', 3500);
+  }
+});
 
 function setMode(m) {
   editing.mode = m;
@@ -1542,35 +1628,59 @@ function videoLabel(v) {
 }
 function latestHTML(v) {
   if (!v) return '';
-  return `${v.fallback ? '<div class="hint">ℹ️ このチャンネルにはライブ配信がないため、最新の動画を流します。</div>' : ''}<div class="latest">${v.thumb ? `<img src="${esc(v.thumb)}" alt="">` : ''}<div>${esc(videoLabel(v))}<br><span style="color:var(--text)">${esc(v.title)}</span></div></div>`;
+  return `${v.fallback ? '<div class="hint">ℹ️ このチャンネルにはライブ配信がありません。このまま保存すると、最新の動画を流します。</div>' : ''}<div class="latest">${v.thumb ? `<img src="${esc(v.thumb)}" alt="">` : ''}<div>${esc(videoLabel(v))}<br><span style="color:var(--text)">${esc(v.title)}</span></div></div>`;
 }
 function renderChResult(html) {
   const box = $('#chResult');
-  if (html !== undefined) { box.innerHTML = html; return; }
-  if (!editChannel) { box.innerHTML = ''; return; }
+  if (html !== undefined) { box.innerHTML = html; updateSaveBtn(); return; }
+  if (!editChannel) { box.innerHTML = ''; updateSaveBtn(); return; }
   box.innerHTML = `<div class="okline">${editChannel.thumb ? `<img src="${esc(editChannel.thumb)}" alt="">` : ''}<div style="flex:1;min-width:0">✅ <b>${esc(editChannel.title)}</b></div></div>
-    <div id="chLatest">${editChannel.latest === undefined ? '<div class="hint"><span class="spin"></span>流す動画を確認中…</div>' : latestHTML(editChannel.latest)}</div>`;
+    <div id="chLatest">${editChannel.loading ? '<div class="hint"><span class="spin"></span>流す動画を確認中…</div>' : editChannel.previewErr ? `<div class="hint">流す動画は保存後に確認します（${esc(editChannel.previewErr)}）</div>` : latestHTML(editChannel.latest)}</div>${editChannel.extra || ''}`;
+  updateSaveBtn();
+}
+/* 確認中は「保存」を押せないようにする */
+let chBusy = false, vBusy = false;
+function updateSaveBtn() {
+  const btn = $('#btnSave'); if (!btn) return;
+  const busy = editPlay === 'fixed' ? vBusy : (chBusy || !!(editChannel && editChannel.loading));
+  btn.disabled = busy;
+  btn.textContent = busy ? '確認中…' : '保存';
 }
 async function loadLatestPreview() {
   const ch = editChannel; if (!ch) return;
-  try { ch.latest = await findLatest(ch.id, editPlay, $('#fPreferLive').checked); track('latest_preview', { ch: ch.id, title: ch.title, found: !!ch.latest, live: !!ch.latest?.isLive, vid: ch.latest?.id, play: editPlay, fallback: !!ch.latest?.fallback }); }
-  catch (e) { ch.latest = undefined; if (editChannel === ch) $('#chLatest').innerHTML = `<div class="hint">流す動画は保存後に確認します（${esc(explain(e).t)}）</div>`; return; }
+  const play = editPlay;
+  ch.loading = true; ch.previewErr = ''; ch.extra = ''; ch.latest = undefined;
+  if (editChannel === ch) renderChResult();
+  try {
+    ch.latest = await findLatest(ch.id, play, $('#fPreferLive').checked);
+    track('latest_preview', { ch: ch.id, title: ch.title, found: !!ch.latest, live: !!ch.latest?.isLive, vid: ch.latest?.id, play, fallback: !!ch.latest?.fallback });
+  } catch (e) { ch.latest = undefined; ch.previewErr = explain(e).t; }
   if (editChannel !== ch) return;
   if (ch.latest === null) {
-    // 公開されている動画が1本もないチャンネルはエラーにして、おすすめを出す
-    const e = mkErr('novideo');
-    track('channel_error', { kind: 'novideo', ch: ch.id, title: ch.title });
-    renderChResult(errorHTML(e, 'channel') + await recommendHTML(ch.id));
+    // 流せる動画が1本もないチャンネルはエラーにして、同じ種類で人気のチャンネルを出す
+    const e = mkErr(play === 'video' ? 'noLongVideo' : 'novideo');
+    track('channel_error', { kind: e.kind, ch: ch.id, title: ch.title, play });
+    const rec = await recommendHTML(ch.id, play === 'video' ? 'video' : 'live', play === 'video' ? '最新の動画でよく選ばれているチャンネルはいかがですか？' : 'ライブ配信でよく選ばれているチャンネルはいかがですか？');
+    if (editChannel !== ch) return;
+    ch.loading = false;
+    renderChResult(errorHTML(e, 'channel') + rec);
+    updateSaveBtn();
     return;
   }
+  if (ch.latest && ch.latest.fallback) {
+    // ライブ配信がないチャンネル：このまま保存すると最新の動画を流す。ライブ配信の候補も出す
+    ch.extra = await recommendHTML(ch.id, 'live');
+    if (editChannel !== ch) return;
+  }
+  ch.loading = false;
   renderChResult();
 }
-function pickChannel(c) { editChannel = { ...c, latest: undefined }; renderChResult(); loadLatestPreview(); }
+function pickChannel(c) { editChannel = { ...c, latest: undefined, loading: true }; renderChResult(); loadLatestPreview(); }
 /* よく選ばれているチャンネルをタップ */
 $('#mEdit').addEventListener('click', e => {
   const b = e.target.closest('[data-top]'); if (!b) return;
-  const c = (topCache?.list || []).find(x => x.id === b.dataset.top); if (!c) return;
-  track('top_pick', { ch: c.id, title: c.title, rank: +b.dataset.rank });
+  const c = topIndex[b.dataset.top]; if (!c) return;
+  track('top_pick', { ch: c.id, title: c.title, rank: +b.dataset.rank, pick: c.source === 'pick', kind: editPlay });
   track('channel_ok', { ch: c.id, title: c.title, type: 'top' });
   clearTimeout(chTimer); chSeq++;
   $('#fChannel').value = 'https://www.youtube.com/channel/' + c.id; lastChecked = $('#fChannel').value;
@@ -1583,10 +1693,11 @@ async function checkChannel(force) {
   if (!hasApi()) { renderChResult(errorHTML(mkErr('nokey'), 'channel')); renderEditKeyCard(); return false; }
   const seq = ++chSeq; lastChecked = val;
   const inType = inputType(val);
+  chBusy = true; updateSaveBtn();
   track('channel_check', { type: inType });
   renderChResult('<div class="hint"><span class="spin"></span>チャンネルを確認しています…</div>');
   try {
-    const r = await resolveChannel(val);
+    const r = await resolveChannel(val).finally(() => { if (seq === chSeq) { chBusy = false; updateSaveBtn(); } });
     if (seq !== chSeq) return false;
     if (r.channel) { track('channel_ok', { ch: r.channel.id, title: r.channel.title, type: inType }); pickChannel(r.channel); return true; }
     editChannel = null;
@@ -1624,7 +1735,7 @@ function inputType(v) {
 const looksLikeChannel = s => /youtu|^@|＠|UC[\w-]{22}/i.test(s);
 let chTimer = null;
 $('#fChannel').addEventListener('input', () => {
-  editChannel = null; clearTimeout(chTimer);
+  editChannel = null; clearTimeout(chTimer); chSeq++; chBusy = false;
   const v = $('#fChannel').value.trim();
   if (!v) { renderChResult(''); return; }
   // リンクや@ハンドルは入力が止まったら自動で確認（チャンネル名検索はEnter/保存時）
@@ -1656,7 +1767,7 @@ $('#btnSave').addEventListener('click', async () => {
       btn.disabled = false;
       if (!ok) { $('#fChannel').scrollIntoView({ behavior: 'smooth', block: 'center' }); if (!$('#fChannel').value.trim()) toast('チャンネルを入力してください'); return; }
     }
-    if (editChannel.latest === undefined) { btn.disabled = true; await loadLatestPreview(); btn.disabled = false; }
+    if (editChannel.loading) return; // 確認中は保存しない（ボタンも押せない）
     if (!editChannel || editChannel.latest === null) { $('#fChannel').scrollIntoView({ behavior: 'smooth', block: 'center' }); toast('このチャンネルには公開されている動画がないため設定できません'); return; }
     a.channelInput = $('#fChannel').value.trim();
     changed = a.channelId !== editChannel.id || (a.play || 'live') !== editPlay;
@@ -1677,7 +1788,7 @@ $('#btnSave').addEventListener('click', async () => {
   if (i >= 0) state.alarms[i] = a; else state.alarms.push(a);
   editSaved = true;
   const firstTime = a.mode === 'custom' ? (a.days.find(Boolean) || a.time) : a.time;
-  track('alarm_save', { isNew: editIsNew, ch: a.channelId, title: a.channelTitle, mode: a.mode, hour: +firstTime.split(':')[0], days: a.mode === 'custom' ? a.days.filter(Boolean).length : undefined, vol: a.volume, skipHol: a.skipHolidays, preferLive: a.preferLive, play: a.play, vid: a.play === 'fixed' ? a.fixedVideoId : undefined, alarms: state.alarms.length });
+  track('alarm_save', { isNew: editIsNew, ch: a.channelId, title: a.channelTitle, mode: a.mode, hour: +firstTime.split(':')[0], days: a.mode === 'custom' ? a.days.filter(Boolean).length : undefined, vol: a.volume, skipHol: a.skipHolidays, preferLive: a.preferLive, play: a.play, fallback: a.play === 'live' && !!a.lastVideo?.fallback, vid: a.play === 'fixed' ? a.fixedVideoId : undefined, alarms: state.alarms.length });
   save(); closeModal('mEdit'); render();
   const nx = nextOccurrence(a);
   toast(nx ? `保存しました。次は ${fmtDate(nx)} に鳴ります` : '保存しました');
