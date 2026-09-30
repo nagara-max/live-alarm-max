@@ -463,7 +463,7 @@ html:not(.public) .pubonly{display:none!important}
 <div id="toast"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 
-<script src="config.js?v=1.5.1"></script>
+<script src="config.js?v=1.5.2"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -486,7 +486,7 @@ const MODE_LABEL = { weekday:'平日（土日祝除く）', monfri:'月〜金', 
 const CFG = window.LIVE_ALARM_CONFIG || {};
 const BACKEND = /^https:\/\//.test(String(CFG.backendUrl || '').trim()) ? String(CFG.backendUrl).trim() : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.5.1'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.5.2'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -1670,10 +1670,13 @@ function latestHTML(v) {
 }
 function renderChResult(html) {
   const box = $('#chResult');
-  if (html !== undefined) { box.innerHTML = html; updateSaveBtn(); return; }
-  if (!editChannel) { box.innerHTML = ''; updateSaveBtn(); return; }
+  // 候補（おすすめ）をエラー等と一緒に出す時は、入力欄の下の候補は隠して1か所だけにする
+  const syncTop = () => { $('#chTop').style.display = box.querySelector('.toplist') ? 'none' : ''; };
+  if (html !== undefined) { box.innerHTML = html; syncTop(); updateSaveBtn(); return; }
+  if (!editChannel) { box.innerHTML = ''; syncTop(); updateSaveBtn(); return; }
   box.innerHTML = `<div class="okline">${editChannel.thumb ? `<img src="${esc(editChannel.thumb)}" alt="">` : ''}<div style="flex:1;min-width:0">✅ <b>${esc(editChannel.title)}</b></div></div>
     <div id="chLatest">${editChannel.loading ? '<div class="hint"><span class="spin"></span>流す動画を確認中…</div>' : editChannel.previewErr ? `<div class="hint">流す動画は保存後に確認します（${esc(editChannel.previewErr)}）</div>` : latestHTML(editChannel.latest)}</div>${editChannel.extra || ''}`;
+  syncTop();
   updateSaveBtn();
 }
 /* 確認中は「保存」を押せないようにする */
