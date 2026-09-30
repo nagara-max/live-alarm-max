@@ -1,0 +1,2147 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Live目覚まし">
+<meta name="theme-color" content="#0e1116">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<title>Live目覚まし</title>
+<style>
+:root{
+  --bg:#0e1116; --panel:#171b22; --panel2:#1f242d; --line:#2b313c;
+  --text:#e9edf3; --muted:#9aa4b2; --accent:#ff8a3d; --accent2:#ffb37a;
+  --ok:#3ecf8e; --warn:#f5c04a; --err:#ff6b6b; --radius:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Yu Gothic UI",sans-serif;
+  -webkit-text-size-adjust:100%;line-height:1.55}
+body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--accent2)}
+.wrap{max-width:720px;margin:0 auto;padding:16px}
+header.top{display:flex;align-items:center;gap:10px;padding:8px 0 16px}
+header.top h1{font-size:20px;margin:0;flex:1;letter-spacing:.02em}
+header.top h1 span{color:var(--accent)}
+.iconbtn{background:var(--panel);border:1px solid var(--line);border-radius:10px;height:40px;min-width:40px;padding:0 12px;cursor:pointer}
+.btn{border-radius:12px;padding:11px 16px;cursor:pointer;background:var(--panel2);border:1px solid var(--line);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#1b0f05;font-weight:700}
+.btn.ghost{background:transparent}
+.btn.link{background:transparent;border:0;color:var(--accent2);padding:6px 4px;text-decoration:underline}
+.btn.danger{color:var(--err)}
+.btn.block{width:100%}
+.btn.sm{padding:7px 12px;font-size:14px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.hero .label{color:var(--muted);font-size:13px}
+.hero .next{font-size:30px;font-weight:700;margin:2px 0}
+.hero .sub{color:var(--muted);font-size:14px;margin-bottom:14px}
+.row{display:flex;gap:8px;align-items:center}
+.row.wrapok{flex-wrap:wrap}
+.spacer{flex:1}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:14px}
+.alarm{display:flex;gap:12px;align-items:flex-start}
+.alarm .time{font-size:34px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.alarm .meta{flex:1;min-width:0}
+.alarm .meta .ch{font-size:15px;color:var(--text);margin-top:2px;word-break:break-word}
+.alarm .meta .ch b{font-weight:800}
+.alarm.off .time,.alarm.off .meta{opacity:.45}
+.chip{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);margin:2px 4px 2px 0}
+.actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+/* toggle */
+.sw{position:relative;width:52px;height:30px;flex:none}
+.sw input{opacity:0;width:0;height:0}
+.sw span{position:absolute;inset:0;background:#3a414d;border-radius:999px;transition:.2s;cursor:pointer}
+.sw span:before{content:"";position:absolute;width:24px;height:24px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.sw input:checked+span{background:var(--ok)}
+.sw input:checked+span:before{transform:translateX(22px)}
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center;z-index:50}
+.modal.open{display:flex}
+#mGuide{z-index:80}
+#mError{z-index:85}
+.sheet{background:var(--panel);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));border:1px solid var(--line);-webkit-overflow-scrolling:touch}
+.sheet.hasfoot{padding-bottom:0}
+@media(min-width:700px){.modal{align-items:center}.sheet{border-radius:18px}}
+.sheet h2{margin:0 0 12px;font-size:18px}
+.sheethead{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.sheethead h2{margin:0;flex:1}
+.footbar{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);margin:14px -16px 0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;gap:8px;align-items:center}
+.field{margin-bottom:16px}
+.field>label,.flabel{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+.step{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#1b0f05;font-size:12px;font-weight:700;margin-right:6px}
+.input{width:100%;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px}
+.input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+input[type=time].input{font-size:24px;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%}
+.seg{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+@media(min-width:520px){.seg{grid-template-columns:repeat(4,1fr)}}
+.seg.seg3{grid-template-columns:repeat(3,1fr)}
+.seg.seg3 button{font-size:13px;padding:10px 4px}
+.toplist{margin-top:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.topch{display:inline-flex;align-items:center;gap:6px;max-width:100%;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 5px;cursor:pointer;font-size:13px}
+.topch img{width:24px;height:24px;border-radius:50%;flex:none}
+.topch .rk{color:var(--accent2);font-weight:700;font-size:12px;margin-left:4px}
+.topch{text-align:left;border-radius:14px}
+.topch span.nm{word-break:break-word}
+.topch .pk{font-size:10.5px;color:#1b0f05;background:var(--accent2);border-radius:6px;padding:1px 5px;margin-left:2px;flex:none}
+.pastecol{display:flex;flex-direction:column;gap:6px;flex:none;align-items:stretch}
+.dupbtn{padding:5px 10px;font-size:12.5px;border-radius:9px}
+.duplist{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.dupitem{text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;line-height:1.5;word-break:break-word;white-space:normal}
+.dupitem b{font-size:15px}
+.dupitem .s{display:block;font-size:12.5px;color:var(--muted)}
+.dupitem .v{display:block;font-size:13px}
+.sleepbtn .t1s{font-size:.62em;font-weight:600;opacity:.85}
+.sleepbtn .t1b{display:block;font-size:15px;font-weight:700;opacity:.85;margin-top:2px}
+.seg button{padding:10px 6px;border-radius:10px;border:1px solid var(--line);background:var(--bg);cursor:pointer;font-size:14px;line-height:1.3}
+.seg button.on{background:var(--accent);color:#1b0f05;border-color:var(--accent);font-weight:700}
+.dayrow{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+.dayrow .d{width:28px;font-weight:700}
+.dayrow .d.sun{color:#ff7b7b}.dayrow .d.sat{color:#7bb8ff}
+.dayrow input[type=time]{flex:1;font-size:18px;padding:8px 10px}
+.chbox{display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer}
+.chbox input{width:20px;height:20px;flex:none}
+.hint{font-size:12.5px;color:var(--muted);margin-top:6px}
+.okline{display:flex;gap:10px;align-items:center;margin-top:10px;padding:10px;border-radius:10px;background:#12261e;border:1px solid #1f4a37;font-size:14px}
+.okline img{width:36px;height:36px;border-radius:50%;flex:none}
+.latest{display:flex;gap:10px;margin-top:8px;font-size:13px;color:var(--muted)}
+.latest img{width:112px;border-radius:8px;flex:none;aspect-ratio:16/9;object-fit:cover}
+.cands{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.cand{display:flex;align-items:center;gap:10px;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer}
+.cand img{width:32px;height:32px;border-radius:50%;flex:none}
+.note{font-size:13px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0}
+.note.warn{border-color:#5a4a1a;color:#f0d9a0;background:#221d10}
+.keycard{background:#1c1712;border:1px solid #4a3620;border-radius:12px;padding:14px;margin-bottom:16px}
+.keycard.ok{background:#12261e;border-color:#1f4a37}
+.errbox{margin-top:10px;border:1px solid #5b2a2a;background:#231314;border-radius:10px;padding:12px;font-size:14px}
+.errbox .et{font-weight:700;color:#ffb4b4;margin-bottom:4px}
+.errbox .eb{color:#e6cfcf}
+.errbox .eb ol{margin:6px 0;padding-left:1.3em}
+.errbox .ea{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.errbox details{margin-top:8px;color:var(--muted);font-size:12px}
+.errbox code{display:block;white-space:pre-wrap;word-break:break-all;margin-top:4px}
+.copyline{display:flex;gap:8px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:6px 0}
+.copyline code{flex:1;min-width:0;word-break:break-all;font-size:13px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--muted);border-top-color:transparent;border-radius:50%;animation:sp 1s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+details.more{margin-top:4px}
+details.more summary{cursor:pointer;color:var(--muted);font-size:14px;padding:8px 0}
+/* guide */
+.gstep{display:flex;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.gstep .n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#1b0f05;font-weight:700;display:flex;align-items:center;justify-content:center}
+.gstep .c{flex:1;min-width:0}
+.gstep .c b{color:#fff}
+.gstep ul{margin:6px 0;padding-left:1.2em}
+.gstep li{margin:4px 0}
+.gstep .btn{margin-top:8px}
+.faq{margin-top:14px}
+.faq details{border:1px solid var(--line);border-radius:10px;padding:0 12px;margin:6px 0;background:var(--bg)}
+.faq summary{cursor:pointer;padding:10px 0;font-size:14px}
+.faq details>div{padding-bottom:10px;font-size:13.5px;color:#cfd5de}
+/* intro */
+.slides .slide{display:none}.slides .slide.on{display:block}
+.slide h3{margin:0 0 8px;font-size:18px}
+.slide ol,.slide ul{padding-left:1.3em;margin:6px 0}
+.slide li{margin:6px 0}
+.dots{display:flex;gap:6px;justify-content:center;margin:12px 0}
+.dots i{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.dots i.on{background:var(--accent)}
+.kbd{display:inline-block;border:1px solid var(--line);background:var(--panel2);border-radius:6px;padding:0 6px;font-size:13px}
+/* env banner */
+#envBanner{display:none}
+.updbar{background:#12261e;border:1px solid #1f4a37;border-radius:12px;padding:12px 14px;margin-bottom:12px}
+.updbar .ut{font-size:15px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.public .keyonly{display:none!important}
+html:not(.public) .pubonly{display:none!important}
+#mReset{z-index:90}
+.btn.dangerfill{background:#d93838;border-color:#d93838;color:#fff;font-weight:700}
+.foot a{color:#7c8594}
+.sleepbtn{flex-direction:column;gap:2px;padding:16px 12px;border-radius:16px}
+.sleepbtn .t1{font-size:21px;font-weight:800;letter-spacing:.02em}
+.sleepbtn .t2{font-size:13px;font-weight:600;opacity:.8}
+.sleepbtn.night{background:linear-gradient(135deg,#ffb37a,#ff8a3d);box-shadow:0 0 0 0 rgba(255,138,61,.6);animation:glow 2.6s ease-in-out infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(255,138,61,.45)}50%{box-shadow:0 0 0 10px rgba(255,138,61,0)}}
+@media (prefers-reduced-motion:reduce){.sleepbtn.night{animation:none}}
+.nightmsg{display:none;font-size:13px;color:var(--accent2);margin:-6px 0 10px}
+.nightmsg.on{display:block}
+.sleepsheet{text-align:center;padding-top:28px}
+.sleepmsg{font-size:17px;margin:0 0 22px;line-height:1.7}
+#btnSleepGo{padding:16px;font-size:19px;border-radius:14px}
+.btn.link.sleeptest{display:block;margin:14px auto 0;font-size:12px;color:#6b7280;text-decoration:none;opacity:.7}
+#app{transition:opacity .6s ease}
+#app.fadeout{opacity:0}
+#standby{opacity:0;transition:opacity 1.4s ease .5s}
+#standby.show{opacity:1}
+#standby .sbmsg{color:#6b7280;font-size:15px;margin-top:14px}
+#standby .sbtest{background:none;border:0;color:#3a3f47;font-size:12px;margin-top:10px;cursor:pointer;padding:6px}
+.checklist{list-style:none;padding:0;margin:8px 0 12px}
+.checklist li{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}
+.checklist li .ic{font-size:20px;width:26px;text-align:center;flex:none}
+.checklist li small{display:block;color:var(--muted);font-size:12.5px}
+.testrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+
+/* standby */
+#standby{position:fixed;inset:0;background:#000;z-index:40;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
+#standby.open{display:flex}
+#standby .clock{font-size:min(22vw,120px);font-weight:200;color:#6b7280;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+#standby .nx{color:#555c68;font-size:16px;margin-top:6px}
+#standby .st{color:#454b55;font-size:13px;margin-top:18px;line-height:1.9}
+#standby .st b{color:#6b7280;font-weight:500}
+#standby .sbtns{position:absolute;bottom:calc(24px + env(safe-area-inset-bottom));display:flex;gap:10px}
+#standby .sbtns .btn{background:#111;border-color:#222;color:#666;font-size:14px}
+/* ringing / player */
+#ring{position:fixed;inset:0;background:rgba(5,6,9,.97);z-index:60;display:none;flex-direction:column;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));overflow:auto}
+#ring.open{display:flex}
+#ring .rtitle{font-size:14px;color:var(--muted)}
+#ring .rname{font-size:18px;font-weight:700;margin:2px 0 10px}
+.playerbox{position:relative;width:100%;max-width:960px;margin:0 auto;aspect-ratio:16/9;min-height:200px;background:#000;border-radius:12px;overflow:hidden;flex:none}
+.playerbox iframe,#ytPlayer{position:absolute;inset:0;width:100%;height:100%}
+#ring .rmsg{margin:10px auto;max-width:960px;width:100%}
+#ring .rbtns{display:flex;gap:10px;flex-wrap:wrap;max-width:960px;width:100%;margin:10px auto 0}
+#ring .rbtns .btn{flex:1;min-width:140px}
+#ring .vol{max-width:960px;width:100%;margin:10px auto 0}
+/* block */
+#block{position:fixed;inset:0;background:var(--bg);z-index:100;display:none;align-items:center;justify-content:center;padding:24px;text-align:center}
+#block.open{display:flex}
+#block .box{max-width:420px}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#000;border:1px solid var(--line);padding:10px 16px;border-radius:12px;z-index:200;display:none;font-size:14px;max-width:90vw}
+.empty{text-align:center;color:var(--muted);padding:28px 8px}
+.foot{color:#5c6470;font-size:12px;text-align:center;margin:24px 0 8px}
+</style>
+</head>
+<body>
+
+<div class="wrap" id="app">
+  <header class="top">
+    <h1>⏰ Live<span>目覚まし</span></h1>
+    <button class="iconbtn" id="btnHelp" aria-label="使い方">？</button>
+    <button class="iconbtn" id="btnSettings" aria-label="設定">⚙</button>
+  </header>
+
+  <div id="envBanner" class="note warn"></div>
+  <div id="updBar" class="updbar" style="display:none">
+    <div class="ut">🆕 新しいバージョン <b id="updVer"></b> があります</div>
+    <div class="row wrapok" style="margin-top:8px">
+      <button class="btn primary sm" id="btnUpdBar">今すぐ更新</button>
+      <button class="btn ghost sm" id="btnUpdLater">あとで</button>
+    </div>
+    <div class="hint" id="updHint">更新されない時は、アプリを一度閉じて（画面の下から上にスワイプして終了）、開き直してください。</div>
+  </div>
+
+  <section class="card hero">
+    <div class="label">次のアラーム</div>
+    <div class="next" id="nextTime">—</div>
+    <div class="sub" id="nextSub">アラームが設定されていません</div>
+    <div class="nightmsg" id="nightMsg">そろそろおやすみの時間です。寝る前にこのボタンを押してください</div>
+    <button class="btn primary block sleepbtn" id="btnStandby"><span class="t1" id="sleepBtnLabel"></span></button>
+    <div class="small muted" style="margin-top:8px" id="standbyHint"></div>
+  </section>
+
+  <div class="row" style="margin:18px 0 8px">
+    <h2 style="font-size:16px;margin:0" class="spacer">アラーム一覧</h2>
+    <button class="btn primary" id="btnAdd">＋ 追加</button>
+  </div>
+  <div id="alarmList"></div>
+
+  <div class="foot">映像は YouTube 公式埋め込みプレーヤーで再生します<br>
+    <a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a> ・ <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">YouTube 利用規約</a> ・ <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google プライバシーポリシー</a></div>
+</div>
+
+<!-- アラーム編集 -->
+<div class="modal" id="mEdit"><div class="sheet hasfoot">
+  <div class="sheethead"><h2 id="editTitle">アラームを追加</h2><button class="btn link keyonly" data-guide>APIキーの取り方</button></div>
+
+  <!-- APIキー（未登録・エラー時だけ表示） -->
+  <div id="editKeyCard"></div>
+
+  <div class="field">
+    <span class="flabel"><span class="step">1</span>流す動画</span>
+    <div class="seg seg3" id="fPlay">
+      <button type="button" data-v="live">最新の<br>ライブ配信</button>
+      <button type="button" data-v="video">最新の<br>動画</button>
+      <button type="button" data-v="fixed">決まった<br>動画</button>
+    </div>
+    <div class="hint" id="playHint"></div>
+  </div>
+
+  <div class="field" id="boxCh">
+    <span class="flabel"><span class="step">2</span>チャンネル</span>
+    <div class="row">
+      <input class="input" id="fChannel" placeholder="チャンネルのリンク または @ハンドル" autocapitalize="off" autocomplete="off" spellcheck="false" enterkeyhint="done">
+      <div class="pastecol"><button class="btn" data-paste="fChannel">貼り付け</button><button type="button" class="btn dupbtn" data-dupopen="ch">複製</button></div>
+    </div>
+    <div class="duplist" id="dupListCh" style="display:none"></div>
+    <div class="hint">YouTube アプリでチャンネルを開き「共有」→「リンクをコピー」して貼り付けるだけでOK。動画のリンクやチャンネル名でも探せます。</div>
+    <div id="chTop"></div>
+    <div id="chResult"></div>
+  </div>
+
+  <div class="field" id="boxVideo" style="display:none">
+    <span class="flabel"><span class="step">2</span>動画のリンク</span>
+    <div class="row">
+      <input class="input" id="fVideo" placeholder="https://youtu.be/… または https://www.youtube.com/watch?v=…" autocapitalize="off" autocomplete="off" spellcheck="false" enterkeyhint="done">
+      <div class="pastecol"><button class="btn" data-paste="fVideo">貼り付け</button><button type="button" class="btn dupbtn" data-dupopen="video">複製</button></div>
+    </div>
+    <div class="duplist" id="dupListVideo" style="display:none"></div>
+    <div class="hint">YouTube アプリで流したい動画を開き「共有」→「リンクをコピー」して貼り付けてください。</div>
+    <div id="vResult"></div>
+  </div>
+
+  <div class="field">
+    <span class="flabel"><span class="step">3</span>時刻と曜日</span>
+    <div id="boxTime" style="margin-bottom:10px"><input type="time" class="input" id="fTime" value="06:30"></div>
+    <div class="seg" id="fMode">
+      <button type="button" data-v="weekday">平日<br><span class="small">土日祝を除く</span></button>
+      <button type="button" data-v="monfri">月〜金<br><span class="small">祝日も鳴る</span></button>
+      <button type="button" data-v="everyday">毎日</button>
+      <button type="button" data-v="custom">曜日ごと<br><span class="small">時刻も個別</span></button>
+    </div>
+    <div id="boxCustom" style="display:none;margin-top:8px"><div id="dayRows"></div></div>
+    <label class="chbox" id="boxSkipHol"><input type="checkbox" id="fSkipHol"> 祝日は鳴らさない</label>
+  </div>
+
+  <div class="field">
+    <span class="flabel"><span class="step">4</span>音量 <b id="fVolLabel">60</b></span>
+    <input type="range" id="fVol" min="0" max="100" step="5" value="60">
+    <div class="hint" id="volNote"></div>
+  </div>
+
+  <details class="more">
+    <summary>その他の設定</summary>
+    <label class="chbox" id="boxPreferLive"><input type="checkbox" id="fPreferLive" checked> いま配信中のライブがあればそれを優先する（なければ直近のライブ配信のアーカイブ）</label>
+    <div class="field">
+      <label>メモ（任意）</label>
+      <input class="input" id="fLabel" placeholder="例: 朝のニュース">
+    </div>
+  </details>
+
+  <div class="footbar">
+    <button class="btn danger ghost sm" id="btnDelete">削除</button>
+    <span class="spacer"></span>
+    <button class="btn" data-close>キャンセル</button>
+    <button class="btn primary" id="btnSave">保存</button>
+  </div>
+</div></div>
+
+<!-- 設定 -->
+<div class="modal" id="mSettings"><div class="sheet hasfoot">
+  <div class="sheethead"><h2>設定</h2><button class="btn link keyonly" data-guide>APIキーの取り方</button></div>
+  <div class="field keyonly">
+    <span class="flabel">YouTube Data API キー（この端末のブラウザ内にだけ保存されます）</span>
+    <div id="setKeyCard"></div>
+  </div>
+  <div class="field keyonly" id="boxSiteUrl">
+    <span class="flabel">このサイトのURL（APIキーの「ウェブサイトの制限」に登録する値）</span>
+    <div id="siteUrlLine"></div>
+  </div>
+  <div class="field" id="boxOpenMode">
+    <label>PCでの起動方法</label>
+    <select class="input" id="sOpenMode">
+      <option value="auto">自動（このタブを表示中は埋め込み再生／別タブ表示中は YouTube を新しいタブで開く）</option>
+      <option value="embed">常にこのページ内で再生（音量設定が効く）</option>
+      <option value="newtab">常に YouTube を新しいタブで開く（音量設定は効かない）</option>
+    </select>
+    <div class="hint">新しいタブで開くには、ブラウザでこのサイトの<b>ポップアップを許可</b>してください。</div>
+    <button class="btn sm" id="btnNotif" style="margin-top:8px">デスクトップ通知を許可する</button>
+  </div>
+  <div class="field" id="boxLockMode">
+    <label class="chbox"><input type="checkbox" id="sLockMode"> ロック中モード（実験的）</label>
+    <div class="hint">待機画面の間は無音を流し続け、画面ロック中でも時刻になったら<b>アラーム音</b>を鳴らします。ロックを解除すると YouTube の配信が始まります。電池消費が増えます。</div>
+  </div>
+  <label class="chbox"><input type="checkbox" id="sChime" checked> YouTube が再生できない時はアラーム音で代わりに鳴らす</label>
+  <div class="field pubonly" style="margin-top:8px">
+    <label class="chbox"><input type="checkbox" id="sStats" checked> 匿名の利用統計を送信して改善に協力する</label>
+    <div class="hint">送るのは操作の流れ・選んだチャンネル・エラーなどです。名前・メールアドレスなどの個人情報は送りません。<a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a></div>
+  </div>
+  <div class="field" style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px">
+    <details class="more">
+      <summary>バックアップ・リセット（機種変更の時など）</summary>
+      <div class="hint" style="margin:0 0 8px">ふだんは使う必要はありません。機種変更やブラウザを変える時に、アラームの設定を引っ越すためのものです。</div>
+      <div class="row wrapok">
+        <button class="btn sm" id="btnExport">バックアップを保存</button>
+        <button class="btn sm" id="btnImport">バックアップから復元</button>
+      </div>
+      <button class="btn danger sm" id="btnReset" style="margin-top:12px">すべての設定を削除する…</button>
+      <div class="hint">アラーム・<span class="keyonly">APIキー・</span>設定をこの端末から消して、最初の状態に戻します。</div>
+    </details>
+  </div>
+  <div class="field" style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+    <span class="flabel">アプリのバージョン：<b id="verNow"></b></span>
+    <div class="row wrapok">
+      <button class="btn sm" id="btnDoUpdate" disabled>最新版です</button>
+      <button class="btn ghost sm" id="btnCheckUpdate">更新を確認</button>
+    </div>
+  </div>
+  <div class="footbar">
+    <span class="spacer"></span>
+    <button class="btn" data-close>閉じる</button>
+    <button class="btn primary" id="btnSaveSettings">保存</button>
+  </div>
+</div></div>
+
+<!-- APIキーの取り方（他の画面の上に重ねて表示） -->
+<div class="modal" id="mGuide"><div class="sheet hasfoot">
+  <div class="sheethead"><h2>APIキーの取り方（無料・約5分）</h2></div>
+  <div id="guideBody"></div>
+  <div class="footbar">
+    <span class="small muted">閉じると元の画面に戻ります</span>
+    <span class="spacer"></span>
+    <button class="btn primary" data-close>入力に戻る</button>
+  </div>
+</div></div>
+
+<!-- エラー表示 -->
+<div class="modal" id="mError"><div class="sheet hasfoot">
+  <div id="errorBody"></div>
+  <div class="footbar"><span class="spacer"></span><button class="btn primary" data-close>閉じる</button></div>
+</div></div>
+
+<!-- 全削除の確認 -->
+<div class="modal" id="mReset"><div class="sheet">
+  <h2>すべての設定を削除しますか？</h2>
+  <p style="margin-top:0">この端末から次のものが削除されます。<b>元に戻せません。</b></p>
+  <ul style="margin:0 0 8px;padding-left:1.3em"><li>アラーム（<span id="resetCount">0</span>件）</li><li class="keyonly">登録した APIキー</li><li>各種設定・使い方の表示履歴</li></ul>
+  <div class="note">残しておきたい場合は、先に書き出しておくと後で「読み込み」で戻せます。<br><button class="btn sm" id="btnResetExport" style="margin-top:8px">先に書き出す</button></div>
+  <div class="row" style="margin-top:14px"><span class="spacer"></span><button class="btn" data-close>やめる</button><button class="btn dangerfill" id="btnResetGo">削除する</button></div>
+</div></div>
+
+<!-- 使い方 -->
+<div class="modal" id="mIntro"><div class="sheet">
+  <div class="slides" id="slides"></div>
+  <div class="dots" id="dots"></div>
+  <div class="row">
+    <button class="btn" id="introPrev">戻る</button>
+    <span class="spacer"></span>
+    <button class="btn primary" id="introNext">次へ</button>
+  </div>
+</div></div>
+
+<!-- おやすみモード -->
+<div id="standby">
+  <div class="clock" id="sbClock">00:00</div>
+  <div class="nx" id="sbNext"></div>
+  <div class="sbmsg" id="sbMsg"></div>
+  <div class="st" id="sbStatus"></div>
+  <div class="sbtns">
+    <button class="btn" id="sbExit">終了</button>
+  </div>
+</div>
+
+<!-- 再生画面 -->
+<div id="ring">
+  <div class="rtitle" id="rTitle">アラーム</div>
+  <div class="rname" id="rName"></div>
+  <div class="playerbox" id="ytHolder"><div id="ytPlayer"></div></div>
+  <div class="rmsg note" id="rMsg" style="display:none"></div>
+  <div class="vol" id="rVolBox"><label class="small muted">音量 <b id="rVolLabel"></b></label><input type="range" id="rVol" min="0" max="100" step="5"></div>
+  <div class="rbtns">
+    <a class="btn" id="rOpenYT" href="#" target="_blank" rel="noopener">YouTubeで開く</a>
+    <button class="btn" id="rStopChime" style="display:none">アラーム音を止める</button>
+    <button class="btn primary" id="rClose">閉じる</button>
+  </div>
+</div>
+
+<!-- 非対応ブラウザ -->
+<div id="block"><div class="box">
+  <h2>このブラウザでは使えません</h2>
+  <p id="blockMsg"></p>
+  <button class="btn primary" id="btnCopyUrl">このページのURLをコピー</button>
+</div></div>
+
+<div id="toast"></div>
+<input type="file" id="importFile" accept="application/json" style="display:none">
+
+<script src="config.js?v=1.6.0"></script>
+<script>
+'use strict';
+/* =========================================================
+ * Live目覚まし（個人利用版）
+ *  - 指定時刻に、指定チャンネルの「最新の配信（配信中 or 配信済み）」を再生
+ *  - 配信予定（upcoming）は対象外
+ *  - データはすべてこの端末の localStorage に保存（サーバー不要）
+ * ========================================================= */
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+const DOW = ['日','月','火','水','木','金','土'];
+const MODE_LABEL = { weekday:'平日（土日祝除く）', monfri:'月〜金', everyday:'毎日', custom:'曜日ごと' };
+
+/* ---------- 公開設定（config.js） ----------
+ * backendUrl が入っていれば「公開モード」: APIキーはサーバー側で管理し、利用者は入力不要。統計も送信する
+ * 空なら「個人モード」: 各自の APIキーを使い、統計は送らない */
+const CFG = window.LIVE_ALARM_CONFIG || {};
+/* テスト環境：PC の手元（localhost）・/test/ フォルダ・URL に ?env=test を付けた時
+ *  - サーバーは config.js の testBackendUrl（あれば）を使う
+ *  - 設定は本番と別の場所に保存し、統計にも記録しない */
+const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\//.test(location.pathname) || /[?&]env=test/.test(location.search);
+const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
+const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
+const PUBLIC = !!BACKEND;
+const APP_VERSION = '1.6.0'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+if (PUBLIC) document.documentElement.classList.add('public');
+const hasApi = () => PUBLIC || !!state.apiKey;
+
+/* ---------- 端末・ブラウザ・実行環境の判定 ---------- */
+const UA = navigator.userAgent;
+const isIPadOS = /Macintosh/.test(UA) && navigator.maxTouchPoints > 1;
+const isIOS = /iPhone|iPad|iPod/.test(UA) || isIPadOS;
+const isAndroid = /Android/i.test(UA);
+const isMobile = isIOS || isAndroid || /Mobile|Silk|Kindle/i.test(UA);
+const isStandalone = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+const NON_SAFARI = /CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|GSA\/|YaBrowser|DuckDuckGo|Brave|Line\/|FBAN|FBAV|FBIOS|Instagram|Twitter|MicroMessenger|KAKAOTALK|Snapchat|Pinterest|YJApp|Yahoo/i;
+const isIOSSafari = isIOS && (isStandalone || (/Safari\//.test(UA) && /Version\//.test(UA) && !NON_SAFARI.test(UA)));
+const inFrame = (() => { try { return window.top !== window.self; } catch (e) { return true; } })();
+// 実行環境の問題（ファイル直開き・プレビュー枠内・http）
+const ENV = location.protocol === 'file:' ? 'file' : inFrame ? 'frame' : (!window.isSecureContext ? 'insecure' : null);
+const SITE_PATTERN = /^https?:$/.test(location.protocol) ? `${location.origin}/*` : null;
+
+/* ---------- 保存データ ---------- */
+const STORE_KEY = IS_TEST ? 'liveAlarm.test.v1' : 'liveAlarm.v1';
+const defaults = () => ({
+  apiKey: '', keyOK: false,
+  alarms: [],
+  settings: { openMode: 'auto', lockMode: false, chime: true, introSeen: false, stats: true, consentAt: 0 },
+  lastFired: {},
+  holidayCache: null,
+});
+let storageOK = true;
+let state = load();
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (s) { const d = defaults(); return { ...d, ...s, settings: { ...d.settings, ...(s.settings || {}) } }; }
+  } catch (e) { storageOK = false; }
+  return defaults();
+}
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+  catch (e) { storageOK = false; toast('保存できませんでした（プライベートブラウズでは保存されません）'); }
+}
+
+function toast(msg, ms = 3000) {
+  const t = $('#toast'); t.textContent = msg; t.style.display = 'block';
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.style.display = 'none', ms);
+}
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); toast('コピーしました'); return; } catch (e) {}
+  const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); toast('コピーしました'); } catch (e) { prompt('コピーしてください', text); }
+  ta.remove();
+}
+async function pasteInto(input) {
+  try {
+    const t = await navigator.clipboard.readText();
+    if (t) { input.value = t.trim(); input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('paste-done', { bubbles: true })); return; }
+  } catch (e) {}
+  input.focus(); toast('入力欄を長押しして「ペースト」してください');
+}
+/* =========================================================
+ * 利用統計（公開モードのみ・匿名）
+ *  - 端末ごとのランダムID（個人は特定しない）で、操作の流れ・選んだチャンネル・エラーを送る
+ *  - まとめて送信し、ページを閉じる時にも取りこぼさない（sendBeacon）
+ * ========================================================= */
+const UID_KEY = IS_TEST ? 'liveAlarm.test.uid' : 'liveAlarm.uid';
+let firstVisit = false;
+const UID = (() => {
+  try {
+    let u = localStorage.getItem(UID_KEY);
+    if (!u) { u = (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12)); localStorage.setItem(UID_KEY, u); firstVisit = true; }
+    return u;
+  } catch (e) { firstVisit = true; return 'nostore-' + Math.random().toString(36).slice(2, 12); }
+})();
+const SID = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+function browserName() {
+  if (isIOSSafari) return 'Safari';
+  if (/Edg\//.test(UA)) return 'Edge';
+  if (/Line\//.test(UA)) return 'LINE';
+  if (/Instagram|FBAN|FBAV|Twitter/.test(UA)) return 'SNSアプリ内';
+  if (/CriOS|Chrome\//.test(UA)) return 'Chrome';
+  if (/FxiOS|Firefox\//.test(UA)) return 'Firefox';
+  if (/Safari\//.test(UA)) return 'Safari';
+  return 'その他';
+}
+const statsOn = () => PUBLIC && state.settings.stats !== false;
+let evq = [], evTimer = null, evSeq = 0;
+function track(name, props = {}) {
+  if (!statsOn()) return;
+  const p = {};
+  for (const [k, v] of Object.entries(props)) {
+    if (v === undefined || v === null || v === '') continue;
+    p[k] = typeof v === 'string' ? v.slice(0, 150) : (typeof v === 'number' || typeof v === 'boolean') ? v : String(v).slice(0, 150);
+  }
+  evq.push({ n: name, t: Date.now(), s: SID, q: ++evSeq, p });
+  clearTimeout(evTimer);
+  if (evq.length >= 20) flushStats(); else evTimer = setTimeout(flushStats, 4000);
+}
+function flushStats(beacon) {
+  if (!PUBLIC || !evq.length) return;
+  while (evq.length) {
+    const body = JSON.stringify({
+      c: { u: UID, v: APP_VERSION, env: IS_TEST ? 'test' : 'prod', pf: isIOS ? 'ios' : isAndroid ? 'android' : isMobile ? 'mobile' : 'pc', sa: isStandalone ? 1 : 0, br: browserName() },
+      e: evq.splice(0, 40),
+    });
+    let sent = false;
+    if (beacon && navigator.sendBeacon) { try { sent = navigator.sendBeacon(BACKEND, new Blob([body], { type: 'text/plain' })); } catch (e) {} }
+    if (!sent) fetch(BACKEND, { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain' }, body }).catch(() => {});
+  }
+}
+addEventListener('pagehide', () => flushStats(true));
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushStats(true); });
+
+const copyLine = text => `<div class="copyline"><code>${esc(text)}</code><button class="btn sm" data-copy="${esc(text)}">コピー</button></div>`;
+
+/* =========================================================
+ * 祝日判定
+ *  1) holidays-jp API（内閣府データ）を取得できればそれを優先
+ *  2) 取得できない年は法律の規則から計算（振替休日・国民の休日を含む）
+ * ========================================================= */
+const dkey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const calcCache = {};
+function calcHolidays(y) {
+  if (calcCache[y]) return calcCache[y];
+  const H = {};
+  const add = (m, d, n) => { H[`${y}-${pad(m)}-${pad(d)}`] = n; };
+  const nthMonday = (m, n) => { const w = new Date(y, m - 1, 1).getDay(); return 1 + ((8 - w) % 7) + 7 * (n - 1); };
+  const t = y - 1980;
+  add(1, 1, '元日'); add(1, nthMonday(1, 2), '成人の日'); add(2, 11, '建国記念の日'); add(2, 23, '天皇誕生日');
+  add(3, Math.floor(20.8431 + 0.242194 * t - Math.floor(t / 4)), '春分の日');
+  add(4, 29, '昭和の日'); add(5, 3, '憲法記念日'); add(5, 4, 'みどりの日'); add(5, 5, 'こどもの日');
+  add(7, nthMonday(7, 3), '海の日'); add(8, 11, '山の日'); add(9, nthMonday(9, 3), '敬老の日');
+  add(9, Math.floor(23.2488 + 0.242194 * t - Math.floor(t / 4)), '秋分の日');
+  add(10, nthMonday(10, 2), 'スポーツの日'); add(11, 3, '文化の日'); add(11, 23, '勤労感謝の日');
+  const base = Object.keys(H).sort();
+  for (const k of base) { // 国民の休日：祝日に挟まれた平日
+    const d = new Date(k + 'T00:00:00');
+    const mid = new Date(d); mid.setDate(d.getDate() + 1);
+    const nxt = new Date(d); nxt.setDate(d.getDate() + 2);
+    if (H[dkey(nxt)] && !H[dkey(mid)] && mid.getDay() !== 0) H[dkey(mid)] = '国民の休日';
+  }
+  for (const k of base) { // 振替休日：日曜の祝日の後、最初の祝日でない日
+    const d = new Date(k + 'T00:00:00');
+    if (d.getDay() !== 0) continue;
+    const s = new Date(d);
+    do { s.setDate(s.getDate() + 1); } while (H[dkey(s)]);
+    H[dkey(s)] = '振替休日';
+  }
+  return (calcCache[y] = H);
+}
+function holidayName(date) {
+  const k = dkey(date), y = date.getFullYear();
+  const api = state.holidayCache?.data;
+  if (api && Object.keys(api).some(x => x.startsWith(y + '-'))) return api[k] || null;
+  return calcHolidays(y)[k] || null;
+}
+async function refreshHolidays() {
+  const c = state.holidayCache;
+  if (c && Date.now() - c.fetchedAt < 7 * 864e5) return;
+  try {
+    const r = await fetch('https://holidays-jp.github.io/api/v1/date.json', { cache: 'no-store' });
+    if (!r.ok) return;
+    state.holidayCache = { fetchedAt: Date.now(), data: await r.json() };
+    save(); render();
+  } catch (e) { /* オフライン時は計算値を使う */ }
+}
+
+/* =========================================================
+ * スケジュール計算
+ * ========================================================= */
+function timeFor(a, day) {
+  const w = day.getDay(), hol = !!holidayName(day);
+  switch (a.mode) {
+    case 'weekday':  return (w >= 1 && w <= 5 && !hol) ? a.time : null;
+    case 'monfri':   return (w >= 1 && w <= 5) ? a.time : null;
+    case 'everyday': return (a.skipHolidays && hol) ? null : a.time;
+    case 'custom':   { const t = a.days?.[w]; return (!t || (a.skipHolidays && hol)) ? null : t; }
+  }
+  return null;
+}
+function occurrence(a, day) {
+  const t = timeFor(a, day); if (!t) return null;
+  const [h, m] = t.split(':').map(Number);
+  return new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, m, 0, 0);
+}
+function nextOccurrence(a, from = new Date()) {
+  for (let i = 0; i < 10; i++) {
+    const day = new Date(from.getFullYear(), from.getMonth(), from.getDate() + i);
+    const o = occurrence(a, day);
+    if (o && o > from) return o;
+  }
+  return null;
+}
+function nextOverall() {
+  let best = null;
+  for (const a of state.alarms) {
+    if (!a.enabled) continue;
+    const o = nextOccurrence(a);
+    if (o && (!best || o < best.at)) best = { alarm: a, at: o };
+  }
+  return best;
+}
+function fmtDate(d) {
+  const now = new Date();
+  const t0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diff = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - t0) / 864e5);
+  const rel = diff === 0 ? '今日' : diff === 1 ? '明日' : `${d.getMonth() + 1}/${d.getDate()}`;
+  return `${rel}(${DOW[d.getDay()]}) ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function scheduleSummary(a) {
+  if (a.mode === 'custom') {
+    const on = [1,2,3,4,5,6,0].filter(i => a.days?.[i]).map(i => `${DOW[i]} ${a.days[i]}`);
+    return (on.length ? on.join(' / ') : '曜日未設定') + (a.skipHolidays ? '（祝日除く）' : '');
+  }
+  return MODE_LABEL[a.mode] + (a.mode === 'everyday' && a.skipHolidays ? '（祝日除く）' : '');
+}
+
+/* =========================================================
+ * YouTube Data API v3
+ * ========================================================= */
+const YT_API = 'https://www.googleapis.com/youtube/v3/';
+function mkErr(kind, extra = {}) { const e = new Error(extra.message || kind); e.kind = kind; Object.assign(e, extra); return e; }
+// 公開モード：自前サーバー（Apps Script）経由。APIキーはサーバー側にだけある
+async function backendYt(path, params) {
+  const u = new URL(BACKEND);
+  u.searchParams.set('a', 'yt'); u.searchParams.set('p', path); u.searchParams.set('q', JSON.stringify(params)); u.searchParams.set('v', APP_VERSION);
+  let r;
+  try { r = await fetch(u); }
+  catch (err) {
+    // 原因の切り分け：CORSなしで届くか試す。届く＝サーバーはあるが「全員に公開」になっていない／コード未反映の可能性
+    let reachable = false;
+    try { const pu = new URL(BACKEND); pu.searchParams.set('a', 'ping'); await fetch(pu, { mode: 'no-cors' }); reachable = true; } catch (_) {}
+    throw mkErr('network', { message: String(err && err.message || err), backend: true, reachable });
+  }
+  const j = await r.json().catch(() => null);
+  if (!j) throw mkErr('network', { message: 'サーバーの応答がJSONではありません（HTTP ' + r.status + '）', backend: true, reachable: true });
+  if (!j.ok) {
+    const E = j.error || {};
+    const info = (E.details || []).find(d => /ErrorInfo/.test(d['@type'] || '')) || {};
+    throw mkErr('api', { message: E.message || 'server error', status: j.status || 500, reason: E.errors?.[0]?.reason || '', detailReason: info.reason || '', raw: JSON.stringify(j).slice(0, 600) });
+  }
+  return j.data;
+}
+async function ytGet(path, params, key = state.apiKey) {
+  if (PUBLIC) return backendYt(path, params);
+  if (!key) throw mkErr('nokey');
+  const u = new URL(YT_API + path);
+  for (const [k, v] of Object.entries({ ...params, key })) u.searchParams.set(k, v);
+  let r;
+  // ページのフルURLをリファラーとして送る（キーのウェブサイト制限を「…/live-alarm/*」で登録していても通るように）
+  try { r = await fetch(u, { referrerPolicy: 'no-referrer-when-downgrade' }); }
+  catch (err) { throw mkErr('network', { message: String(err && err.message || err) }); }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const E = j.error || {};
+    const info = (E.details || []).find(d => /ErrorInfo/.test(d['@type'] || '')) || {};
+    const msg = E.message || `HTTP ${r.status}`;
+    throw mkErr('api', {
+      message: msg, status: r.status,
+      reason: E.errors?.[0]?.reason || '', detailReason: info.reason || '',
+      activationUrl: info.metadata?.activationUrl || (msg.match(/https:\/\/console\.(?:developers|cloud)\.google\.com\/[^\s"]+/) || [])[0]?.replace(/[.,)]+$/, '') || '',
+      raw: JSON.stringify(j).slice(0, 1500),
+    });
+  }
+  return j;
+}
+
+/* ---------- エラーの原因と解決方法 ---------- */
+function explain(e) {
+  const R = [e.detailReason, e.reason, e.message].join(' ');
+  const guideBtn = '<button class="btn sm" data-guide>取り方の手順を見る</button>';
+  const siteFix = SITE_PATTERN
+    ? `<ol><li>下の「認証情報を開く」→ 作ったAPIキーの名前をタップ</li><li>「アプリケーションの制限」で <b>ウェブサイト</b> を選び、次の値を追加して保存</li></ol>${copyLine(SITE_PATTERN)}<div class="hint">保存後、反映まで最大5分ほどかかります。</div>`
+    : '';
+  const credBtn = '<a class="btn sm" href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">認証情報を開く</a>';
+  switch (e.kind) {
+    case 'nokey': return { t: 'APIキーがまだ登録されていません', b: '最初に一度だけ、無料の YouTube Data API キーを登録してください。', a: guideBtn };
+    case 'badkey': return { t: 'APIキーの形式が違うようです', b: `APIキーは <b>「AIza」で始まる39文字</b> です（いま入っているのは ${e.len} 文字）。Google Cloud の画面で「キーを表示」→ コピーし直してください。`, a: guideBtn };
+    case 'badinput': return { t: 'チャンネルを読み取れませんでした', b: 'YouTube のチャンネルページ・配信・動画のリンク、@ハンドル、チャンネル名のどれかを入れてください。<br>例: <code>https://www.youtube.com/@xxxx</code>、<code>@xxxx</code>' };
+    case 'notfound': return { t: 'チャンネルが見つかりませんでした', b: '@ハンドルのつづりを確認するか、YouTube アプリでチャンネルを開いて「共有」→「リンクをコピー」したものを貼り付けてください。' };
+    case 'nolive': return { t: '流せる動画が見つかりませんでした', b: 'このチャンネルに公開されている動画・配信が見つかりませんでした（配信予定の枠は対象外）。この場合、時刻になるとアラーム音が鳴ります。' };
+    case 'noLongVideo': return { t: 'このチャンネルには流せる最新の動画がありません', b: 'ショート動画・ライブ配信を除いた、公開されている動画が見つかりませんでした。別のチャンネルを選ぶか、①で「最新のライブ配信」を選んでください。' };
+    case 'novideo': return { t: 'このチャンネルには公開されている動画がありません', b: '動画やライブ配信を公開していないチャンネルは設定できません。別のチャンネルを選んでください。' };
+    case 'badvideo': return { t: '動画のリンクを読み取れませんでした', b: 'YouTube の動画のリンク（<code>https://youtu.be/…</code> や <code>https://www.youtube.com/watch?v=…</code>）を貼り付けてください。' };
+    case 'videogone': return { t: 'この動画は見つからないか、公開されていません', b: '削除された動画や非公開の動画、配信予定の枠は設定できません。別の動画のリンクを貼り付けてください。' };
+    case 'network': {
+      if (ENV === 'file') return { t: 'ファイルを直接開いているため通信できません', b: 'このアプリは Web サイトとして開く必要があります。GitHub Pages で公開したURL（https://…github.io/…）、または PC なら <code>http://localhost</code> で開いてください。' };
+      if (ENV === 'frame') return { t: 'プレビュー画面の中では動きません', b: 'このページを Safari（PCならChrome等）で<b>直接</b>開いてください。チャットやファイルのプレビュー画面の中では通信や保存が制限されます。' };
+      if (e.backend && e.reachable) {
+        const ping = BACKEND + (BACKEND.includes('?') ? '&' : '?') + 'a=ping';
+        return { t: 'サーバー（Apps Script）の公開設定に問題があります', b: `サーバーには届いていますが、応答を受け取れませんでした。<br><b>運営者向け：</b>次のURLをブラウザで直接開いて確認してください。${copyLine(ping)}<ul><li><code>{"ok":true,…}</code> と表示 → 正常です。数分後に再度お試しください</li><li>Google のログイン画面になる → デプロイの「アクセスできるユーザー」を<b>全員</b>にして新しいバージョンでデプロイ</li><li>「スクリプト関数が見つかりません: doGet」→ コード.gs の保存前にデプロイしています。保存してから「デプロイを管理」→ 編集 →「新バージョン」でデプロイ</li><li>URL が <code>/dev</code> で終わっている → <code>/exec</code> で終わるURLを config.js に設定</li></ul>` };
+      }
+      if (e.backend) return { t: 'サーバーに接続できませんでした', b: '通信状態を確認して、もう一度お試しください。<br><b>運営者向け：</b>config.js の backendUrl が正しいか（<code>https://script.google.com/macros/s/…/exec</code>）確認してください。広告ブロック・コンテンツブロッカーを使っている場合は、このサイトでオフにしてください。' };
+      return { t: 'インターネットに接続できませんでした', b: '通信状態を確認して、もう一度お試しください。広告ブロック・コンテンツブロッカーを使っている場合は、このサイトでオフにしてください。' };
+    }
+  }
+  if (PUBLIC && e.kind === 'api') {
+    if (/quotaExceeded|dailyLimitExceeded|RATE_LIMIT/i.test(R))
+      return { t: '本日の利用上限に達しました', b: 'サービス全体の1日の上限に達したため、配信の確認が一時的にできません（日本時間の16〜17時ごろに回復します）。アラームは前回確認した配信、またはアラーム音で鳴ります。' };
+    return { t: 'サービス側で一時的な問題が発生しています', b: 'しばらくしてから、もう一度お試しください。' };
+  }
+  if (/API_KEY_INVALID|keyInvalid|API key not valid/i.test(R))
+    return { t: 'APIキーが正しくありません', b: 'コピーしたキーが途中で切れていないか、前後に余分な文字が入っていないか確認してください。<br>キーを作った直後や設定を変えた直後は、<b>反映まで最大5分ほど</b>かかることがあります。少し待ってから再度「確認」を押してください。', a: credBtn + guideBtn };
+  if (/SERVICE_DISABLED|accessNotConfigured|has not been used in project|is disabled/i.test(R))
+    return { t: 'YouTube Data API v3 が「有効」になっていません', b: 'キーを作ったプロジェクトで API を有効にする必要があります。下のボタンから開いて<b>「有効にする」</b>を押してください（有効化後、反映まで数分かかることがあります）。<br><span class="hint">Googleアカウントやプロジェクトを切り替えて作業すると、別のプロジェクトで有効にしてしまうことがよくあります。</span>', a: (e.activationUrl ? `<a class="btn sm primary" href="${esc(e.activationUrl)}" target="_blank" rel="noopener">有効化ページを開く</a>` : '<a class="btn sm primary" href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noopener">APIのページを開く</a>') + guideBtn };
+  if (/REFERRER_BLOCKED|ipRefererBlocked|referer/i.test(R)) {
+    const seen = (e.message.match(/referer\s+(\S*)\s+are blocked/i) || [])[1];
+    return { t: 'このページのURLがAPIキーで許可されていません', b: (seen !== undefined ? `Google から見えたURL: <code>${esc(seen || '（空）')}</code><br>` : '') + (SITE_PATTERN ? siteFix : 'ファイルを直接開いているため、ウェブサイト制限つきのキーは使えません。公開したURLで開いてください。'), a: credBtn + guideBtn };
+  }
+  if (/API_KEY_SERVICE_BLOCKED/i.test(R))
+    return { t: 'APIキーの「APIの制限」に YouTube Data API v3 が入っていません', b: '認証情報 → キーを開き、「APIの制限」→「キーを制限」で <b>YouTube Data API v3</b> にチェックを入れて保存してください。', a: credBtn };
+  if (/IOS_APP_BLOCKED|ANDROID_APP_BLOCKED|IP_ADDRESS_BLOCKED/i.test(R))
+    return { t: 'APIキーの「アプリケーションの制限」の種類が違います', b: 'このアプリは Web サイトなので、「iOS アプリ」「IP アドレス」ではなく<b>「ウェブサイト」</b>を選んでください。' + siteFix, a: credBtn };
+  if (/quotaExceeded|dailyLimitExceeded|RATE_LIMIT/i.test(R))
+    return { t: '今日の無料枠を使い切りました', b: '無料枠は毎日、日本時間の16〜17時ごろにリセットされます。通常の使い方ではまず起きません。' };
+  return { t: 'エラーが発生しました', b: 'もう一度お試しください。続く場合は下の「詳しいエラー内容」を確認してください。', a: guideBtn };
+}
+function errorHTML(e, where) {
+  const x = explain(e);
+  track('error_shown', { kind: e.kind || 'other', reason: e.detailReason || e.reason || '', title: undefined, msg: x.t, where: where || '' });
+  const raw = e.raw || (e.kind === 'api' || e.kind === 'network' ? e.message : '');
+  return `<div class="errbox"><div class="et">⚠️ ${esc(x.t)}</div><div class="eb">${x.b}</div>${x.a ? `<div class="ea">${x.a}</div>` : ''}${raw ? `<details><summary>詳しいエラー内容</summary><code>${esc(raw)}</code></details>` : ''}</div>`;
+}
+function showError(e) { $('#errorBody').innerHTML = errorHTML(e); openModal('mError'); }
+
+/* ---------- APIキーの確認 ---------- */
+function cleanKey(s) { return (s || '').replace(/[\s　"'「」]/g, ''); }
+async function testKey(key) {
+  key = cleanKey(key);
+  if (!key) throw mkErr('nokey');
+  if (!/^AIza[\w-]{35}$/.test(key)) {
+    // 形式が違っても一応試す（Google側の判定を優先）。失敗したら形式エラーを表示
+    try { await ytGet('channels', { part: 'id', forHandle: '@YouTube' }, key); return key; }
+    catch (e) { if (e.kind === 'api' && /API_KEY_INVALID|keyInvalid|not valid/i.test([e.detailReason, e.reason, e.message].join(' '))) throw mkErr('badkey', { len: key.length }); throw e; }
+  }
+  await ytGet('channels', { part: 'id', forHandle: '@YouTube' }, key);
+  return key;
+}
+/* キー入力カード（設定画面とアラーム追加画面で共通） */
+function keyCardHTML(prefix, compactOk) {
+  if (compactOk && state.apiKey && state.keyOK) return '';
+  return `<div class="keycard${state.keyOK ? ' ok' : ''}" id="${prefix}Card">
+    ${compactOk ? '<div style="font-weight:700;margin-bottom:4px">🔑 最初にAPIキーを登録（初回だけ）</div><div class="hint" style="margin:0 0 10px">YouTube の配信を調べるために必要です。無料・約5分で作れます。</div>' : ''}
+    <div class="row">
+      <input class="input mono" id="${prefix}Key" placeholder="AIza… で始まるキーを貼り付け" value="${esc(state.apiKey)}" autocapitalize="off" autocomplete="off" spellcheck="false">
+      <button class="btn" data-paste="${prefix}Key" style="flex:none">貼り付け</button>
+    </div>
+    <div class="row wrapok" style="margin-top:8px">
+      <button class="btn primary" id="${prefix}KeyTest">確認して保存</button>
+      <button class="btn" data-guide>取り方を見る</button>
+    </div>
+    <div id="${prefix}KeyMsg">${state.keyOK && state.apiKey ? '<div class="okline">✅ このキーは使えます</div>' : ''}</div>
+  </div>`;
+}
+function bindKeyCard(prefix, onOK) {
+  const btn = $(`#${prefix}KeyTest`); if (!btn) return;
+  const input = $(`#${prefix}Key`), msg = $(`#${prefix}KeyMsg`);
+  const run = async () => {
+    btn.disabled = true; msg.innerHTML = '<div class="hint"><span class="spin"></span>確認しています…</div>';
+    try {
+      const key = await testKey(input.value);
+      state.apiKey = key; state.keyOK = true; save();
+      input.value = key;
+      msg.innerHTML = '<div class="okline">✅ 使えます。保存しました</div>';
+      $(`#${prefix}Card`)?.classList.add('ok');
+      onOK && onOK();
+    } catch (e) {
+      state.keyOK = false; save();
+      msg.innerHTML = errorHTML(e);
+    }
+    btn.disabled = false;
+  };
+  btn.addEventListener('click', run);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); run(); } });
+  input.addEventListener('paste-done', run);
+  input.addEventListener('paste', () => setTimeout(run, 50));
+}
+
+/* ---------- チャンネルの特定 ---------- */
+function normalizeInput(s) {
+  return (s || '').replace(/＠/g, '@').replace(/[「」"“”]/g, '').replace(/[　\s]+/g, ' ').trim();
+}
+function parseChannelInput(raw) {
+  const s = normalizeInput(raw); let m;
+  if (!s) return null;
+  if ((m = s.match(/(UC[\w-]{22})(?![\w-])/))) return { id: m[1] };
+  let url = (s.match(/https?:\/\/\S+/) || [])[0];
+  if (!url && /^(?:[\w-]+\.)?(youtube\.com|youtu\.be)\//i.test(s)) url = 'https://' + s;
+  if (url) {
+    let u; try { u = new URL(url); } catch (e) { return { bad: true }; }
+    const host = u.hostname.replace(/^(www|m|music)\./i, '').toLowerCase();
+    const parts = u.pathname.split('/').filter(Boolean).map(p => { try { return decodeURIComponent(p); } catch (e) { return p; } });
+    if (host === 'youtu.be' && parts[0]) return { video: parts[0] };
+    if (host !== 'youtube.com') return { bad: true };
+    if (parts[0]?.startsWith('@')) return { handle: parts[0] };
+    if (parts[0] === 'watch' && u.searchParams.get('v')) return { video: u.searchParams.get('v') };
+    if (['live', 'shorts', 'embed', 'v'].includes(parts[0]) && parts[1]) return { video: parts[1] };
+    if (parts[0] === 'channel' && parts[1]) return { id: parts[1] };
+    if (parts[0] === 'user' && parts[1]) return { username: parts[1], name: parts[1] };
+    if (parts[0] === 'c' && parts[1]) return { handle: '@' + parts[1], name: parts[1] };
+    if (parts.length === 1) return { handle: '@' + parts[0], name: parts[0] };
+    return { bad: true };
+  }
+  if (s.startsWith('@')) return { handle: s.split(' ')[0], name: s.split(' ')[0].slice(1) };
+  if (/^[\w.\-]+$/.test(s)) return { handle: '@' + s, name: s };
+  return { name: s }; // チャンネル名 → 検索
+}
+const chFrom = c => ({ id: c.id, title: c.snippet.title, thumb: c.snippet.thumbnails?.default?.url || '' });
+async function channelBy(params) {
+  const j = await ytGet('channels', { part: 'snippet', ...params });
+  return j.items?.[0] ? chFrom(j.items[0]) : null;
+}
+async function searchChannels(q) {
+  const j = await ytGet('search', { part: 'snippet', type: 'channel', q, maxResults: 5 });
+  return (j.items || []).map(x => ({ id: x.snippet.channelId, title: x.snippet.channelTitle || x.snippet.title, thumb: x.snippet.thumbnails?.default?.url || '' }));
+}
+// 戻り値: { channel } または { candidates: [...] }
+async function resolveChannel(input) {
+  const p = parseChannelInput(input);
+  if (!p || p.bad) throw mkErr('badinput');
+  if (p.video) {
+    const j = await ytGet('videos', { part: 'snippet', id: p.video });
+    const v = j.items?.[0]; if (!v) throw mkErr('notfound');
+    const c = await channelBy({ id: v.snippet.channelId });
+    if (c) return { channel: c };
+    throw mkErr('notfound');
+  }
+  let c = null;
+  if (p.id) c = await channelBy({ id: p.id });
+  else if (p.handle) c = await channelBy({ forHandle: p.handle });
+  else if (p.username) c = await channelBy({ forUsername: p.username });
+  if (c) return { channel: c };
+  if (p.name) {
+    const list = await searchChannels(p.name);
+    if (list.length) return { candidates: list };
+  }
+  throw mkErr('notfound');
+}
+
+/* ---------- 最新の配信を探す ---------- */
+async function playlistIds(playlistId, pages) {
+  const ids = []; let token = '';
+  for (let i = 0; i < pages; i++) {
+    const p = { part: 'contentDetails', playlistId, maxResults: 50 };
+    if (token) p.pageToken = token;
+    const j = await ytGet('playlistItems', p);
+    ids.push(...(j.items || []).map(x => x.contentDetails.videoId));
+    token = j.nextPageToken; if (!token) break;
+  }
+  return ids;
+}
+async function liveCandidates(ids) {
+  const out = [];
+  for (let i = 0; i < ids.length; i += 50) {
+    const j = await ytGet('videos', { part: 'snippet,liveStreamingDetails', id: ids.slice(i, i + 50).join(',') });
+    for (const v of j.items || []) {
+      const L = v.liveStreamingDetails;
+      // 配信予定(upcoming)・未開始は除外。実際に開始されたものだけ
+      if (!L?.actualStartTime || v.snippet.liveBroadcastContent === 'upcoming') continue;
+      out.push({
+        id: v.id, title: v.snippet.title,
+        thumb: v.snippet.thumbnails?.medium?.url || v.snippet.thumbnails?.default?.url || '',
+        start: L.actualStartTime,
+        isLive: v.snippet.liveBroadcastContent === 'live' && !L.actualEndTime,
+      });
+    }
+  }
+  return out.sort((a, b) => b.start.localeCompare(a.start));
+}
+async function findLatestLive(channelId, preferLive) {
+  const suffix = channelId.slice(2);
+  let lives = [];
+  try { lives = await liveCandidates(await playlistIds('UULV' + suffix, 1)); } // UULV = ライブだけの再生リスト
+  catch (e) { if (e.status !== 404) throw e; }
+  if (!lives.length) {
+    try { lives = await liveCandidates(await playlistIds('UU' + suffix, 2)); } // 予備: 全アップロードから探す
+    catch (e) { if (e.status !== 404) throw e; }
+  }
+  if (!lives.length) return null;
+  if (preferLive) { const l = lives.find(x => x.isLive); if (l) return l; }
+  return lives[0];
+}
+/* 通常の動画（ライブ配信・配信予定を除く）。UULF = ショートとライブを除いた動画の再生リスト */
+async function videoCandidates(ids) {
+  const out = [];
+  for (let i = 0; i < ids.length; i += 50) {
+    const j = await ytGet('videos', { part: 'snippet,liveStreamingDetails', id: ids.slice(i, i + 50).join(',') });
+    for (const v of j.items || []) {
+      if (v.liveStreamingDetails || v.snippet.liveBroadcastContent !== 'none') continue;
+      out.push({ id: v.id, title: v.snippet.title, thumb: v.snippet.thumbnails?.medium?.url || v.snippet.thumbnails?.default?.url || '', start: v.snippet.publishedAt, isLive: false });
+    }
+  }
+  return out.sort((a, b) => b.start.localeCompare(a.start));
+}
+async function findLatestVideo(channelId) {
+  const suffix = channelId.slice(2);
+  let list = [];
+  // UULF = ショート・ライブを除いた動画だけの再生リスト。404 ならショート以外の動画がない
+  try { list = await videoCandidates(await playlistIds('UULF' + suffix, 1)); }
+  catch (e) {
+    if (e.status === 404) return null;   // ショート・ライブ以外の動画がない
+    throw e;                             // ショートを誤って流さないよう、他の方法では探さない
+  }
+  return list[0] || null;
+}
+/* 設定（play）に応じて流す動画を決める。ライブ配信がないチャンネルは最新の動画にする */
+async function findLatest(channelId, play, preferLive) {
+  if (play === 'video') { const v = await findLatestVideo(channelId); return v ? { ...v, kindUsed: 'video' } : null; }
+  const l = await findLatestLive(channelId, preferLive);
+  if (l) return { ...l, kindUsed: 'live' };
+  const v = await findLatestVideo(channelId);
+  return v ? { ...v, kindUsed: 'video', fallback: true } : null;
+}
+function parseVideoInput(raw) {
+  const s = normalizeInput(raw);
+  if (/^[\w-]{11}$/.test(s)) return s;
+  const p = parseChannelInput(s);
+  return p && p.video && /^[\w-]{11}$/.test(p.video) ? p.video : null;
+}
+async function fetchVideo(id) {
+  const j = await ytGet('videos', { part: 'snippet,liveStreamingDetails', id });
+  const x = j.items?.[0];
+  if (!x || x.snippet.liveBroadcastContent === 'upcoming') return null;
+  return { id: x.id, title: x.snippet.title, thumb: x.snippet.thumbnails?.medium?.url || x.snippet.thumbnails?.default?.url || '', start: x.snippet.publishedAt,
+    isLive: x.snippet.liveBroadcastContent === 'live', kindUsed: 'fixed', channelId: x.snippet.channelId, channelTitle: x.snippet.channelTitle };
+}
+async function resolveVideo(a) {
+  const v = a.play === 'fixed' ? await fetchVideo(a.fixedVideoId) : await findLatest(a.channelId, a.play || 'live', a.preferLive !== false);
+  if (v) { a.lastVideo = { ...v, checkedAt: Date.now() }; save(); }
+  return v;
+}
+const PLAY_LABEL = { live: '最新のライブ配信', video: '最新の動画', fixed: '決まった動画' };
+
+/* ---------- よく選ばれているチャンネル（公開モードのみ）----------
+ * 統計のランキング上位 ＋ 足りない分はおすすめ（有名チャンネル）で5件にする。種類（ライブ／動画）別 */
+const topCache = {}, topIndex = {};
+/* サーバーから取れない時・5件に満たない時に使う「おすすめ」（サーバーの FEATURED と同じ内容） */
+const FEATURED_LOCAL = {
+  live: [
+    ['UCNsidkYpIAQ4QaufptQBPHQ', 'ウェザーニュース'], ['UCGCZAYq5Xxojl_tSXcVJhiQ', 'ANNnewsCH'], ['UC6AG81pAkf6Lbi_1VC5NmPA', 'TBS NEWS DIG Powered by JNN'],
+    ['UCuTAXTexrhetbOe3zgskJBQ', '日テレNEWS'], ['UCoQBJMzcwmXrRSHBFAlTsIw', 'FNNプライムオンライン'], ['UCHL12woHGeiqAqLrK-pJe7g', '日本経済新聞'],
+  ],
+  video: [
+    ['UCZf__ehlCEBPop-_sldpBUQ', 'HikakinTV'], ['UCgMPP6RRjktV7krOfyUewqw', 'はじめしゃちょー（hajime）'], ['UCibEhpu5HP45-w7Bq1ZIulw', "Fischer's-フィッシャーズ-"],
+    ['UCutJqz56653xV2wwSvut_hQ', '東海オンエア'], ['UCHL12woHGeiqAqLrK-pJe7g', '日本経済新聞'],
+  ],
+};
+function fillWithFeatured(list, kind, n) {
+  const have = new Set(list.map(x => x.id));
+  const out = list.slice();
+  for (const [id, title] of FEATURED_LOCAL[kind] || []) {
+    if (out.length >= Math.max(n, 5)) break;
+    if (!have.has(id)) { out.push({ id, title, thumb: '', source: 'pick' }); have.add(id); }
+  }
+  return out;
+}
+async function loadTop(n = 5, kind = 'live') {
+  if (!PUBLIC) return [];
+  const c = topCache[kind];
+  if (c && Date.now() - c.at < 30 * 60 * 1000) return c.list.slice(0, n);
+  let list = [], ok = false;
+  try {
+    const u = new URL(BACKEND); u.searchParams.set('a', 'top'); u.searchParams.set('n', n); u.searchParams.set('k', kind);
+    const j = await withTimeout(fetch(u).then(r => r.json()), 10000);
+    ok = !!(j && j.ok);
+    list = ok && Array.isArray(j.list) ? j.list.filter(x => /^UC[\w-]{22}$/.test(x.id)) : [];
+  } catch (e) {}
+  list = fillWithFeatured(list, kind, n);   // サーバーが古い・つながらない時もおすすめは必ず出す
+  list.forEach(x => { topIndex[x.id] = x; });
+  topCache[kind] = { at: ok ? Date.now() : Date.now() - 25 * 60 * 1000, list }; // 取れなかった時は5分後に再取得
+  return list.slice(0, n);
+}
+function topHTML(list, title, exclude) {
+  const l = list.filter(c => c.id !== exclude);
+  if (!l.length) return '';
+  let rank = 0;
+  return `<div class="toplist"><div class="hint" style="margin:0">${esc(title)}</div><div class="chips">${l.map(c => {
+    const isRank = c.source !== 'pick'; if (isRank) rank++;
+    return `<button type="button" class="topch" data-top="${esc(c.id)}" data-rank="${isRank ? rank : 0}">${isRank ? `<span class="rk">${rank}</span>` : '<span class="pk">おすすめ</span>'}${c.thumb ? `<img src="${esc(c.thumb)}" alt="">` : ''}<span class="nm">${esc(c.title)}</span></button>`;
+  }).join('')}</div></div>`;
+}
+const TOP_TITLE = { live: 'ライブ配信の人気・おすすめチャンネル（タップで選択）', video: '最新の動画の人気・おすすめチャンネル（タップで選択）' };
+async function renderTop() {
+  const box = $('#chTop'); if (!box) return;
+  const kind = editPlay === 'video' ? 'video' : 'live';
+  if (editPlay === 'fixed') { box.innerHTML = ''; return; }
+  const list = await loadTop(5, kind);
+  if ((editPlay === 'video' ? 'video' : 'live') !== kind) return; // 読み込み中に切り替わった
+  box.innerHTML = topHTML(list, TOP_TITLE[kind]);
+  if (list.length) track('top_shown', { n: list.length, kind, where: 'editor' });
+}
+async function recommendHTML(exclude, kind, title) {
+  kind = kind || (editPlay === 'video' ? 'video' : 'live');
+  const list = await loadTop(5, kind);
+  return topHTML(list, title || (kind === 'live' ? 'ライブ配信を流したい場合は、こちらのチャンネルはいかがですか？' : '代わりに、こちらのチャンネルはいかがですか？'), exclude);
+}
+const watchUrl = id => `https://www.youtube.com/watch?v=${id}`;
+const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+const fmtStart = iso => { const d = new Date(iso); return `${d.getMonth() + 1}/${d.getDate()}(${DOW[d.getDay()]}) ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+
+/* =========================================================
+ * 音（アラーム音・無音ループ）
+ *  - <audio> 要素はマナーモード（消音スイッチ）でも鳴る
+ *  - navigator.audioSession.type = 'playback' でさらに確実に（iOS 16.4+）
+ * ========================================================= */
+function wavURL(samples, rate) {
+  const n = samples.length, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+  const w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  w(36, 'data'); v.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, samples[i])) * 32767, true);
+  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+}
+const RATE = 22050;
+function chimeSamples(vol) {
+  const amp = Math.max(0.03, vol / 100) * 0.9, total = Math.floor(RATE * 1.6), s = new Float32Array(total);
+  for (const [st, f] of [[0, 880], [0.22, 880], [0.44, 1175]]) {
+    const o = Math.floor(st * RATE), len = Math.floor(0.17 * RATE);
+    for (let i = 0; i < len && o + i < total; i++) {
+      const env = Math.min(1, i / 200) * Math.min(1, (len - i) / 400);
+      s[o + i] += amp * env * (Math.sin(2 * Math.PI * f * i / RATE) * 0.8 + Math.sin(4 * Math.PI * f * i / RATE) * 0.2);
+    }
+  }
+  return s;
+}
+const SILENT_URL = (() => { const s = new Float32Array(RATE); for (let i = 0; i < s.length; i++) s[i] = (i % 2 ? 1 : -1) / 32767; return wavURL(s, RATE); })();
+const chimeCache = {};
+const chimeURL = vol => chimeCache[vol] || (chimeCache[vol] = wavURL(chimeSamples(vol), RATE));
+
+const silentEl = new Audio(); silentEl.loop = true; silentEl.preload = 'auto'; silentEl.setAttribute('playsinline', '');
+const chimeEl = new Audio(); chimeEl.loop = true; chimeEl.preload = 'auto'; chimeEl.setAttribute('playsinline', '');
+let audioUnlocked = false, chimeOn = false, chimeViaSilent = false, chimeStopTimer = null;
+
+function setPlaybackSession() { try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {} }
+function unlockAudio() { // タップ操作の中で呼ぶ → 以後スクリプトから音を出せる
+  setPlaybackSession();
+  if (audioUnlocked) return;
+  chimeEl.src = SILENT_URL;
+  chimeEl.play().then(() => { chimeEl.pause(); audioUnlocked = true; }).catch(() => {});
+  silentEl.src = SILENT_URL;
+  silentEl.play().then(() => { if (!(standbyOn && state.settings.lockMode)) silentEl.pause(); }).catch(() => {});
+}
+function startChime(vol) {
+  if (!state.settings.chime || chimeOn) return;
+  track('chime', { ch: current?.alarm?.channelId, hidden: document.visibilityState !== 'visible' });
+  chimeOn = true; setPlaybackSession();
+  chimeEl.src = chimeURL(vol); chimeEl.loop = true;
+  chimeEl.play().catch(() => { chimeViaSilent = true; silentEl.src = chimeURL(vol); silentEl.play().catch(() => {}); });
+  setMediaMeta('⏰ アラーム', 'ロック解除で YouTube を再生します');
+  $('#rStopChime').style.display = '';
+  clearTimeout(chimeStopTimer); chimeStopTimer = setTimeout(stopChime, 15 * 60 * 1000);
+}
+function stopChime() {
+  if (!chimeOn) return;
+  chimeOn = false; clearTimeout(chimeStopTimer);
+  chimeEl.pause();
+  if (chimeViaSilent) {
+    chimeViaSilent = false; silentEl.src = SILENT_URL;
+    if (standbyOn && state.settings.lockMode) silentEl.play().catch(() => {});
+  }
+  $('#rStopChime').style.display = 'none';
+  setMediaMeta('Live目覚まし', '待機中');
+}
+function setMediaMeta(title, artist) {
+  if (!('mediaSession' in navigator)) return;
+  try { navigator.mediaSession.metadata = new MediaMetadata({ title, artist, artwork: [{ src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' }] }); } catch (e) {}
+}
+if ('mediaSession' in navigator) {
+  try { // イヤホン・ロック画面の一時停止ボタン → アラーム音を止める
+    navigator.mediaSession.setActionHandler('pause', () => { if (chimeOn) stopChime(); else silentEl.pause(); updateStandby(); });
+    navigator.mediaSession.setActionHandler('play', () => { if (standbyOn && state.settings.lockMode) silentEl.play().catch(() => {}); updateStandby(); });
+  } catch (e) {}
+}
+
+/* =========================================================
+ * YouTube 埋め込みプレーヤー（公式 IFrame Player API）
+ * ========================================================= */
+let ytReadyResolve; const ytReady = new Promise(r => ytReadyResolve = r);
+window.onYouTubeIframeAPIReady = () => ytReadyResolve();
+function loadYTApi() {
+  if (!document.getElementById('ytapi')) {
+    const s = document.createElement('script'); s.id = 'ytapi'; s.src = 'https://www.youtube.com/iframe_api';
+    s.onerror = () => { if (!ENV) toast('YouTube プレーヤーを読み込めませんでした'); };
+    document.head.appendChild(s);
+  }
+  return ytReady;
+}
+let player = null, playerP = null, playing = false, testMode = false, current = null, verifyTimer = null;
+function ensurePlayer() {
+  if (playerP) return playerP;
+  playerP = loadYTApi().then(() => new Promise(res => {
+    player = new YT.Player('ytPlayer', {
+      width: '100%', height: '100%',
+      playerVars: { playsinline: 1, rel: 0, origin: location.origin },
+      events: { onReady: () => res(player), onStateChange: onPlayerState, onError: onPlayerError },
+    });
+  }));
+  return playerP;
+}
+function onPlayerState(e) {
+  playing = e.data === YT.PlayerState.PLAYING;
+  if (playing) {
+    stopChime(); hideRingMsg();
+    if (current) { try { player.unMute(); player.setVolume(current.volume); } catch (_) {} }
+    if (current && !testMode && !current.reported) {
+      current.reported = true;
+      track(current.test ? 'test_play_start' : 'play_start', { ch: current.alarm.channelId, title: current.alarm.channelTitle, vid: current.videoId, vtitle: current.title, live: current.isLive, via: 'embed', ms: Date.now() - current.firedAt });
+    }
+    if (testMode) {
+      track('prime_ok');
+      setRingMsg('✅ 音が出ればOKです。3秒後に停止します。');
+      setTimeout(() => { try { player.pauseVideo(); } catch (_) {} testMode = false; closeRing(); toast('再生テスト完了'); }, 3000);
+    }
+  }
+}
+function onPlayerError(e) {
+  const code = e.data;
+  track('player_error', { code, vid: current?.videoId, ch: current?.alarm?.channelId, env: ENV || '' });
+  // 153 = 埋め込み元のURLが分からない（ファイルを直接開いた時など）/ 101・150 = 配信者が埋め込みを禁止
+  const msg = code === 153
+    ? (ENV === 'file' ? 'ファイルを直接開いているため、ページ内では再生できません（エラー153）。YouTube を新しいタブで開きます。'
+                      : '埋め込み再生の設定エラーです（エラー153）。YouTube を新しいタブで開きます。')
+    : (code === 101 || code === 150) ? 'この配信は埋め込み再生が許可されていません。YouTube を新しいタブで開きます。'
+    : `再生エラー（コード ${code}）。「YouTubeで開く」を試してください。`;
+  setRingMsg(msg, 'warn');
+  if ([101, 150, 153].includes(code) && current) {
+    const w = window.open(watchUrl(current.videoId), '_blank');
+    if (w) { stopChime(); setRingMsg('YouTube を新しいタブで開きました。'); if (!current.reported && !testMode) { current.reported = true; track(current.test ? 'test_play_start' : 'play_start', { ch: current.alarm.channelId, title: current.alarm.channelTitle, vid: current.videoId, vtitle: current.title, via: 'newtab_fallback', ms: Date.now() - current.firedAt }); } return; }
+    setRingMsg(msg.replace('YouTube を新しいタブで開きます。', '') + '「YouTubeで開く」を押してください（このサイトのポップアップを許可すると自動で開きます）。', 'warn');
+  }
+  if (current && !testMode) startChime(current.volume);
+}
+
+/* =========================================================
+ * アラーム発火
+ * ========================================================= */
+let pending = null;
+async function fire(a, isTest = false) {
+  const firedAt = Date.now();
+  let video = null, fromCache = false, errKind = '';
+  track(isTest ? 'test_fire' : 'alarm_fire', { ch: a.channelId, title: a.channelTitle, mode: a.mode, play: a.play || 'live', standby: standbyOn, visible: document.visibilityState === 'visible' });
+  showRing(a, null, isTest ? 'テスト再生' : 'アラーム');
+  setRingMsg('流す動画を確認しています…');
+  // 数分前に先読みした結果があれば、それを使って YouTube API を使わない（テスト再生は確認し直す）
+  const fresh = !isTest && a.lastVideo && Date.now() - (a.lastVideo.checkedAt || 0) < 6 * 60 * 1000;
+  try { video = fresh ? a.lastVideo : await withTimeout(resolveVideo(a), 12000); }
+  catch (e) { errKind = e.kind || 'timeout'; video = a.lastVideo || null; fromCache = !!video; if (!video) setRingMsg('配信を取得できませんでした：' + (e.kind ? explain(e).t : e.message), 'warn'); }
+  if (!video) {
+    track('video_none', { ch: a.channelId, kind: errKind || 'nolive', test: isTest });
+    if (!a.lastVideo) setRingMsg('再生できる動画が見つからなかったため、アラーム音を鳴らしています。', 'warn');
+    startChime(a.volume); return;
+  }
+  track('video_found', { ch: a.channelId, title: a.channelTitle, vid: video.id, vtitle: video.title, live: video.isLive, cached: fromCache, test: isTest });
+  await startVideo(a, video, { test: isTest, firedAt });
+}
+async function startVideo(a, video, meta = {}) {
+  current = { videoId: video.id, title: video.title, isLive: !!video.isLive, volume: a.volume, alarm: a, test: !!meta.test, firedAt: meta.firedAt || Date.now(), reported: false, shownAt: Date.now() };
+  const reportNewTab = () => { current.reported = true; track(current.test ? 'test_play_start' : 'play_start', { ch: a.channelId, title: a.channelTitle, vid: video.id, vtitle: video.title, live: !!video.isLive, via: 'newtab', ms: Date.now() - current.firedAt }); };
+  showRing(a, video);
+  const hidden = document.visibilityState !== 'visible';
+  const mode = ENV === 'file' ? 'newtab' : state.settings.openMode;
+  if (!isMobile && (mode === 'newtab' || (mode === 'auto' && hidden))) {
+    const w = window.open(watchUrl(video.id), '_blank');
+    if (w) { setRingMsg('YouTube を新しいタブで開きました。'); reportNewTab(); return; }
+    if (hidden) {
+      startChime(a.volume); notify(a, video); pending = { a, video, meta };
+      setRingMsg('ポップアップがブロックされました。このタブに戻ると再生します。', 'warn'); return;
+    }
+  }
+  if (hidden) { startChime(a.volume); pending = { a, video, meta }; notify(a, video); return; }
+
+  const p = await ensurePlayer();
+  try { p.loadVideoById(video.id); p.unMute(); p.setVolume(a.volume); p.playVideo(); } catch (e) {}
+  $('#rVol').value = a.volume; $('#rVolLabel').textContent = a.volume;
+  clearTimeout(verifyTimer);
+  verifyTimer = setTimeout(() => {
+    if (!playing && current?.videoId === video.id) {
+      track('play_blocked', { ch: a.channelId, vid: video.id, test: !!meta.test });
+      startChime(a.volume);
+      setRingMsg('自動再生がブロックされました。プレーヤーの ▶ をタップしてください。', 'warn');
+    }
+  }, 8000);
+}
+function notify(a, video) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    const n = new Notification('⏰ Live目覚まし', { body: video ? video.title : (a.channelTitle || ''), tag: 'live-alarm', requireInteraction: true });
+    n.onclick = () => { window.focus(); n.close(); };
+  } catch (e) {}
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  if (standbyOn && !wakeLock) requestWake();
+  if (pending) { const p = pending; pending = null; startVideo(p.a, p.video, p.meta); }
+  tick(true);
+});
+
+function showRing(a, video, title) {
+  $('#ring').classList.add('open');
+  if (title) $('#rTitle').textContent = title + (a.label ? `：${a.label}` : '');
+  $('#rName').textContent = video ? `${video.isLive ? '🔴 配信中 ' : ''}${video.title}` : (a.channelTitle || '');
+  $('#rOpenYT').href = video ? watchUrl(video.id) : (a.channelId ? `https://www.youtube.com/channel/${a.channelId}/streams` : '#');
+  $('#rVolBox').style.display = isIOS ? 'none' : '';
+}
+function setRingMsg(msg, kind) { const m = $('#rMsg'); m.style.display = ''; m.textContent = msg; m.className = 'rmsg note' + (kind === 'warn' ? ' warn' : ''); }
+function hideRingMsg() { $('#rMsg').style.display = 'none'; }
+function closeRing() {
+  if ($('#ring').classList.contains('open') && current) track('ring_close', { ch: current.alarm?.channelId, vid: current.videoId, sec: Math.round((Date.now() - current.shownAt) / 1000), played: !!current.reported, test: !!current.test || testMode });
+  $('#ring').classList.remove('open'); stopChime(); pending = null; clearTimeout(verifyTimer);
+  try { player && player.stopVideo(); } catch (e) {}
+  current = null;
+}
+
+/* =========================================================
+ * タイマー（1秒ごと）
+ * ========================================================= */
+const GRACE = 10 * 60 * 1000;
+const PREFETCH = 5 * 60 * 1000;
+// 先読みのタイミングを端末ごとに 2〜5 分前でばらけさせる（同じ時刻に問い合わせが集中しないように）
+const PREFETCH_AT = 2 * 60 * 1000 + Math.floor(Math.random() * 3 * 60 * 1000);
+const prefetched = new Set();
+let testAlarm = null, lastTick = 0;
+function tick(force) {
+  const t = Date.now(); if (!force && t - lastTick < 900) return; lastTick = t;
+  const now = new Date();
+  updateClock(now);
+  for (const a of state.alarms) {
+    if (!a.enabled || !a.channelId) continue;
+    for (const off of [0, -1]) {
+      const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + off);
+      const o = occurrence(a, day); if (!o) continue;
+      const diff = now - o, k = a.id + '@' + o.getTime();
+      if (diff >= -PREFETCH && diff >= -PREFETCH_AT && diff < 0 && !prefetched.has(k)) { prefetched.add(k); resolveVideo(a).catch(() => {}); }
+      if (diff >= 0 && diff < GRACE && o.getTime() > (a.savedAt || 0) && state.lastFired[a.id] !== o.getTime()) {
+        state.lastFired[a.id] = o.getTime(); save(); fire(a);
+      }
+    }
+  }
+  if (testAlarm && now >= testAlarm.at) { const a = testAlarm.alarm; testAlarm = null; fire(a, true); }
+}
+function startTicker() {
+  setInterval(tick, 1000);
+  try {
+    const w = new Worker(URL.createObjectURL(new Blob(['setInterval(()=>postMessage(0),1000)'], { type: 'text/javascript' })));
+    w.onmessage = () => tick();
+  } catch (e) {}
+  silentEl.addEventListener('timeupdate', () => tick());
+}
+
+/* =========================================================
+ * おやすみモード
+ * ========================================================= */
+let standbyOn = false, wakeLock = null, standbyAt = 0;
+async function requestWake() {
+  try {
+    if (!('wakeLock' in navigator)) return;
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; updateStandby(); });
+  } catch (e) { wakeLock = null; }
+  updateStandby();
+}
+async function startStandby() {
+  if (!state.alarms.some(a => a.enabled && a.channelId)) { toast('有効なアラームがありません。「＋ 追加」から作成してください'); return; }
+  unlockAudio();
+  standbyOn = true;
+  if (state.settings.lockMode) { silentEl.src = SILENT_URL; silentEl.play().catch(() => {}); setMediaMeta('Live目覚まし', '待機中'); }
+  $('#sbMsg').textContent = isIOS ? '自動で暗い時計の表示になります。' : '別のタブやアプリを使っていても大丈夫です。';
+  $('#app').classList.add('fadeout');   // 元の画面は約0.6秒でふわっと消え、時計の画面が約1.4秒かけて現れる
+  const sb = $('#standby'); sb.classList.remove('show'); sb.classList.add('open');
+  requestAnimationFrame(() => requestAnimationFrame(() => sb.classList.add('show')));
+  await requestWake();
+  standbyAt = Date.now();
+  track('standby_start', { lock: !!state.settings.lockMode, wake: !!wakeLock, alarms: state.alarms.filter(a => a.enabled).length });
+  ensurePlayer();
+}
+function stopStandby() {
+  if (standbyOn) track('standby_end', { min: Math.round((Date.now() - standbyAt) / 60000) });
+  standbyOn = false; $('#standby').classList.remove('open', 'show'); $('#app').classList.remove('fadeout');
+  silentEl.pause();
+  try { wakeLock && wakeLock.release(); } catch (e) {} wakeLock = null;
+}
+function updateStandby() {
+  if (!standbyOn) return;
+  const nx = nextOverall();
+  $('#sbNext').textContent = nx ? `次: ${fmtDate(nx.at)}　${nx.alarm.channelTitle || ''}` : 'アラームなし';
+  const lines = [];
+  lines.push(`画面の点灯維持：<b>${wakeLock ? 'ON' : ('wakeLock' in navigator ? 'OFF（画面をタップで再取得）' : '非対応（自動ロックを「なし」に）')}</b>`);
+  if (state.settings.lockMode) lines.push(`ロック中モード：<b>${!silentEl.paused ? '待機音 再生中' : '停止中（画面をタップで再開）'}</b>`);
+  if (testAlarm) lines.push(`テスト：${pad(testAlarm.at.getHours())}:${pad(testAlarm.at.getMinutes())} に鳴ります`);
+  $('#sbStatus').innerHTML = lines.join('<br>');
+}
+function updateClock(now) {
+  if (!standbyOn) return;
+  $('#sbClock').textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  if (now.getSeconds() === 0 || !updateClock._init) { updateClock._init = true; updateStandby(); }
+}
+function sessGet(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
+function sessSet(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
+async function primePlayer() {
+  const a = state.alarms.find(x => x.enabled && x.channelId);
+  if (!a) return;
+  let v = a.lastVideo;
+  if (!v) { try { v = await withTimeout(resolveVideo(a), 10000); } catch (e) {} }
+  if (!v) { toast('テストできる配信が見つかりませんでした'); return; }
+  testMode = true; current = { videoId: v.id, volume: a.volume, alarm: a };
+  showRing(a, v, '再生テスト');
+  track('prime_shown', { ch: a.channelId });
+  setRingMsg('プレーヤーの ▶ をタップして、音が出るか確認してください（3秒で自動で止まり、元の画面に戻ります）。' + (isIOS ? 'iPhone では、これで朝の自動再生がうまくいきやすくなります。' : ''));
+  const p = await ensurePlayer();
+  try { p.cueVideoById(v.id); } catch (e) {}
+  sessSet('ytPrimed', '1');
+}
+
+/* =========================================================
+ * 画面描画（トップ）
+ * ========================================================= */
+function render() {
+  const list = $('#alarmList');
+  if (!state.alarms.length) {
+    list.innerHTML = '<div class="card empty">まだアラームがありません。<br><br><button class="btn primary" id="btnAddEmpty">＋ 最初のアラームを作る</button></div>';
+    $('#btnAddEmpty').addEventListener('click', () => openEditor(null));
+  } else {
+    list.innerHTML = state.alarms.map(a => {
+      const nx = a.enabled ? nextOccurrence(a) : null;
+      const time = a.mode === 'custom' ? (nx ? `${pad(nx.getHours())}:${pad(nx.getMinutes())}` : '--:--') : a.time;
+      const lv = a.lastVideo;
+      return `<div class="card"><div class="alarm ${a.enabled ? '' : 'off'}">
+        <div class="meta">
+          <div class="time">${esc(time)}</div>
+          <div class="small">${esc(scheduleSummary(a))}</div>
+          <div class="ch">📺 <b>${esc(a.channelTitle || '（チャンネル未設定）')}</b>${a.label ? `<span class="small muted"> ・ ${esc(a.label)}</span>` : ''}</div>
+          <div><span class="chip">${esc(PLAY_LABEL[a.play || 'live'])}</span><span class="chip">音量 ${a.volume}</span>${nx ? `<span class="chip">次: ${esc(fmtDate(nx))}</span>` : ''}</div>
+          ${lv ? `<div class="small muted" style="margin-top:4px">${esc(lv.kindUsed ? videoLabel(lv) : (lv.isLive ? '🔴 配信中' : '直近の配信'))}: ${esc(lv.title)}</div>` : ''}
+        </div>
+        <label class="sw" aria-label="オン/オフ"><input type="checkbox" data-toggle="${a.id}" ${a.enabled ? 'checked' : ''}><span></span></label>
+      </div>
+      <div class="actions">
+        <button class="btn sm" data-edit="${a.id}">編集</button>
+        ${a.play === 'fixed' ? '' : `<button class="btn sm" data-check="${a.id}">流す動画を確認</button>`}
+        <button class="btn sm" data-play="${a.id}">▶ テスト再生</button>
+        <button class="btn sm" data-dup="${a.id}">複製</button>
+      </div></div>`;
+    }).join('');
+  }
+  const nx = nextOverall();
+  $('#nextTime').textContent = nx ? fmtDate(nx.at) : '—';
+  $('#nextSub').textContent = nx ? `${nx.alarm.channelTitle || ''}${nx.alarm.label ? ' ・ ' + nx.alarm.label : ''}` : 'アラームが設定されていません';
+  $('#standbyHint').textContent = isIOS
+    ? 'iPhone は、寝る前にこのボタンを押さないとアラームが鳴りません。押したら充電しながら画面をそのままにしてください（画面は暗くなります）。'
+    : 'PC はこのタブを開いたままにしておけば鳴ります。ボタンを押すと、画面が消えないよう時計表示で待機します。';
+  const hr = new Date().getHours(), night = !!nx && (hr >= 20 || hr < 4);
+  $('#btnStandby').classList.toggle('night', night);
+  $('#nightMsg').classList.toggle('on', night && isIOS);
+  $('#sleepBtnLabel').innerHTML = isMobile ? '画面を暗くする<span class="t1b">(🌙寝る前にタップ)</span>' : '🌙画面<span class="t1s">(本ウィンドウのみ)</span>を暗くする';
+  updateStandby();
+}
+
+/* ---------- モーダル共通 ---------- */
+function openModal(id) { $('#' + id).classList.add('open'); }
+function closeModal(id) {
+  const m = $('#' + id); if (!m.classList.contains('open')) return;
+  m.classList.remove('open');
+  // 途中離脱の記録
+  if (id === 'mEdit' && !editSaved) track('editor_cancel', { typed: !!$('#fChannel').value.trim(), ch_ok: !!editChannel, isNew: editIsNew });
+  if (id === 'mIntro' && !introFinished) track('intro_close', { i: slideIdx, total: SLIDES.length });
+}
+$$('.modal').forEach(m => m.addEventListener('click', e => {
+  if (e.target === m || e.target.closest('[data-close]')?.closest('.modal') === m) closeModal(m.id);
+}));
+// どの画面からでも使えるボタン（取り方・コピー・貼り付け）
+document.addEventListener('click', e => {
+  const g = e.target.closest('[data-guide]'); if (g) { e.preventDefault(); openGuide(); return; }
+  const c = e.target.closest('[data-copy]'); if (c) { e.preventDefault(); copyText(c.dataset.copy); return; }
+  const p = e.target.closest('[data-paste]'); if (p) { e.preventDefault(); pasteInto(document.getElementById(p.dataset.paste)); }
+});
+
+/* =========================================================
+ * APIキーの取り方ガイド（どの画面の上にも重ねて開く）
+ * ========================================================= */
+function openGuide() {
+  track('guide_open');
+  closeModal('mError'); // エラー画面から開いた場合はガイドを前面に
+  const envWarn = ENV === 'file' ? '<div class="note warn">いまファイルを直接開いています。先に Web サイトとして公開したURL（または PC なら http://localhost）で開き直してください。</div>'
+    : ENV === 'frame' ? '<div class="note warn">いまプレビュー画面の中で開いています。Safari（PCならChrome等）で<b>直接</b>開き直してから設定してください。</div>' : '';
+  $('#guideBody').innerHTML = `${envWarn}
+  <div class="note">Google アカウントがあれば無料で作れます。支払い情報の登録は不要です。PC で作業すると楽です（キーはあとでスマホに貼り付けられます）。</div>
+  <div class="gstep"><div class="n">1</div><div class="c"><b>プロジェクトを作る</b>
+    <ul><li>右上のアイコンが<b>使いたい Google アカウント</b>になっているか確認</li><li>プロジェクト名は何でもOK（例: live-alarm）→「作成」</li></ul>
+    <a class="btn sm" href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">プロジェクト作成画面を開く ↗</a></div></div>
+  <div class="gstep"><div class="n">2</div><div class="c"><b>YouTube Data API v3 を「有効にする」</b>
+    <ul><li>画面上部のプロジェクト名が、手順1で作ったものになっているか確認</li><li>青い「有効にする」ボタンを押す</li></ul>
+    <a class="btn sm" href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noopener">API のページを開く ↗</a></div></div>
+  <div class="gstep"><div class="n">3</div><div class="c"><b>APIキーを作る</b>
+    <ul><li>「＋ 認証情報を作成」→「API キー」</li>
+    <li><b>アプリケーションの制限</b>：「ウェブサイト」を選び、次の値を追加（iOS アプリ・IP アドレスは選ばない）${SITE_PATTERN ? copyLine(SITE_PATTERN) : '<br><span class="hint">（公開したURLで開くと、ここに登録する値が表示されます）</span>'}</li>
+    <li><b>API の制限</b>：「キーを制限」→「YouTube Data API v3」にチェック</li>
+    <li>「サービスアカウント」に関するチェックは<b>オンにしない</b></li>
+    <li>「作成」または「保存」を押す（反映まで最大5分ほど）</li></ul>
+    <a class="btn sm" href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">認証情報の画面を開く ↗</a></div></div>
+  <div class="gstep" style="border:0"><div class="n">4</div><div class="c"><b>キーをコピーして貼り付け</b>
+    <ul><li>表示された「AIza…」で始まるキーをコピー</li><li>この画面を閉じて、キーの欄の「貼り付け」→「確認して保存」</li></ul></div></div>
+  <div class="faq">
+    <details><summary>Google アカウントが2つある場合は？</summary><div>どちらのアカウントで作っても大丈夫です。YouTube にログインしているアカウントとも関係ありません（このアプリは Google へのログインを使いません）。<br><br>注意点は<b>手順1〜3を同じアカウント・同じプロジェクトで行うこと</b>だけです。途中でアカウントが切り替わると「API が有効になっていません」というエラーになります。Google Cloud の画面右上のアイコンと、上部のプロジェクト名をときどき確認してください。</div></details>
+    <details><summary>「確認して保存」でエラーになった</summary><div>エラーの下に原因と直し方が表示されます。多いのは次の4つです。<ul><li><b>作った直後</b>：5分ほど待ってから再度確認</li><li><b>API が有効になっていない</b>：手順2をもう一度（別のプロジェクトで有効にしていることが多い）</li><li><b>ウェブサイトの制限が合っていない</b>：手順3の値をコピーして登録</li><li><b>プレビュー画面やファイルで開いている</b>：公開したURLを Safari 等で直接開く</li></ul></div></details>
+    <details><summary>料金はかかる？</summary><div>かかりません。無料枠は1日10,000ユニットで、このアプリは1回の確認に約3ユニットしか使いません。枠を超えるとその日は止まるだけで、請求は発生しません。</div></details>
+  </div>`;
+  openModal('mGuide');
+}
+
+/* =========================================================
+ * アラーム編集
+ * ========================================================= */
+let editing = null, editChannel = null, chSeq = 0, lastChecked = '', editSaved = false, editIsNew = true, editPlay = 'live', editVideo = null, vSeq = 0, vLast = '';
+function newAlarm() {
+  return { id: 'a' + Date.now().toString(36), enabled: true, label: '', channelInput: '', channelId: '', channelTitle: '', channelThumb: '',
+    mode: 'weekday', time: '06:30', days: ['', '06:30', '06:30', '06:30', '06:30', '06:30', ''], skipHolidays: false, volume: 60, preferLive: true, play: 'live' };
+}
+function renderEditKeyCard() {
+  const box = $('#editKeyCard');
+  if (PUBLIC) { box.innerHTML = ''; return; }
+  box.innerHTML = keyCardHTML('e', true);
+  bindKeyCard('e', () => {
+    setTimeout(() => { box.innerHTML = ''; }, 1200);
+    if ($('#fChannel').value.trim() && !editChannel) checkChannel(true);
+  });
+}
+function openEditor(a, asCopy) {
+  editing = a ? JSON.parse(JSON.stringify(a)) : newAlarm();
+  if (asCopy) { editing.id = 'a' + Date.now().toString(36); editing.enabled = true; }
+  editSaved = false; editIsNew = !a || !!asCopy;
+  track('editor_open', { isNew: editIsNew, copy: !!asCopy, alarms: state.alarms.length });
+  editPlay = editing.play || 'live';
+  editChannel = editing.play !== 'fixed' && editing.channelId ? { id: editing.channelId, title: editing.channelTitle, thumb: editing.channelThumb, latest: editing.lastVideo } : null;
+  editVideo = editing.play === 'fixed' && editing.lastVideo ? editing.lastVideo : null;
+  lastChecked = editChannel ? (editing.channelInput || editing.channelId) : '';
+  vLast = editVideo ? (editing.fixedInput || '') : '';
+  $('#editTitle').textContent = asCopy ? 'アラームを追加（コピー）' : a ? 'アラームを編集' : 'アラームを追加';
+  $('#btnDelete').style.visibility = a && !asCopy ? 'visible' : 'hidden';
+  $('#fChannel').value = editing.play !== 'fixed' ? (editing.channelInput || editing.channelId || '') : '';
+  $('#fVideo').value = editing.play === 'fixed' ? (editing.fixedInput || (editing.fixedVideoId ? watchUrl(editing.fixedVideoId) : '')) : '';
+  fillSchedule(editing);
+  $('#fLabel').value = editing.label || '';
+  $('#volNote').textContent = isIOS ? 'iPhone では YouTube の音量は本体の音量ボタンで調整します。ここの音量はアラーム音に使われます。' : '';
+  renderEditKeyCard();
+  renderChResult();
+  renderVideoResult();
+  $('#chTop').innerHTML = '';
+  renderTop();
+  setPlay(editPlay, true);
+  if (editChannel && (editChannel.latest === undefined || (editChannel.latest && !editChannel.latest.kindUsed)) && hasApi()) loadLatestPreview();
+  closeDupLists(); updateDupButtons(); updateSaveBtn();
+  setMode(editing.mode);
+  openModal('mEdit');
+  $('#mEdit .sheet').scrollTop = 0;
+}
+const PLAY_HINT = {
+  live: '配信中のライブがあればそれを、なければ直近のライブ配信のアーカイブを流します。ライブ配信をしていないチャンネルは最新の動画を流します（配信予定の枠は流しません）。',
+  video: 'ライブ配信・ショートを除いた、いちばん新しい動画を流します。',
+  fixed: '毎回、同じ動画を流します。お気に入りの動画や音楽で起きたい時に。',
+};
+function setPlay(v, initial) {
+  const prev = editPlay; editPlay = v;
+  $$('#fPlay button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  $('#playHint').textContent = PLAY_HINT[v];
+  $('#boxCh').style.display = v === 'fixed' ? 'none' : '';
+  $('#boxVideo').style.display = v === 'fixed' ? '' : 'none';
+  $('#boxPreferLive').style.display = v === 'live' ? '' : 'none';
+  // ライブ⇔動画を切り替えたら、流す動画を確認し直す
+  if (!initial && prev !== v && v !== 'fixed' && editChannel && hasApi()) loadLatestPreview();
+  if (!initial && prev !== v) { renderTop(); closeDupLists(); }
+  updateDupButtons();
+  updateSaveBtn();
+}
+$('#fPlay').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { setPlay(b.dataset.v); track('play_select', { play: b.dataset.v }); } });
+
+/* 決まった動画：リンクを確認 */
+function renderVideoResult(html) {
+  const box = $('#vResult');
+  if (html !== undefined) { box.innerHTML = html; updateSaveBtn(); return; }
+  updateSaveBtn();
+  box.innerHTML = editVideo ? `<div class="okline" style="align-items:flex-start">${editVideo.thumb ? `<img src="${esc(editVideo.thumb)}" alt="" style="width:96px;height:auto;border-radius:6px">` : ''}<div style="flex:1;min-width:0">✅ <b>${esc(editVideo.title)}</b><br><span class="small muted">${esc(editVideo.channelTitle || '')}</span></div></div>` : '';
+}
+async function checkVideo(force) {
+  const val = $('#fVideo').value.trim();
+  if (!val) { editVideo = null; renderVideoResult(); return false; }
+  if (!force && val === vLast && editVideo) return true;
+  if (!hasApi()) { renderVideoResult(errorHTML(mkErr('nokey'), 'video')); renderEditKeyCard(); return false; }
+  const id = parseVideoInput(val);
+  if (!id) { editVideo = null; renderVideoResult(errorHTML(mkErr('badvideo'), 'video')); return false; }
+  const seq = ++vSeq; vLast = val;
+  vBusy = true;
+  renderVideoResult('<div class="hint"><span class="spin"></span>動画を確認しています…</div>');
+  try {
+    const v = await fetchVideo(id).finally(() => { if (seq === vSeq) vBusy = false; });
+    if (seq !== vSeq) return false;
+    if (!v) { editVideo = null; track('channel_error', { kind: 'videogone', type: 'fixed_video' }); renderVideoResult(errorHTML(mkErr('videogone'), 'video')); return false; }
+    editVideo = v;
+    track('channel_ok', { ch: v.channelId, title: v.channelTitle, vid: v.id, vtitle: v.title, type: 'fixed_video' });
+    renderVideoResult(); return true;
+  } catch (e) {
+    if (seq !== vSeq) return false;
+    editVideo = null; vLast = '';
+    renderVideoResult(errorHTML(e, 'video')); return false;
+  }
+}
+let vTimer = null;
+$('#fVideo').addEventListener('input', () => { editVideo = null; clearTimeout(vTimer); vSeq++; vBusy = false; if (!$('#fVideo').value.trim()) { renderVideoResult(''); return; } vTimer = setTimeout(() => checkVideo(), 700); });
+$('#fVideo').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(vTimer); checkVideo(true); } });
+$('#fVideo').addEventListener('paste-done', () => { clearTimeout(vTimer); checkVideo(true); });
+
+/* 時刻・曜日・音量などを画面に反映 */
+function fillSchedule(src) {
+  $('#fTime').value = src.time; $('#fVol').value = src.volume; $('#fVolLabel').textContent = src.volume;
+  $('#fSkipHol').checked = !!src.skipHolidays; $('#fPreferLive').checked = src.preferLive !== false;
+  $('#dayRows').innerHTML = [1,2,3,4,5,6,0].map(i => `<div class="dayrow">
+      <input type="checkbox" data-dayon="${i}" ${src.days[i] ? 'checked' : ''} style="width:20px;height:20px">
+      <span class="d ${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}">${DOW[i]}</span>
+      <input type="time" class="input" data-daytime="${i}" value="${esc(src.days[i] || src.time)}"></div>`).join('');
+  if (editing) { editing.mode = src.mode; setMode(src.mode); }
+}
+
+/* ---------- 追加画面の「複製」：一覧のアラームから設定を写す ---------- */
+function dupCandidates(forFixed) {
+  const list = state.alarms.filter(a => a.id !== (editing && editing.id) && a.channelId && ((a.play === 'fixed') === forFixed));
+  if (forFixed) return list;
+  const same = editPlay === 'video' ? 'video' : 'live';
+  return list.sort((x, y) => ((x.play || 'live') === same ? 0 : 1) - ((y.play || 'live') === same ? 0 : 1));
+}
+function updateDupButtons() {
+  $$('[data-dupopen]').forEach(b => { b.style.display = dupCandidates(b.dataset.dupopen === 'video').length ? '' : 'none'; });
+}
+function closeDupLists() { ['#dupListCh', '#dupListVideo'].forEach(id => { const el = $(id); if (el) { el.style.display = 'none'; el.innerHTML = ''; } }); }
+function schedText(a) {
+  const nx = a.enabled ? nextOccurrence(a) : null;
+  const t = a.mode === 'custom' ? '' : ' ' + a.time;
+  return `${scheduleSummary(a)}${t}${nx ? `（次: ${fmtDate(nx)}）` : a.enabled ? '' : '（オフ）'}`;
+}
+$('#mEdit').addEventListener('click', e => {
+  const o = e.target.closest('[data-dupopen]');
+  if (o) {
+    const forFixed = o.dataset.dupopen === 'video';
+    const box = $(forFixed ? '#dupListVideo' : '#dupListCh');
+    if (box.style.display !== 'none') { closeDupLists(); return; }
+    const list = dupCandidates(forFixed);
+    box.innerHTML = `<div class="hint" style="margin:0">一覧のアラームから選ぶと、${forFixed ? '動画' : 'チャンネル'}・時刻・曜日・音量をコピーします</div>` + list.map(a =>
+      `<button type="button" class="dupitem" data-dupfrom="${a.id}"><b>${esc(a.channelTitle || '')}</b>${forFixed ? `<span class="v">🎬 ${esc(a.lastVideo?.title || a.fixedInput || '')}</span>` : `<span class="s">${esc(PLAY_LABEL[a.play || 'live'])}</span>`}<span class="s">⏰ ${esc(schedText(a))}</span>${a.label ? `<span class="s">📝 ${esc(a.label)}</span>` : ''}</button>`).join('');
+    box.style.display = '';
+    track('dup_open', { n: list.length, fixed: forFixed });
+    return;
+  }
+  const f = e.target.closest('[data-dupfrom]');
+  if (f) {
+    const src = state.alarms.find(x => x.id === f.dataset.dupfrom); if (!src) return;
+    fillSchedule(src);
+    if (src.play === 'fixed') {
+      $('#fVideo').value = src.fixedInput || watchUrl(src.fixedVideoId); vLast = $('#fVideo').value;
+      if (src.lastVideo && src.lastVideo.kindUsed === 'fixed') { editVideo = { ...src.lastVideo }; renderVideoResult(); } else checkVideo(true);
+    } else {
+      $('#fChannel').value = src.channelInput || 'https://www.youtube.com/channel/' + src.channelId; lastChecked = $('#fChannel').value;
+      clearTimeout(chTimer); chSeq++; chBusy = false;
+      pickChannel({ id: src.channelId, title: src.channelTitle, thumb: src.channelThumb || '' });
+    }
+    closeDupLists();
+    track('dup_pick', { ch: src.channelId, fixed: src.play === 'fixed' });
+    toast('設定をコピーしました。時刻などを変えて保存してください', 3500);
+  }
+});
+
+function setMode(m) {
+  editing.mode = m;
+  $$('#fMode button').forEach(b => b.classList.toggle('on', b.dataset.v === m));
+  $('#boxTime').style.display = m === 'custom' ? 'none' : '';
+  $('#boxCustom').style.display = m === 'custom' ? '' : 'none';
+  $('#boxSkipHol').style.display = (m === 'everyday' || m === 'custom') ? '' : 'none';
+}
+function videoLabel(v) {
+  if (v.kindUsed === 'fixed') return '🎬 この動画を流します';
+  if (v.isLive) return '🔴 いま配信中';
+  if (v.kindUsed === 'live') return `直近のライブ配信（${fmtStart(v.start)} 開始）`;
+  return `最新の動画（${fmtStart(v.start)} 公開）`;
+}
+function latestHTML(v) {
+  if (!v) return '';
+  return `${v.fallback ? '<div class="hint">ℹ️ このチャンネルにはライブ配信がありません。このまま保存すると、最新の動画を流します。</div>' : ''}<div class="latest">${v.thumb ? `<img src="${esc(v.thumb)}" alt="">` : ''}<div>${esc(videoLabel(v))}<br><span style="color:var(--text)">${esc(v.title)}</span></div></div>`;
+}
+function renderChResult(html) {
+  const box = $('#chResult');
+  // 候補（おすすめ）をエラー等と一緒に出す時は、入力欄の下の候補は隠して1か所だけにする
+  const syncTop = () => { $('#chTop').style.display = box.querySelector('.toplist') ? 'none' : ''; };
+  if (html !== undefined) { box.innerHTML = html; syncTop(); updateSaveBtn(); return; }
+  if (!editChannel) { box.innerHTML = ''; syncTop(); updateSaveBtn(); return; }
+  box.innerHTML = `<div class="okline">${editChannel.thumb ? `<img src="${esc(editChannel.thumb)}" alt="">` : ''}<div style="flex:1;min-width:0">✅ <b>${esc(editChannel.title)}</b></div></div>
+    <div id="chLatest">${editChannel.loading ? '<div class="hint"><span class="spin"></span>流す動画を確認中…</div>' : editChannel.previewErr ? `<div class="hint">流す動画は保存後に確認します（${esc(editChannel.previewErr)}）</div>` : latestHTML(editChannel.latest)}</div>${editChannel.extra || ''}`;
+  syncTop();
+  updateSaveBtn();
+}
+/* 確認中は「保存」を押せないようにする */
+let chBusy = false, vBusy = false;
+function updateSaveBtn() {
+  const btn = $('#btnSave'); if (!btn) return;
+  const busy = editPlay === 'fixed' ? vBusy : (chBusy || !!(editChannel && editChannel.loading));
+  btn.disabled = busy;
+  btn.textContent = busy ? '確認中…' : '保存';
+}
+async function loadLatestPreview() {
+  const ch = editChannel; if (!ch) return;
+  const play = editPlay;
+  ch.loading = true; ch.previewErr = ''; ch.extra = ''; ch.latest = undefined;
+  if (editChannel === ch) renderChResult();
+  try {
+    ch.latest = await findLatest(ch.id, play, $('#fPreferLive').checked);
+    track('latest_preview', { ch: ch.id, title: ch.title, found: !!ch.latest, live: !!ch.latest?.isLive, vid: ch.latest?.id, play, fallback: !!ch.latest?.fallback });
+  } catch (e) { ch.latest = undefined; ch.previewErr = explain(e).t; }
+  if (editChannel !== ch) return;
+  if (ch.latest === null) {
+    // 流せる動画が1本もないチャンネルはエラーにして、同じ種類で人気のチャンネルを出す
+    const e = mkErr(play === 'video' ? 'noLongVideo' : 'novideo');
+    track('channel_error', { kind: e.kind, ch: ch.id, title: ch.title, play });
+    const rec = await recommendHTML(ch.id, play === 'video' ? 'video' : 'live', play === 'video' ? '最新の動画でよく選ばれているチャンネルはいかがですか？' : 'ライブ配信でよく選ばれているチャンネルはいかがですか？');
+    if (editChannel !== ch) return;
+    ch.loading = false;
+    renderChResult(errorHTML(e, 'channel') + rec);
+    updateSaveBtn();
+    return;
+  }
+  if (ch.latest && ch.latest.fallback) {
+    // ライブ配信がないチャンネル：このまま保存すると最新の動画を流す。ライブ配信の候補も出す
+    ch.extra = await recommendHTML(ch.id, 'live');
+    if (editChannel !== ch) return;
+  }
+  ch.loading = false;
+  renderChResult();
+}
+function pickChannel(c) { editChannel = { ...c, latest: undefined, loading: true }; renderChResult(); loadLatestPreview(); }
+/* よく選ばれているチャンネルをタップ */
+$('#mEdit').addEventListener('click', e => {
+  const b = e.target.closest('[data-top]'); if (!b) return;
+  const c = topIndex[b.dataset.top]; if (!c) return;
+  track('top_pick', { ch: c.id, title: c.title, rank: +b.dataset.rank, pick: c.source === 'pick', kind: editPlay });
+  track('channel_ok', { ch: c.id, title: c.title, type: 'top' });
+  clearTimeout(chTimer); chSeq++;
+  $('#fChannel').value = 'https://www.youtube.com/channel/' + c.id; lastChecked = $('#fChannel').value;
+  pickChannel({ id: c.id, title: c.title, thumb: c.thumb || '' });
+});
+async function checkChannel(force) {
+  const val = $('#fChannel').value.trim();
+  if (!val) { editChannel = null; renderChResult(); return false; }
+  if (!force && val === lastChecked && editChannel) return true;
+  if (!hasApi()) { renderChResult(errorHTML(mkErr('nokey'), 'channel')); renderEditKeyCard(); return false; }
+  const seq = ++chSeq; lastChecked = val;
+  const inType = inputType(val);
+  chBusy = true; updateSaveBtn();
+  track('channel_check', { type: inType });
+  renderChResult('<div class="hint"><span class="spin"></span>チャンネルを確認しています…</div>');
+  try {
+    const r = await resolveChannel(val).finally(() => { if (seq === chSeq) { chBusy = false; updateSaveBtn(); } });
+    if (seq !== chSeq) return false;
+    if (r.channel) { track('channel_ok', { ch: r.channel.id, title: r.channel.title, type: inType }); pickChannel(r.channel); return true; }
+    editChannel = null;
+    track('channel_candidates', { n: r.candidates.length, type: inType });
+    renderChResult(`<div class="hint">該当しそうなチャンネル（タップして選択）</div><div class="cands">${r.candidates.map((c, i) =>
+      `<button type="button" class="cand" data-cand="${i}">${c.thumb ? `<img src="${esc(c.thumb)}" alt="">` : ''}<span>${esc(c.title)}</span></button>`).join('')}</div>`);
+    $$('#chResult [data-cand]').forEach(b => b.addEventListener('click', () => {
+      const c = r.candidates[+b.dataset.cand];
+      track('channel_pick', { ch: c.id, title: c.title, rank: +b.dataset.cand + 1 });
+      track('channel_ok', { ch: c.id, title: c.title, type: 'search' });
+      pickChannel(c);
+    }));
+    return false;
+  } catch (e) {
+    if (seq !== chSeq) return false;
+    editChannel = null; lastChecked = '';
+    track('channel_error', { kind: e.kind || 'other', reason: e.detailReason || e.reason || '', type: inType });
+    const rec = (e.kind === 'notfound' || e.kind === 'badinput') ? await recommendHTML() : '';
+    if (seq !== chSeq) return false;
+    renderChResult(errorHTML(e, 'channel') + rec);
+    // キー側の問題なら、キー入力欄も出してその場で直せるようにする
+    if (e.kind === 'api' && !/quota|RATE_LIMIT/i.test(e.reason + e.detailReason)) { state.keyOK = false; save(); renderEditKeyCard(); }
+    return false;
+  }
+}
+function inputType(v) {
+  const p = parseChannelInput(v);
+  if (!p || p.bad) return 'bad';
+  if (p.video) return 'video_link';
+  if (p.id) return /youtu/i.test(v) ? 'channel_link' : 'channel_id';
+  if (p.handle) return /youtu/i.test(v) ? 'handle_link' : 'handle';
+  if (p.username) return 'user_link';
+  return 'name';
+}
+const looksLikeChannel = s => /youtu|^@|＠|UC[\w-]{22}/i.test(s);
+let chTimer = null;
+$('#fChannel').addEventListener('input', () => {
+  editChannel = null; clearTimeout(chTimer); chSeq++; chBusy = false;
+  const v = $('#fChannel').value.trim();
+  if (!v) { renderChResult(''); return; }
+  // リンクや@ハンドルは入力が止まったら自動で確認（チャンネル名検索はEnter/保存時）
+  if (looksLikeChannel(v)) chTimer = setTimeout(() => checkChannel(), 700);
+  else renderChResult('<div class="hint">チャンネル名で探す場合は Enter（改行）を押してください</div>');
+});
+$('#fChannel').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(chTimer); checkChannel(true); } });
+$('#fChannel').addEventListener('paste-done', () => { clearTimeout(chTimer); checkChannel(true); });
+$('#fMode').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setMode(b.dataset.v); });
+$('#fVol').addEventListener('input', e => $('#fVolLabel').textContent = e.target.value);
+$('#fPreferLive').addEventListener('change', () => { if (editChannel) { editChannel.latest = undefined; renderChResult(); loadLatestPreview(); } });
+$('#btnSave').addEventListener('click', async () => {
+  const btn = $('#btnSave');
+  if (!hasApi()) { renderEditKeyCard(); $('#mEdit .sheet').scrollTo({ top: 0, behavior: 'smooth' }); toast('先にAPIキーを登録してください'); return; }
+  const a = editing;
+  let changed;
+  if (editPlay === 'fixed') {
+    if (!editVideo) {
+      btn.disabled = true; const ok = await checkVideo(true); btn.disabled = false;
+      if (!ok) { $('#fVideo').scrollIntoView({ behavior: 'smooth', block: 'center' }); if (!$('#fVideo').value.trim()) toast('動画のリンクを入力してください'); return; }
+    }
+    changed = a.fixedVideoId !== editVideo.id;
+    a.fixedVideoId = editVideo.id; a.fixedInput = $('#fVideo').value.trim();
+    a.channelId = editVideo.channelId; a.channelTitle = editVideo.channelTitle; a.channelThumb = ''; a.channelInput = '';
+  } else {
+    if (!editChannel) {
+      btn.disabled = true;
+      const ok = await checkChannel(true);
+      btn.disabled = false;
+      if (!ok) { $('#fChannel').scrollIntoView({ behavior: 'smooth', block: 'center' }); if (!$('#fChannel').value.trim()) toast('チャンネルを入力してください'); return; }
+    }
+    if (editChannel.loading) return; // 確認中は保存しない（ボタンも押せない）
+    if (!editChannel || editChannel.latest === null) { $('#fChannel').scrollIntoView({ behavior: 'smooth', block: 'center' }); toast('このチャンネルには公開されている動画がないため設定できません'); return; }
+    a.channelInput = $('#fChannel').value.trim();
+    changed = a.channelId !== editChannel.id || (a.play || 'live') !== editPlay;
+    a.channelId = editChannel.id; a.channelTitle = editChannel.title; a.channelThumb = editChannel.thumb;
+    delete a.fixedVideoId; delete a.fixedInput;
+  }
+  a.play = editPlay;
+  a.time = $('#fTime').value || '06:30';
+  a.volume = +$('#fVol').value; a.skipHolidays = $('#fSkipHol').checked; a.preferLive = $('#fPreferLive').checked;
+  a.label = $('#fLabel').value.trim();
+  a.days = [0,1,2,3,4,5,6].map(i => $(`[data-dayon="${i}"]`).checked ? ($(`[data-daytime="${i}"]`).value || '') : '');
+  if (a.mode === 'custom' && !a.days.some(Boolean)) { toast('鳴らす曜日を1つ以上選んでください'); return; }
+  const pre = editPlay === 'fixed' ? editVideo : editChannel.latest;
+  if (pre) a.lastVideo = { ...pre, checkedAt: Date.now() };
+  else if (changed) delete a.lastVideo;
+  a.savedAt = Date.now();
+  const i = state.alarms.findIndex(x => x.id === a.id);
+  if (i >= 0) state.alarms[i] = a; else state.alarms.push(a);
+  editSaved = true;
+  const firstTime = a.mode === 'custom' ? (a.days.find(Boolean) || a.time) : a.time;
+  track('alarm_save', { isNew: editIsNew, ch: a.channelId, title: a.channelTitle, mode: a.mode, hour: +firstTime.split(':')[0], days: a.mode === 'custom' ? a.days.filter(Boolean).length : undefined, vol: a.volume, skipHol: a.skipHolidays, preferLive: a.preferLive, play: a.play, fallback: a.play === 'live' && !!a.lastVideo?.fallback, vid: a.play === 'fixed' ? a.fixedVideoId : undefined, alarms: state.alarms.length });
+  save(); closeModal('mEdit'); render();
+  const nx = nextOccurrence(a);
+  toast(nx ? `保存しました。次は ${fmtDate(nx)} に鳴ります` : '保存しました');
+  if (!a.lastVideo) resolveVideo(a).then(render).catch(() => {});
+});
+$('#btnDelete').addEventListener('click', () => {
+  if (!editing || !confirm('このアラームを削除しますか？')) return;
+  track('alarm_delete', { ch: editing.channelId });
+  editSaved = true;
+  state.alarms = state.alarms.filter(x => x.id !== editing.id); save(); closeModal('mEdit'); render(); toast('削除しました');
+});
+$('#alarmList').addEventListener('click', async e => {
+  const t = e.target.closest('button'); if (!t) return;
+  const id = t.dataset.edit || t.dataset.check || t.dataset.play || t.dataset.dup;
+  const a = state.alarms.find(x => x.id === id); if (!a) return;
+  if (t.dataset.edit) openEditor(a);
+  if (t.dataset.dup) { track('alarm_copy', { ch: a.channelId }); openEditor(a, true); }
+  if (t.dataset.check) {
+    t.disabled = true; t.innerHTML = '<span class="spin"></span>確認中';
+    try {
+      const v = await resolveVideo(a);
+      track('check_latest', { ch: a.channelId, found: !!v, live: !!v?.isLive });
+      if (v) toast(`${videoLabel(v)}: ${v.title}`, 4500); else showError(mkErr('nolive'));
+    } catch (err) { track('check_latest', { ch: a.channelId, found: false, kind: err.kind }); showError(err); }
+    render();
+  }
+  if (t.dataset.play) { unlockAudio(); fire(a, true); }
+});
+$('#alarmList').addEventListener('change', e => {
+  const id = e.target.dataset.toggle; if (!id) return;
+  const a = state.alarms.find(x => x.id === id); if (!a) return;
+  a.enabled = e.target.checked; a.savedAt = Date.now(); save(); render();
+  track('alarm_toggle', { on: a.enabled, ch: a.channelId });
+  toast(a.enabled ? 'オンにしました' : 'オフにしました', 1500);
+});
+
+/* ---------- 設定 ---------- */
+function openSettings() {
+  track('settings_open');
+  renderUpdateUI(latestVersion && verNum(latestVersion) > verNum(APP_VERSION));
+  if (!PUBLIC) { $('#setKeyCard').innerHTML = keyCardHTML('s', false); bindKeyCard('s'); } else $('#setKeyCard').innerHTML = '';
+  $('#sStats').checked = state.settings.stats !== false;
+  $('#boxSiteUrl').style.display = SITE_PATTERN ? '' : 'none';
+  $('#siteUrlLine').innerHTML = SITE_PATTERN ? copyLine(SITE_PATTERN) : '';
+  $('#sOpenMode').value = state.settings.openMode; $('#sLockMode').checked = state.settings.lockMode; $('#sChime').checked = state.settings.chime;
+  $('#boxOpenMode').style.display = isMobile ? 'none' : '';
+  $('#boxLockMode').style.display = isIOS ? '' : 'none';
+  $('#btnNotif').style.display = ('Notification' in window && Notification.permission !== 'granted') ? '' : 'none';
+  openModal('mSettings');
+}
+$('#btnSettings').addEventListener('click', openSettings);
+$('#btnUpdBar').addEventListener('click', doUpdate);
+$('#btnDoUpdate').addEventListener('click', doUpdate);
+$('#btnUpdLater').addEventListener('click', () => { updDismissed = true; $('#updBar').style.display = 'none'; track('update_later'); });
+$('#btnCheckUpdate').addEventListener('click', () => checkUpdate(true));
+$('#btnSaveSettings').addEventListener('click', () => {
+  const k = cleanKey($('#sKey')?.value);
+  if (k !== state.apiKey) { state.apiKey = k; state.keyOK = false; testKey(k).then(() => { state.keyOK = true; save(); toast('APIキーを確認しました'); }).catch(e => showError(e)); }
+  state.settings.openMode = $('#sOpenMode').value; state.settings.lockMode = $('#sLockMode').checked; state.settings.chime = $('#sChime').checked;
+  track('settings_save', { openMode: state.settings.openMode, lock: state.settings.lockMode, chime: state.settings.chime, stats: $('#sStats').checked });
+  if (PUBLIC && state.settings.stats !== false && !$('#sStats').checked) { track('stats_off'); flushStats(true); }
+  state.settings.stats = $('#sStats').checked;
+  save(); closeModal('mSettings'); render(); toast('保存しました');
+});
+$('#btnNotif').addEventListener('click', async () => { try { const p = await Notification.requestPermission(); toast(p === 'granted' ? '通知を許可しました' : '通知は許可されませんでした'); } catch (e) {} });
+function exportSettings() {
+  track('export', { alarms: state.alarms.length });
+  const data = JSON.stringify({ alarms: state.alarms, settings: state.settings }, null, 2);
+  const url = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+  const a = document.createElement('a'); a.href = url; a.download = `live-alarm-backup-${dkey(new Date())}.json`; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+$('#btnExport').addEventListener('click', exportSettings);
+$('#btnResetExport').addEventListener('click', exportSettings);
+/* すべての設定を削除 */
+$('#btnReset').addEventListener('click', () => { $('#resetCount').textContent = state.alarms.length; openModal('mReset'); });
+$('#btnResetGo').addEventListener('click', () => {
+  track('reset', { alarms: state.alarms.length });
+  flushStats(true);
+  try { stopStandby(); closeRing(); } catch (e) {}
+  try { localStorage.removeItem(STORE_KEY); localStorage.removeItem(UID_KEY); } catch (e) {}
+  try { sessionStorage.clear(); } catch (e) {}
+  location.replace(location.pathname + '?reset=' + Date.now());
+});
+$('#btnImport').addEventListener('click', () => $('#importFile').click());
+/* 復元ファイルの中身を検査（知らない項目・不正な値は捨てる） */
+function sanitizeAlarms(list) {
+  if (!Array.isArray(list)) return [];
+  const T = /^([01]\d|2[0-3]):[0-5]\d$/, str = (v, n) => typeof v === 'string' ? v.slice(0, n) : '';
+  return list.slice(0, 30).map(a => {
+    if (!a || typeof a !== 'object' || !/^UC[\w-]{22}$/.test(a.channelId || '')) return null;
+    const days = Array.isArray(a.days) && a.days.length === 7 ? a.days.map(d => (typeof d === 'string' && T.test(d)) ? d : '') : ['', '06:30', '06:30', '06:30', '06:30', '06:30', ''];
+    return {
+      id: 'a' + Math.random().toString(36).slice(2, 10), enabled: a.enabled !== false, label: str(a.label, 40),
+      channelInput: str(a.channelInput, 200), channelId: a.channelId, channelTitle: str(a.channelTitle, 100), channelThumb: /^https:\/\/[\w.-]+\.(ggpht|googleusercontent|ytimg)\.com\//.test(a.channelThumb || '') ? a.channelThumb : '',
+      mode: ['weekday', 'monfri', 'everyday', 'custom'].includes(a.mode) ? a.mode : 'weekday',
+      time: T.test(a.time || '') ? a.time : '06:30', days, skipHolidays: !!a.skipHolidays,
+      volume: Math.max(0, Math.min(100, Math.round(Number(a.volume) || 60))), preferLive: a.preferLive !== false, savedAt: Date.now(),
+      play: ['live', 'video', 'fixed'].includes(a.play) && (a.play !== 'fixed' || /^[\w-]{11}$/.test(a.fixedVideoId || '')) ? a.play : 'live',
+      fixedVideoId: /^[\w-]{11}$/.test(a.fixedVideoId || '') ? a.fixedVideoId : undefined, fixedInput: str(a.fixedInput, 200),
+    };
+  }).filter(Boolean);
+}
+$('#importFile').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    if (f.size > 200000) throw new Error('too big');
+    const j = JSON.parse(await f.text());
+    const alarms = sanitizeAlarms(j.alarms);
+    if (!alarms.length && !j.settings) throw new Error('empty');
+    if (state.alarms.length && !confirm(`今のアラーム${state.alarms.length}件を、バックアップの${alarms.length}件に置き換えます。よろしいですか？`)) { e.target.value = ''; return; }
+    state.alarms = alarms;
+    const s0 = j.settings || {};
+    if (['auto', 'embed', 'newtab'].includes(s0.openMode)) state.settings.openMode = s0.openMode;
+    ['lockMode', 'chime'].forEach(k => { if (typeof s0[k] === 'boolean') state.settings[k] = s0[k]; });
+    save(); render(); toast(`復元しました（アラーム${alarms.length}件）`); track('import', { alarms: alarms.length });
+  } catch (err) { toast('このファイルは読み込めませんでした（Live目覚ましのバックアップを選んでください）', 4500); }
+  e.target.value = '';
+});
+
+/* ---------- おやすみモード操作 ---------- */
+$('#btnStandby').addEventListener('click', () => {
+  if (!nextOverall()) { toast('先にアラームを作ってください'); openEditor(null); return; }
+  track('sleep_tap', { hour: new Date().getHours() });
+  startStandby();                        // タップ中に開始（音声・画面点灯維持の許可のため）
+});
+
+$('#sbExit').addEventListener('click', stopStandby);
+$('#standby').addEventListener('click', e => {
+  if (e.target.closest('button')) return;
+  setPlaybackSession();
+  if (!wakeLock) requestWake();
+  if (state.settings.lockMode && silentEl.paused) silentEl.play().catch(() => {});
+  updateStandby();
+});
+
+
+/* ---------- 再生画面操作 ---------- */
+$('#rClose').addEventListener('click', () => { testMode = false; closeRing(); });
+$('#rStopChime').addEventListener('click', stopChime);
+$('#rVol').addEventListener('input', e => { $('#rVolLabel').textContent = e.target.value; try { player.setVolume(+e.target.value); } catch (_) {} });
+$('#rOpenYT').addEventListener('click', () => { track('open_youtube', { vid: current?.videoId, ch: current?.alarm?.channelId }); stopChime(); });
+
+/* =========================================================
+ * 使い方ポップアップ（初回自動表示）
+ * ========================================================= */
+const SLIDE_KEY = `<h3>🔑 はじめに APIキー（無料）を1つ作ります</h3>
+<p>YouTube の配信情報を調べるために、Google の無料の「APIキー」が必要です。最初の1回だけ、約5分で終わります。</p>
+<ul><li>このあと表示される「アラームを追加」画面で、そのまま登録できます</li><li>作り方は、どの画面からでも <b>「APIキーの取り方」</b> ボタンで確認できます（今の画面は閉じずに重ねて表示）</li><li>PC で作ってスマホに貼り付けるのが楽です</li></ul>
+<button class="btn sm" data-guide>いま手順を見る</button>`;
+const SLIDES_IOS = [
+`<h3>⏰ Live目覚ましへようこそ</h3>
+<p>決めた時刻に、YouTube の<b>最新のライブ配信</b>・<b>最新の動画</b>・<b>決まった動画</b>のどれかを自動で再生します（配信予定の枠は再生しません）。</p>
+<ul><li>平日（土日祝除く）／月〜金／毎日／曜日ごとの時刻設定</li><li>チャンネル・流す動画・音量をアラームごとに設定</li><li>よく選ばれているチャンネルからワンタップで選べます</li><li>マナーモード（消音スイッチ）でも音が出ます</li></ul>`,
+`<h3>📱 iPhone は Safari 専用です</h3>
+<p>このアプリは <b>Safari</b> でのみ動きます（Chrome や LINE などのアプリ内ブラウザでは使えません）。</p>
+<h3 style="margin-top:14px">🏠 ホーム画面に追加してください</h3>
+<ol>
+<li>Safari でこのページを開く</li>
+<li>画面下の <span class="kbd">共有</span>ボタン（□に↑のアイコン）をタップ<br><span class="small muted">※ iOS 26 以降でボタンが見当たらない場合は <span class="kbd">…</span> → <span class="kbd">共有</span></span></li>
+<li>メニューを下にスクロールして <span class="kbd">ホーム画面に追加</span> をタップ</li>
+<li>「Webアプリとして開く」がオンになっていることを確認して <span class="kbd">追加</span></li>
+<li>以後は<b>ホーム画面の「Live目覚まし」アイコン</b>から起動</li>
+</ol>
+<div class="note">ホーム画面から開くと全画面になり、アプリのように使えます。設定はアイコンから開いた方に保存されます（Safari のタブとは別扱い）。</div>`,
+`<h3>🌙 寝る前にすること</h3>
+<ol>
+<li>iPhone を<b>充電器につなぐ</b></li>
+<li>アプリの <b>「画面を暗くする（🌙寝る前にタップ）」</b>を押す</li>
+<li>そのまま<b>画面を点けたまま</b>置いておく（画面は暗い時計表示になり、自動ロックされません）</li>
+</ol>
+<div class="note">音量は iPhone 本体の音量ボタンで調整します。マナーモードのスイッチがオンでも音は鳴りますが、<b>本体の音量が0だと鳴りません</b>。</div>`,
+`<h3>🔒 画面ロック中について</h3>
+<p>YouTube の規約と iPhone の仕様により、<b>画面ロック中に YouTube の映像・音声を流すことはできません</b>。</p>
+<p>代わりに ⚙設定の <b>「ロック中モード（実験的）」</b>をオンにすると：</p>
+<ul><li>時刻になると<b>アラーム音</b>を鳴らします</li><li>ロックを解除すると YouTube の配信が始まります</li><li>イヤホンやロック画面の一時停止ボタンでアラーム音を止められます</li></ul>
+<div class="note warn">iOS のバージョンによって動かないことがあります。</div>`,
+SLIDE_KEY,
+];
+const SLIDES_PC = [
+SLIDES_IOS[0],
+`<h3>💻 PCでの使い方</h3>
+<ol>
+<li>このページを<b>開いたまま</b>にしておきます（他のタブを見ていてもOK）</li>
+<li>PC がスリープしないよう、OS の電源設定を確認してください</li>
+<li>時刻になると、このタブを見ていればページ内で再生（音量設定が効きます）。別のタブを見ている時は YouTube を新しいタブで開きます</li>
+<li>新しいタブで開くには、このサイトの<b>ポップアップを許可</b>してください</li>
+</ol>
+<div class="note">スマホ（iPhone）で使う場合は Safari でこのページを開き、共有 → 「ホーム画面に追加」してください。</div>`,
+SLIDE_KEY,
+];
+const SLIDE_CONSENT = `<h3>✅ はじめる前に</h3>
+<p>このサービスは <b>YouTube API サービス</b>を利用しています。ご利用いただくことで <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">YouTube 利用規約</a> に同意したものとみなされます。</p>
+<ul><li>アラームの設定は、この端末の中だけに保存されます（アカウント登録は不要です）</li>
+<li>サービス改善のため、<b>匿名の利用統計</b>（画面の操作・選んだチャンネル・エラーなど）を送信します。名前やメールアドレスは送りません。⚙設定でいつでもオフにできます</li></ul>
+<p class="small"><a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a> ／ <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google プライバシーポリシー</a></p>`;
+if (PUBLIC) { SLIDES_IOS[SLIDES_IOS.length - 1] = SLIDE_CONSENT; SLIDES_PC[SLIDES_PC.length - 1] = SLIDE_CONSENT; }
+let slideIdx = 0, introFinished = false; const SLIDES = isIOS ? SLIDES_IOS : SLIDES_PC;
+function openIntro(i = 0) {
+  slideIdx = i; introFinished = false;
+  $('#slides').innerHTML = SLIDES.map((s, k) => `<div class="slide ${k === i ? 'on' : ''}">${s}</div>`).join('');
+  drawIntro(); openModal('mIntro');
+}
+function drawIntro() {
+  $$('#slides .slide').forEach((s, k) => s.classList.toggle('on', k === slideIdx));
+  $('#dots').innerHTML = SLIDES.map((_, k) => `<i class="${k === slideIdx ? 'on' : ''}"></i>`).join('');
+  $('#introPrev').style.visibility = slideIdx ? 'visible' : 'hidden';
+  const last = slideIdx === SLIDES.length - 1;
+  $('#introNext').textContent = last ? (PUBLIC && !state.settings.consentAt ? '同意してはじめる' : state.alarms.length ? '閉じる' : 'アラームを作る') : '次へ';
+  track('intro_view', { i: slideIdx, total: SLIDES.length });
+}
+$('#introPrev').addEventListener('click', () => { slideIdx = Math.max(0, slideIdx - 1); drawIntro(); });
+$('#introNext').addEventListener('click', () => {
+  if (slideIdx < SLIDES.length - 1) { slideIdx++; drawIntro(); return; }
+  introFinished = true;
+  if (!state.settings.introSeen || (PUBLIC && !state.settings.consentAt)) track('intro_done', { consent: PUBLIC });
+  if (PUBLIC && !state.settings.consentAt) state.settings.consentAt = Date.now();
+  closeModal('mIntro'); state.settings.introSeen = true; save();
+  if (!state.alarms.length) openEditor(null);
+});
+$('#btnHelp').addEventListener('click', () => openIntro(0));
+$('#btnAdd').addEventListener('click', () => openEditor(null));
+
+/* =========================================================
+ * 起動
+ * ========================================================= */
+function showEnvBanner() {
+  const b = $('#envBanner');
+  const msg = ENV === 'file' ? '⚠️ ファイルを直接開いているため、ページ内で YouTube を再生できません（エラー153の原因）。'+(isMobile?'公開したURL（https://…）で開いてください。':'同じフォルダの<b>「Macで起動.command」</b>（Windows は「Windowsで起動.bat」）をダブルクリックして開き直してください。今の設定は ⚙設定 →「設定を書き出し」で移せます。')
+    : ENV === 'frame' ? '⚠️ プレビュー画面の中では正しく動きません。このページを Safari（PCならChrome等）で<b>直接</b>開いてください。'
+    : ENV === 'insecure' ? '⚠️ https ではないため、一部の機能（画面の点灯維持など）が使えません。'
+    : !storageOK ? '⚠️ このブラウザでは設定を保存できません（プライベートブラウズを解除してください）。' : '';
+  if (msg) { b.innerHTML = msg; b.style.display = 'block'; track('env_problem', { env: ENV || 'nostorage' }); }
+  if (IS_TEST) {
+    const t = document.createElement('div');
+    t.className = 'note'; t.style.cssText = 'background:#2a1f05;border-color:#8a6a10;color:#ffd666;font-weight:700';
+    t.innerHTML = `🧪 テスト環境です（サーバー：${CFG.testBackendUrl ? 'テスト用' : '本番と同じ'}）。アラームの設定は本番とは別に保存され、統計にも記録されません。`;
+    b.parentNode.insertBefore(t, b);
+    document.title = '【テスト】' + document.title;
+  }
+}
+/* =========================================================
+ * 新しいバージョンの確認（ホーム画面アプリは古い画面が残りやすいため）
+ *  - 公開中の index.html を取りに行き、APP_VERSION が新しければ案内を出す
+ * ========================================================= */
+let latestVersion = null, updDismissed = false;
+const verNum = v => String(v || '0').split('.').map(x => parseInt(x, 10) || 0).reduce((a, x) => a * 1000 + x, 0);
+async function checkUpdate(manual) {
+  if (ENV === 'file' || ENV === 'frame') return;
+  try {
+    const r = await fetch(location.pathname + '?vcheck=' + Date.now(), { cache: 'no-store' });
+    const m = (await r.text()).match(/const APP_VERSION = '([\d.]+)'/);
+    if (!m) return;
+    latestVersion = m[1];
+    const newer = verNum(latestVersion) > verNum(APP_VERSION);
+    renderUpdateUI(newer);
+    if (manual) toast(newer ? `新しいバージョン ${latestVersion} があります` : 'いまのバージョンが最新です');
+    if (newer) track('update_available', { from: APP_VERSION, to: latestVersion });
+  } catch (e) { if (manual) toast('確認できませんでした。通信状態を確認してください'); }
+}
+function renderUpdateUI(newer) {
+  const bar = $('#updBar');
+  $('#verNow').textContent = APP_VERSION;
+  $('#btnDoUpdate').disabled = !newer;
+  $('#btnDoUpdate').textContent = newer ? `最新版（${latestVersion}）に更新する` : '最新版です';
+  bar.style.display = newer && !updDismissed && !standbyOn ? '' : 'none';
+  if (newer) $('#updVer').textContent = latestVersion;
+  $('#updHint').textContent = isMobile ? '更新されない時は、アプリを一度閉じて（画面の下から上にスワイプして終了）、開き直してください。' : '更新されない時は、キーボードで ⌘ + Shift + R（Windows は Ctrl + F5）を押して再読み込みしてください。';
+}
+function doUpdate() {
+  track('update_click', { from: APP_VERSION, to: latestVersion || '' });
+  flushStats(true);
+  // キャッシュを使わずに最新の画面を読み込み直す
+  setTimeout(() => location.replace(location.pathname + '?v=' + encodeURIComponent(latestVersion || Date.now())), 150);
+}
+
+function boot() {
+  track('app_open', { first: firstVisit, env: ENV || '', alarms: state.alarms.length, ref: document.referrer ? new URL(document.referrer).hostname : '', reset: /[?&]reset=/.test(location.search) });
+  if (/[?&]reset=/.test(location.search)) { history.replaceState(null, '', location.pathname); setTimeout(() => toast('すべての設定を削除しました'), 300); }
+  if (isMobile && !isIOSSafari) {
+    track('env_blocked', { os: isIOS ? 'ios' : isAndroid ? 'android' : 'other' });
+    $('#blockMsg').innerHTML = isIOS
+      ? 'スマホ版は <b>Safari 専用</b>です。<br>URLをコピーして Safari に貼り付けて開き、共有ボタンから「ホーム画面に追加」してください。'
+      : 'スマホ版は <b>iPhone の Safari 専用</b>です。PC のブラウザでご利用ください。';
+    $('#block').classList.add('open');
+    $('#btnCopyUrl').addEventListener('click', () => copyText(location.href));
+    return;
+  }
+  showEnvBanner();
+  render();
+  refreshHolidays();
+  startTicker();
+  loadYTApi();
+  if (!state.settings.introSeen || (PUBLIC && !state.settings.consentAt)) openIntro(0);
+  else if (isIOS && !isStandalone) toast('ホーム画面に追加して使うのがおすすめです（？ボタン参照）', 5000);
+  setInterval(render, 60 * 1000);
+  // 起動時・画面に戻った時・1時間ごとに新しいバージョンを確認
+  setTimeout(checkUpdate, 3000);
+  setInterval(() => { if (!standbyOn) checkUpdate(); }, 60 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !standbyOn) checkUpdate(); });
+  if (/[?&]v=/.test(location.search)) { history.replaceState(null, '', location.pathname); setTimeout(() => toast(`バージョン ${APP_VERSION} に更新しました`), 400); }
+}
+boot();
+</script>
+</body>
+</html>
