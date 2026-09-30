@@ -145,6 +145,20 @@ html:not(.public) .pubonly{display:none!important}
 #mReset{z-index:90}
 .btn.dangerfill{background:#d93838;border-color:#d93838;color:#fff;font-weight:700}
 .foot a{color:#7c8594}
+.sleepbtn{flex-direction:column;gap:2px;padding:16px 12px;border-radius:16px}
+.sleepbtn .t1{font-size:21px;font-weight:800;letter-spacing:.02em}
+.sleepbtn .t2{font-size:13px;font-weight:600;opacity:.8}
+.sleepbtn.night{background:linear-gradient(135deg,#ffb37a,#ff8a3d);box-shadow:0 0 0 0 rgba(255,138,61,.6);animation:glow 2.6s ease-in-out infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(255,138,61,.45)}50%{box-shadow:0 0 0 10px rgba(255,138,61,0)}}
+@media (prefers-reduced-motion:reduce){.sleepbtn.night{animation:none}}
+.nightmsg{display:none;font-size:13px;color:var(--accent2);margin:-6px 0 10px}
+.nightmsg.on{display:block}
+.checklist{list-style:none;padding:0;margin:8px 0 12px}
+.checklist li{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}
+.checklist li .ic{font-size:20px;width:26px;text-align:center;flex:none}
+.checklist li small{display:block;color:var(--muted);font-size:12.5px}
+.testrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+
 /* standby */
 #standby{position:fixed;inset:0;background:#000;z-index:40;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
 #standby.open{display:flex}
@@ -189,7 +203,8 @@ html:not(.public) .pubonly{display:none!important}
     <div class="label">次のアラーム</div>
     <div class="next" id="nextTime">—</div>
     <div class="sub" id="nextSub">アラームが設定されていません</div>
-    <button class="btn primary block" id="btnStandby">🌙 おやすみモードを開始</button>
+    <div class="nightmsg" id="nightMsg">そろそろおやすみの時間です。寝る前にこのボタンを押してください</div>
+    <button class="btn primary block sleepbtn" id="btnStandby"><span class="t1">🌙 寝る前にタップ</span><span class="t2" id="sleepBtnSub">アラームの待機を始めます</span></button>
     <div class="small muted" style="margin-top:8px" id="standbyHint"></div>
   </section>
 
@@ -279,7 +294,7 @@ html:not(.public) .pubonly{display:none!important}
   </div>
   <div class="field" id="boxLockMode">
     <label class="chbox"><input type="checkbox" id="sLockMode"> ロック中モード（実験的）</label>
-    <div class="hint">おやすみモード中に無音を流し続け、画面ロック中でも時刻になったら<b>アラーム音</b>を鳴らします。ロックを解除すると YouTube の配信が始まります。電池消費が増えます。「2分後にテスト」で必ず確認してください。</div>
+    <div class="hint">待機画面の間は無音を流し続け、画面ロック中でも時刻になったら<b>アラーム音</b>を鳴らします。ロックを解除すると YouTube の配信が始まります。電池消費が増えます。「2分後にテスト」で必ず確認してください。</div>
   </div>
   <label class="chbox"><input type="checkbox" id="sChime" checked> YouTube が再生できない時はアラーム音で代わりに鳴らす</label>
   <div class="field pubonly" style="margin-top:8px">
@@ -320,6 +335,22 @@ html:not(.public) .pubonly{display:none!important}
 <div class="modal" id="mError"><div class="sheet hasfoot">
   <div id="errorBody"></div>
   <div class="footbar"><span class="spacer"></span><button class="btn primary" data-close>閉じる</button></div>
+</div></div>
+
+<!-- 寝る前の準備 -->
+<div class="modal" id="mSleep"><div class="sheet hasfoot">
+  <h2>🌙 寝る前の準備</h2>
+  <div class="okline" id="sleepNext" style="margin-top:0"></div>
+  <ul class="checklist" id="sleepChecklist"></ul>
+  <div class="note">
+    <b>音のテスト</b>（はじめての時・心配な時だけ）
+    <div class="testrow"><button class="btn sm" id="btnSoundTest">🔈 音のテストをする</button><span class="small muted" id="soundTestState">YouTube が数秒流れて止まります</span></div>
+  </div>
+  <div class="footbar">
+    <button class="btn" data-close>やめる</button>
+    <span class="spacer"></span>
+    <button class="btn primary" id="btnSleepGo" style="padding:12px 22px;font-size:17px">おやすみ（待機開始）</button>
+  </div>
 </div></div>
 
 <!-- 全削除の確認 -->
@@ -1155,7 +1186,6 @@ async function startStandby() {
   standbyAt = Date.now();
   track('standby_start', { lock: !!state.settings.lockMode, wake: !!wakeLock, alarms: state.alarms.filter(a => a.enabled).length });
   ensurePlayer();
-  if (isIOS && !sessGet('ytPrimed')) primePlayer();
 }
 function stopStandby() {
   if (standbyOn) track('standby_end', { min: Math.round((Date.now() - standbyAt) / 60000) });
@@ -1186,11 +1216,11 @@ async function primePlayer() {
   if (!a) return;
   let v = a.lastVideo;
   if (!v) { try { v = await withTimeout(resolveVideo(a), 10000); } catch (e) {} }
-  if (!v) return;
+  if (!v) { toast('テストできる配信が見つかりませんでした'); return; }
   testMode = true; current = { videoId: v.id, volume: a.volume, alarm: a };
   showRing(a, v, '再生テスト');
   track('prime_shown', { ch: a.channelId });
-  setRingMsg('iPhone では最初に1回、プレーヤーの ▶ をタップして音が出るか確認してください（3秒で自動停止）。これで時刻になった時に自動再生されやすくなります。');
+  setRingMsg('プレーヤーの ▶ をタップして、音が出るか確認してください（3秒で自動で止まり、元の画面に戻ります）。' + (isIOS ? 'iPhone では、これで朝の自動再生がうまくいきやすくなります。' : ''));
   const p = await ensurePlayer();
   try { p.cueVideoById(v.id); } catch (e) {}
   sessSet('ytPrimed', '1');
@@ -1230,8 +1260,12 @@ function render() {
   $('#nextTime').textContent = nx ? fmtDate(nx.at) : '—';
   $('#nextSub').textContent = nx ? `${nx.alarm.channelTitle || ''}${nx.alarm.label ? ' ・ ' + nx.alarm.label : ''}` : 'アラームが設定されていません';
   $('#standbyHint').textContent = isIOS
-    ? '寝る前にタップ。充電しながら画面を点けたまま待機します（画面は暗くなります）。'
-    : 'このタブを開いたままにしておけば、おやすみモードでなくても鳴ります。';
+    ? 'iPhone は、寝る前にこのボタンを押さないとアラームが鳴りません。押したら充電しながら画面をそのままにしてください（画面は暗くなります）。'
+    : 'PC はこのタブを開いたままにしておけば鳴ります。ボタンを押すと、画面が消えないよう時計表示で待機します。';
+  const hr = new Date().getHours(), night = !!nx && (hr >= 20 || hr < 4);
+  $('#btnStandby').classList.toggle('night', night);
+  $('#nightMsg').classList.toggle('on', night && isIOS);
+  $('#sleepBtnSub').textContent = nx ? `${fmtDate(nx.at)} に鳴らす準備をします` : 'アラームの待機を始めます';
   updateStandby();
 }
 
@@ -1551,7 +1585,28 @@ $('#importFile').addEventListener('change', async e => {
 });
 
 /* ---------- おやすみモード操作 ---------- */
-$('#btnStandby').addEventListener('click', startStandby);
+$('#btnStandby').addEventListener('click', openSleepSheet);
+function openSleepSheet() {
+  const nx = nextOverall();
+  if (!nx) { toast('先にアラームを作ってください'); openEditor(null); return; }
+  unlockAudio(); // タップ中に音声を使えるようにしておく
+  $('#sleepNext').innerHTML = `⏰ <div><b>${esc(fmtDate(nx.at))}</b> に<br>「${esc(nx.alarm.channelTitle || '')}」の最新の配信を流します</div>`;
+  const items = isIOS ? [
+    ['🔌', '充電器につなぐ', '朝まで画面を点けたままにするため'],
+    ['🔊', '本体の音量を上げておく', 'マナーモード（消音スイッチ）がオンでも鳴ります。音量が0だと鳴りません'],
+    ['📱', 'このあと画面はそのまま置いておく', '自動で暗い時計の表示になります。ホームに戻ったりロックしたりしないでください'],
+  ] : [
+    ['🗂', 'このタブを閉じない', '別のタブや他のアプリを使っていても大丈夫です'],
+    ['💤', 'PC がスリープしない設定にしておく', 'スリープ中は鳴りません'],
+    ['🔊', 'PC の音量を確認', ''],
+  ];
+  $('#sleepChecklist').innerHTML = items.map(([ic, t, s]) => `<li><span class="ic">${ic}</span><div>${esc(t)}${s ? `<small>${esc(s)}</small>` : ''}</div></li>`).join('');
+  $('#soundTestState').textContent = sessGet('ytPrimed') ? '✓ テスト済み' : 'YouTube が数秒流れて止まります';
+  track('sleep_sheet_open', { hour: new Date().getHours() });
+  openModal('mSleep');
+}
+$('#btnSoundTest').addEventListener('click', () => { unlockAudio(); track('sound_test'); primePlayer(); });
+$('#btnSleepGo').addEventListener('click', () => { closeModal('mSleep'); startStandby(); });
 $('#sbExit').addEventListener('click', stopStandby);
 $('#standby').addEventListener('click', e => {
   if (e.target.closest('button')) return;
@@ -1601,8 +1656,8 @@ const SLIDES_IOS = [
 `<h3>🌙 寝る前にすること</h3>
 <ol>
 <li>iPhone を<b>充電器につなぐ</b></li>
-<li>アプリの <b>「おやすみモードを開始」</b>をタップ</li>
-<li>初回は再生テストが出るので、プレーヤーの ▶ をタップして音を確認</li>
+<li>アプリの <b>「🌙 寝る前にタップ」</b>を押す</li>
+<li>はじめての時は、準備画面の「🔈 音のテスト」で音を確認</li>
 <li>そのまま<b>画面を点けたまま</b>置いておく（画面は暗い時計表示になり、自動ロックされません）</li>
 </ol>
 <div class="note">音量は iPhone 本体の音量ボタンで調整します。マナーモードのスイッチがオンでも音は鳴りますが、<b>本体の音量が0だと鳴りません</b>。</div>`,
@@ -1610,7 +1665,7 @@ const SLIDES_IOS = [
 <p>YouTube の規約と iPhone の仕様により、<b>画面ロック中に YouTube の映像・音声を流すことはできません</b>。</p>
 <p>代わりに ⚙設定の <b>「ロック中モード（実験的）」</b>をオンにすると：</p>
 <ul><li>時刻になると<b>アラーム音</b>を鳴らします</li><li>ロックを解除すると YouTube の配信が始まります</li><li>イヤホンやロック画面の一時停止ボタンでアラーム音を止められます</li></ul>
-<div class="note warn">iOS のバージョンによって動かないことがあります。おやすみモードの「2分後にテスト」で必ず確認してください。</div>`,
+<div class="note warn">iOS のバージョンによって動かないことがあります。待機画面（🌙 寝る前にタップ）の「2分後にテスト」で必ず確認してください。</div>`,
 SLIDE_KEY,
 ];
 const SLIDES_PC = [
