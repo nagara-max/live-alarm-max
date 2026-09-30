@@ -237,7 +237,7 @@ html:not(.public) .pubonly{display:none!important}
       <button class="btn primary sm" id="btnUpdBar">今すぐ更新</button>
       <button class="btn ghost sm" id="btnUpdLater">あとで</button>
     </div>
-    <div class="hint">更新されない時は、アプリを一度閉じて（画面の下から上にスワイプして終了）、開き直してください。</div>
+    <div class="hint" id="updHint">更新されない時は、アプリを一度閉じて（画面の下から上にスワイプして終了）、開き直してください。</div>
   </div>
 
   <section class="card hero">
@@ -463,7 +463,7 @@ html:not(.public) .pubonly{display:none!important}
 <div id="toast"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 
-<script src="config.js?v=1.5.2"></script>
+<script src="config.js?v=1.5.4"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -486,7 +486,7 @@ const MODE_LABEL = { weekday:'平日（土日祝除く）', monfri:'月〜金', 
 const CFG = window.LIVE_ALARM_CONFIG || {};
 const BACKEND = /^https:\/\//.test(String(CFG.backendUrl || '').trim()) ? String(CFG.backendUrl).trim() : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.5.2'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.5.4'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -1230,7 +1230,9 @@ async function fire(a, isTest = false) {
   track(isTest ? 'test_fire' : 'alarm_fire', { ch: a.channelId, title: a.channelTitle, mode: a.mode, play: a.play || 'live', standby: standbyOn, visible: document.visibilityState === 'visible' });
   showRing(a, null, isTest ? 'テスト再生' : 'アラーム');
   setRingMsg('流す動画を確認しています…');
-  try { video = await withTimeout(resolveVideo(a), 12000); }
+  // 数分前に先読みした結果があれば、それを使って YouTube API を使わない（決まった動画・テスト再生は確認し直す）
+  const fresh = !isTest && a.play !== 'fixed' && a.lastVideo && Date.now() - (a.lastVideo.checkedAt || 0) < 6 * 60 * 1000;
+  try { video = fresh ? a.lastVideo : await withTimeout(resolveVideo(a), 12000); }
   catch (e) { errKind = e.kind || 'timeout'; video = a.lastVideo || null; fromCache = !!video; if (!video) setRingMsg('配信を取得できませんでした：' + (e.kind ? explain(e).t : e.message), 'warn'); }
   if (!video) {
     track('video_none', { ch: a.channelId, kind: errKind || 'nolive', test: isTest });
@@ -1302,7 +1304,9 @@ function closeRing() {
  * タイマー（1秒ごと）
  * ========================================================= */
 const GRACE = 10 * 60 * 1000;
-const PREFETCH = 3 * 60 * 1000;
+const PREFETCH = 5 * 60 * 1000;
+// 先読みのタイミングを端末ごとに 2〜5 分前でばらけさせる（同じ時刻に問い合わせが集中しないように）
+const PREFETCH_AT = 2 * 60 * 1000 + Math.floor(Math.random() * 3 * 60 * 1000);
 const prefetched = new Set();
 let testAlarm = null, lastTick = 0;
 function tick(force) {
@@ -1315,7 +1319,7 @@ function tick(force) {
       const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + off);
       const o = occurrence(a, day); if (!o) continue;
       const diff = now - o, k = a.id + '@' + o.getTime();
-      if (diff >= -PREFETCH && diff < 0 && !prefetched.has(k)) { prefetched.add(k); resolveVideo(a).catch(() => {}); }
+      if (diff >= -PREFETCH && diff >= -PREFETCH_AT && diff < 0 && !prefetched.has(k)) { prefetched.add(k); resolveVideo(a).catch(() => {}); }
       if (diff >= 0 && diff < GRACE && o.getTime() > (a.savedAt || 0) && state.lastFired[a.id] !== o.getTime()) {
         state.lastFired[a.id] = o.getTime(); save(); fire(a);
       }
@@ -2090,6 +2094,7 @@ function renderUpdateUI(newer) {
   $('#btnDoUpdate').textContent = newer ? `最新版（${latestVersion}）に更新する` : '最新版です';
   bar.style.display = newer && !updDismissed && !standbyOn ? '' : 'none';
   if (newer) $('#updVer').textContent = latestVersion;
+  $('#updHint').textContent = isMobile ? '更新されない時は、アプリを一度閉じて（画面の下から上にスワイプして終了）、開き直してください。' : '更新されない時は、キーボードで ⌘ + Shift + R（Windows は Ctrl + F5）を押して再読み込みしてください。';
 }
 function doUpdate() {
   track('update_click', { from: APP_VERSION, to: latestVersion || '' });
