@@ -287,13 +287,16 @@ html:not(.public) .pubonly{display:none!important}
     <div class="hint">送るのは操作の流れ・選んだチャンネル・エラーなどです。名前・メールアドレスなどの個人情報は送りません。<a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a></div>
   </div>
   <div class="field" style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px">
-    <span class="flabel">データの管理</span>
-    <div class="row wrapok">
-      <button class="btn sm" id="btnExport">設定を書き出し</button>
-      <button class="btn sm" id="btnImport">書き出したファイルを読み込み</button>
-    </div>
-    <button class="btn danger sm" id="btnReset" style="margin-top:10px">すべての設定を削除する…</button>
-    <div class="hint">アラーム・<span class="keyonly">APIキー・</span>設定をこの端末から消して、最初の状態に戻します。</div>
+    <details class="more">
+      <summary>バックアップ・リセット（機種変更の時など）</summary>
+      <div class="hint" style="margin:0 0 8px">ふだんは使う必要はありません。機種変更やブラウザを変える時に、アラームの設定を引っ越すためのものです。</div>
+      <div class="row wrapok">
+        <button class="btn sm" id="btnExport">バックアップを保存</button>
+        <button class="btn sm" id="btnImport">バックアップから復元</button>
+      </div>
+      <button class="btn danger sm" id="btnReset" style="margin-top:12px">すべての設定を削除する…</button>
+      <div class="hint">アラーム・<span class="keyonly">APIキー・</span>設定をこの端末から消して、最初の状態に戻します。</div>
+    </details>
   </div>
   <div class="footbar">
     <span class="spacer"></span>
@@ -1498,7 +1501,7 @@ function exportSettings() {
   track('export', { alarms: state.alarms.length });
   const data = JSON.stringify({ alarms: state.alarms, settings: state.settings }, null, 2);
   const url = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
-  const a = document.createElement('a'); a.href = url; a.download = 'live-alarm-settings.json'; a.click();
+  const a = document.createElement('a'); a.href = url; a.download = `live-alarm-backup-${dkey(new Date())}.json`; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 $('#btnExport').addEventListener('click', exportSettings);
@@ -1514,10 +1517,36 @@ $('#btnResetGo').addEventListener('click', () => {
   location.replace(location.pathname + '?reset=' + Date.now());
 });
 $('#btnImport').addEventListener('click', () => $('#importFile').click());
+/* 復元ファイルの中身を検査（知らない項目・不正な値は捨てる） */
+function sanitizeAlarms(list) {
+  if (!Array.isArray(list)) return [];
+  const T = /^([01]\d|2[0-3]):[0-5]\d$/, str = (v, n) => typeof v === 'string' ? v.slice(0, n) : '';
+  return list.slice(0, 30).map(a => {
+    if (!a || typeof a !== 'object' || !/^UC[\w-]{22}$/.test(a.channelId || '')) return null;
+    const days = Array.isArray(a.days) && a.days.length === 7 ? a.days.map(d => (typeof d === 'string' && T.test(d)) ? d : '') : ['', '06:30', '06:30', '06:30', '06:30', '06:30', ''];
+    return {
+      id: 'a' + Math.random().toString(36).slice(2, 10), enabled: a.enabled !== false, label: str(a.label, 40),
+      channelInput: str(a.channelInput, 200), channelId: a.channelId, channelTitle: str(a.channelTitle, 100), channelThumb: /^https:\/\/[\w.-]+\.(ggpht|googleusercontent|ytimg)\.com\//.test(a.channelThumb || '') ? a.channelThumb : '',
+      mode: ['weekday', 'monfri', 'everyday', 'custom'].includes(a.mode) ? a.mode : 'weekday',
+      time: T.test(a.time || '') ? a.time : '06:30', days, skipHolidays: !!a.skipHolidays,
+      volume: Math.max(0, Math.min(100, Math.round(Number(a.volume) || 60))), preferLive: a.preferLive !== false, savedAt: Date.now(),
+    };
+  }).filter(Boolean);
+}
 $('#importFile').addEventListener('change', async e => {
   const f = e.target.files[0]; if (!f) return;
-  try { const j = JSON.parse(await f.text()); if (Array.isArray(j.alarms)) state.alarms = j.alarms; if (j.settings) state.settings = { ...state.settings, ...j.settings }; save(); render(); toast('読み込みました'); track('import', { alarms: state.alarms.length }); }
-  catch (err) { toast('読み込めませんでした'); }
+  try {
+    if (f.size > 200000) throw new Error('too big');
+    const j = JSON.parse(await f.text());
+    const alarms = sanitizeAlarms(j.alarms);
+    if (!alarms.length && !j.settings) throw new Error('empty');
+    if (state.alarms.length && !confirm(`今のアラーム${state.alarms.length}件を、バックアップの${alarms.length}件に置き換えます。よろしいですか？`)) { e.target.value = ''; return; }
+    state.alarms = alarms;
+    const s0 = j.settings || {};
+    if (['auto', 'embed', 'newtab'].includes(s0.openMode)) state.settings.openMode = s0.openMode;
+    ['lockMode', 'chime'].forEach(k => { if (typeof s0[k] === 'boolean') state.settings[k] = s0[k]; });
+    save(); render(); toast(`復元しました（アラーム${alarms.length}件）`); track('import', { alarms: alarms.length });
+  } catch (err) { toast('このファイルは読み込めませんでした（Live目覚ましのバックアップを選んでください）', 4500); }
   e.target.value = '';
 });
 
