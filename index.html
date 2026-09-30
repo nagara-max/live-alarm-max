@@ -156,10 +156,13 @@ html:not(.public) .pubonly{display:none!important}
 .sleepsheet{text-align:center;padding-top:28px}
 .sleepmsg{font-size:17px;margin:0 0 22px;line-height:1.7}
 #btnSleepGo{padding:16px;font-size:19px;border-radius:14px}
-.sleeptest{display:block;margin:14px auto 0;font-size:12px;color:#6b7280;text-decoration:none;opacity:.7}
-#mSleep.fading{opacity:0;transition:opacity .6s ease}
-#standby{opacity:0;transition:opacity 1.4s ease}
+.btn.link.sleeptest{display:block;margin:14px auto 0;font-size:12px;color:#6b7280;text-decoration:none;opacity:.7}
+#app{transition:opacity .6s ease}
+#app.fadeout{opacity:0}
+#standby{opacity:0;transition:opacity 1.4s ease .5s}
 #standby.show{opacity:1}
+#standby .sbmsg{color:#6b7280;font-size:15px;margin-top:14px}
+#standby .sbtest{background:none;border:0;color:#3a3f47;font-size:12px;margin-top:10px;cursor:pointer;padding:6px}
 .checklist{list-style:none;padding:0;margin:8px 0 12px}
 .checklist li{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}
 .checklist li .ic{font-size:20px;width:26px;text-align:center;flex:none}
@@ -301,7 +304,7 @@ html:not(.public) .pubonly{display:none!important}
   </div>
   <div class="field" id="boxLockMode">
     <label class="chbox"><input type="checkbox" id="sLockMode"> ロック中モード（実験的）</label>
-    <div class="hint">待機画面の間は無音を流し続け、画面ロック中でも時刻になったら<b>アラーム音</b>を鳴らします。ロックを解除すると YouTube の配信が始まります。電池消費が増えます。「2分後にテスト」で必ず確認してください。</div>
+    <div class="hint">待機画面の間は無音を流し続け、画面ロック中でも時刻になったら<b>アラーム音</b>を鳴らします。ロックを解除すると YouTube の配信が始まります。電池消費が増えます。</div>
   </div>
   <label class="chbox"><input type="checkbox" id="sChime" checked> YouTube が再生できない時はアラーム音で代わりに鳴らす</label>
   <div class="field pubonly" style="margin-top:8px">
@@ -344,13 +347,6 @@ html:not(.public) .pubonly{display:none!important}
   <div class="footbar"><span class="spacer"></span><button class="btn primary" data-close>閉じる</button></div>
 </div></div>
 
-<!-- 寝る前：待機開始の確認（最小限の表示） -->
-<div class="modal" id="mSleep"><div class="sheet sleepsheet">
-  <p class="sleepmsg" id="sleepMsg"></p>
-  <button class="btn primary block" id="btnSleepGo">おやすみ（待機開始）</button>
-  <button class="btn link sleeptest" id="btnSoundTest">音のテスト</button>
-</div></div>
-
 <!-- 全削除の確認 -->
 <div class="modal" id="mReset"><div class="sheet">
   <h2>すべての設定を削除しますか？</h2>
@@ -375,9 +371,9 @@ html:not(.public) .pubonly{display:none!important}
 <div id="standby">
   <div class="clock" id="sbClock">00:00</div>
   <div class="nx" id="sbNext"></div>
+  <div class="sbmsg" id="sbMsg"></div>
   <div class="st" id="sbStatus"></div>
   <div class="sbtns">
-    <button class="btn" id="sbTest">2分後にテスト</button>
     <button class="btn" id="sbExit">終了</button>
   </div>
 </div>
@@ -1179,6 +1175,8 @@ async function startStandby() {
   unlockAudio();
   standbyOn = true;
   if (state.settings.lockMode) { silentEl.src = SILENT_URL; silentEl.play().catch(() => {}); setMediaMeta('Live目覚まし', '待機中'); }
+  $('#sbMsg').textContent = isIOS ? '自動で暗い時計の表示になります。' : '別のタブやアプリを使っていても大丈夫です。';
+  $('#app').classList.add('fadeout');   // 元の画面は約0.6秒でふわっと消え、時計の画面が約1.4秒かけて現れる
   const sb = $('#standby'); sb.classList.remove('show'); sb.classList.add('open');
   requestAnimationFrame(() => requestAnimationFrame(() => sb.classList.add('show')));
   await requestWake();
@@ -1188,7 +1186,7 @@ async function startStandby() {
 }
 function stopStandby() {
   if (standbyOn) track('standby_end', { min: Math.round((Date.now() - standbyAt) / 60000) });
-  standbyOn = false; $('#standby').classList.remove('open', 'show');
+  standbyOn = false; $('#standby').classList.remove('open', 'show'); $('#app').classList.remove('fadeout');
   silentEl.pause();
   try { wakeLock && wakeLock.release(); } catch (e) {} wakeLock = null;
 }
@@ -1199,7 +1197,6 @@ function updateStandby() {
   const lines = [];
   lines.push(`画面の点灯維持：<b>${wakeLock ? 'ON' : ('wakeLock' in navigator ? 'OFF（画面をタップで再取得）' : '非対応（自動ロックを「なし」に）')}</b>`);
   if (state.settings.lockMode) lines.push(`ロック中モード：<b>${!silentEl.paused ? '待機音 再生中' : '停止中（画面をタップで再開）'}</b>`);
-  lines.push(isIOS ? '充電しながら、画面を点けたままにしてください' : 'このタブを開いたままにしてください');
   if (testAlarm) lines.push(`テスト：${pad(testAlarm.at.getHours())}:${pad(testAlarm.at.getMinutes())} に鳴ります`);
   $('#sbStatus').innerHTML = lines.join('<br>');
 }
@@ -1584,22 +1581,12 @@ $('#importFile').addEventListener('change', async e => {
 });
 
 /* ---------- おやすみモード操作 ---------- */
-$('#btnStandby').addEventListener('click', openSleepSheet);
-function openSleepSheet() {
-  const nx = nextOverall();
-  if (!nx) { toast('先にアラームを作ってください'); openEditor(null); return; }
-  unlockAudio(); // タップ中に音声を使えるようにしておく
-  $('#sleepMsg').textContent = isIOS ? '自動で暗い時計の表示になります。' : '別のタブやアプリを使っていても大丈夫です。';
-  $('#mSleep').classList.remove('fading');
-  track('sleep_sheet_open', { hour: new Date().getHours() });
-  openModal('mSleep');
-}
-$('#btnSoundTest').addEventListener('click', () => { unlockAudio(); track('sound_test'); primePlayer(); });
-$('#btnSleepGo').addEventListener('click', () => {
+$('#btnStandby').addEventListener('click', () => {
+  if (!nextOverall()) { toast('先にアラームを作ってください'); openEditor(null); return; }
+  track('sleep_tap', { hour: new Date().getHours() });
   startStandby();                        // タップ中に開始（音声・画面点灯維持の許可のため）
-  const m = $('#mSleep'); m.classList.add('fading');   // 確認画面はふわっと消え、時計の画面がゆっくり現れる
-  setTimeout(() => { closeModal('mSleep'); m.classList.remove('fading'); }, 600);
 });
+
 $('#sbExit').addEventListener('click', stopStandby);
 $('#standby').addEventListener('click', e => {
   if (e.target.closest('button')) return;
@@ -1608,15 +1595,7 @@ $('#standby').addEventListener('click', e => {
   if (state.settings.lockMode && silentEl.paused) silentEl.play().catch(() => {});
   updateStandby();
 });
-$('#sbTest').addEventListener('click', () => {
-  const a = state.alarms.find(x => x.enabled && x.channelId);
-  if (!a) return toast('有効なアラームがありません');
-  unlockAudio();
-  testAlarm = { alarm: a, at: new Date(Date.now() + 2 * 60 * 1000) };
-  track('standby_test', { lock: !!state.settings.lockMode });
-  toast(isIOS ? '2分後に鳴ります。ロック中モードの確認なら、今すぐ画面をロックしてください' : '2分後に鳴ります', 4500);
-  updateStandby();
-});
+
 
 /* ---------- 再生画面操作 ---------- */
 $('#rClose').addEventListener('click', () => { testMode = false; closeRing(); });
@@ -1650,7 +1629,6 @@ const SLIDES_IOS = [
 <ol>
 <li>iPhone を<b>充電器につなぐ</b></li>
 <li>アプリの <b>「🌙 寝る前にタップ」</b>を押す</li>
-<li>はじめての時は、準備画面の「🔈 音のテスト」で音を確認</li>
 <li>そのまま<b>画面を点けたまま</b>置いておく（画面は暗い時計表示になり、自動ロックされません）</li>
 </ol>
 <div class="note">音量は iPhone 本体の音量ボタンで調整します。マナーモードのスイッチがオンでも音は鳴りますが、<b>本体の音量が0だと鳴りません</b>。</div>`,
@@ -1658,7 +1636,7 @@ const SLIDES_IOS = [
 <p>YouTube の規約と iPhone の仕様により、<b>画面ロック中に YouTube の映像・音声を流すことはできません</b>。</p>
 <p>代わりに ⚙設定の <b>「ロック中モード（実験的）」</b>をオンにすると：</p>
 <ul><li>時刻になると<b>アラーム音</b>を鳴らします</li><li>ロックを解除すると YouTube の配信が始まります</li><li>イヤホンやロック画面の一時停止ボタンでアラーム音を止められます</li></ul>
-<div class="note warn">iOS のバージョンによって動かないことがあります。待機画面（🌙 寝る前にタップ）の「2分後にテスト」で必ず確認してください。</div>`,
+<div class="note warn">iOS のバージョンによって動かないことがあります。</div>`,
 SLIDE_KEY,
 ];
 const SLIDES_PC = [
