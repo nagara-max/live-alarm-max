@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>プライバシーポリシー・利用規約 | Live目覚まし</title>
+<style>
+:root{--bg:#0e1116;--panel:#171b22;--line:#2b313c;--text:#e9edf3;--muted:#9aa4b2;--accent:#ffb37a}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;line-height:1.8}
+main{max-width:760px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:22px}h2{font-size:17px;margin-top:32px;border-bottom:1px solid var(--line);padding-bottom:4px}
+a{color:var(--accent)}li{margin:4px 0}.muted{color:var(--muted);font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:14px}th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}th{background:var(--panel)}
+.back{display:inline-block;margin-bottom:12px}
+</style>
+</head>
+<body>
+<main>
+<a class="back" href="./">← アプリに戻る</a>
+<h1>プライバシーポリシー・利用規約</h1>
+<p class="muted">運営者：<span id="op">（未設定）</span>　最終更新：2026年9月30日</p>
+
+<h2>1. YouTube API サービスの利用について</h2>
+<p>本サービス「Live目覚まし」（以下「本サービス」）は、YouTube の配信情報の取得と再生に <b>YouTube API サービス</b>を利用しています。本サービスを利用することで、<a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">YouTube 利用規約</a>に同意したものとみなされます。YouTube（Google）による情報の取扱いについては <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google プライバシーポリシー</a>をご確認ください。</p>
+
+<h2>2. 端末に保存する情報</h2>
+<p>本サービスは、ブラウザの保存領域（localStorage）に次の情報を保存します。これらはお使いの端末の中だけにあり、運営者には送信されません（下記3の統計を除く）。</p>
+<ul>
+<li>アラームの設定（時刻・曜日・チャンネル・音量など）</li>
+<li>各種設定、使い方の表示履歴</li>
+<li>統計用のランダムな識別子（端末ごとに自動生成。個人を特定する情報を含みません）</li>
+<li>（個人モードのみ）利用者が登録した YouTube Data API キー</li>
+</ul>
+<p>⚙設定の「すべての設定を削除する」で、いつでもすべて削除できます。</p>
+
+<h2>3. 送信する情報（匿名の利用統計）</h2>
+<p>サービス改善のため、次の情報を運営者のサーバー（Google Apps Script）に送信し、運営者の Google ドライブ上のスプレッドシートに記録します。⚙設定の「匿名の利用統計を送信」をオフにすると送信を停止します。</p>
+<table>
+<tr><th>送信する情報</th><th>例</th></tr>
+<tr><td>ランダムな識別子・セッション識別子</td><td>端末ごと／起動ごとの無作為な文字列</td></tr>
+<tr><td>操作の記録と日時</td><td>画面を開いた、アラームを保存した、アラームが鳴った、再生が始まった など</td></tr>
+<tr><td>選択したチャンネル・再生した配信</td><td>チャンネルID・チャンネル名、動画ID・タイトル</td></tr>
+<tr><td>設定の傾向</td><td>アラームの時台、曜日設定の種類、音量</td></tr>
+<tr><td>エラーの内容</td><td>エラーの種類・コード</td></tr>
+<tr><td>端末の種類</td><td>PC／iPhone、ブラウザの種類、ホーム画面から起動したか、アプリの版</td></tr>
+</table>
+<p>氏名・メールアドレス・位置情報・入力した文字そのもの（URLなど）・IPアドレスは記録しません。</p>
+<p><b>利用目的：</b>どの画面で操作が止まっているかの把握、不具合の発見、よく使われるチャンネルや時刻の傾向の把握による機能改善。</p>
+<p><b>保存期間：</b>記録は最長400日で削除します。YouTube から取得したチャンネル名・動画タイトルは30日で削除し、IDのみを残します。</p>
+
+<h2>4. 外部サービスへの送信</h2>
+<table>
+<tr><th>送信先</th><th>内容・目的</th></tr>
+<tr><td>YouTube（Google）</td><td>埋め込みプレーヤーでの再生。YouTube がクッキー等を使用する場合があります</td></tr>
+<tr><td>Google Apps Script（運営者のサーバー）</td><td>配信情報の問い合わせの中継、上記3の統計の受信</td></tr>
+<tr><td>holidays-jp.github.io</td><td>祝日データの取得（個人に関する情報は送りません）</td></tr>
+</table>
+<p>法令に基づく場合を除き、取得した情報を第三者に提供・販売することはありません。本サービスに広告はありません。</p>
+
+<h2>5. 利用規約</h2>
+<ul>
+<li>本サービスは無料で提供しています。アラームが確実に鳴ること・配信が再生されることは保証しません。<b>寝坊が許されない予定には、端末標準の目覚まし等を併用してください。</b></li>
+<li>配信の内容は各配信者・YouTube に帰属します。本サービスは YouTube 公式の埋め込みプレーヤーで再生し、映像や音声を加工・保存しません。</li>
+<li>本サービスを不正に利用する行為（サーバーへの過度なアクセス等）を禁止します。</li>
+<li>本サービスの内容は予告なく変更・終了することがあります。</li>
+</ul>
+
+<h2>6. お問い合わせ</h2>
+<p id="contact">（未設定）</p>
+
+<h2>7. 改定</h2>
+<p>本ポリシーを改定する場合は、このページでお知らせします。</p>
+</main>
+<script src="config.js"></script>
+<script>
+  var c = window.LIVE_ALARM_CONFIG || {};
+  if (c.operator) document.getElementById('op').textContent = c.operator;
+  if (c.contact) document.getElementById('contact').textContent = c.contact;
+</script>
+</body>
+</html>
