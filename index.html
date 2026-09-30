@@ -160,6 +160,9 @@ details.more summary{cursor:pointer;color:var(--muted);font-size:14px;padding:8p
 .kbd{display:inline-block;border:1px solid var(--line);background:var(--panel2);border-radius:6px;padding:0 6px;font-size:13px}
 /* env banner */
 #envBanner{display:none}
+.updbar{background:#12261e;border:1px solid #1f4a37;border-radius:12px;padding:12px 14px;margin-bottom:12px}
+.updbar .ut{font-size:15px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
 .public .keyonly{display:none!important}
 html:not(.public) .pubonly{display:none!important}
 #mReset{z-index:90}
@@ -228,6 +231,14 @@ html:not(.public) .pubonly{display:none!important}
   </header>
 
   <div id="envBanner" class="note warn"></div>
+  <div id="updBar" class="updbar" style="display:none">
+    <div class="ut">🆕 新しいバージョン <b id="updVer"></b> があります</div>
+    <div class="row wrapok" style="margin-top:8px">
+      <button class="btn primary sm" id="btnUpdBar">今すぐ更新</button>
+      <button class="btn ghost sm" id="btnUpdLater">あとで</button>
+    </div>
+    <div class="hint">更新されない時は、アプリを一度閉じて（画面の下から上にスワイプして終了）、開き直してください。</div>
+  </div>
 
   <section class="card hero">
     <div class="label">次のアラーム</div>
@@ -366,6 +377,13 @@ html:not(.public) .pubonly{display:none!important}
       <div class="hint">アラーム・<span class="keyonly">APIキー・</span>設定をこの端末から消して、最初の状態に戻します。</div>
     </details>
   </div>
+  <div class="field" style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+    <span class="flabel">アプリのバージョン：<b id="verNow"></b></span>
+    <div class="row wrapok">
+      <button class="btn sm" id="btnDoUpdate" disabled>最新版です</button>
+      <button class="btn ghost sm" id="btnCheckUpdate">更新を確認</button>
+    </div>
+  </div>
   <div class="footbar">
     <span class="spacer"></span>
     <button class="btn" data-close>閉じる</button>
@@ -445,7 +463,7 @@ html:not(.public) .pubonly{display:none!important}
 <div id="toast"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 
-<script src="config.js"></script>
+<script src="config.js?v=1.5.0"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -468,7 +486,7 @@ const MODE_LABEL = { weekday:'平日（土日祝除く）', monfri:'月〜金', 
 const CFG = window.LIVE_ALARM_CONFIG || {};
 const BACKEND = /^https:\/\//.test(String(CFG.backendUrl || '').trim()) ? String(CFG.backendUrl).trim() : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.5.0'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -1006,18 +1024,41 @@ const PLAY_LABEL = { live: '最新のライブ配信', video: '最新の動画',
 /* ---------- よく選ばれているチャンネル（公開モードのみ）----------
  * 統計のランキング上位 ＋ 足りない分はおすすめ（有名チャンネル）で5件にする。種類（ライブ／動画）別 */
 const topCache = {}, topIndex = {};
+/* サーバーから取れない時・5件に満たない時に使う「おすすめ」（サーバーの FEATURED と同じ内容） */
+const FEATURED_LOCAL = {
+  live: [
+    ['UCNsidkYpIAQ4QaufptQBPHQ', 'ウェザーニュース'], ['UCGCZAYq5Xxojl_tSXcVJhiQ', 'ANNnewsCH'], ['UC6AG81pAkf6Lbi_1VC5NmPA', 'TBS NEWS DIG Powered by JNN'],
+    ['UCuTAXTexrhetbOe3zgskJBQ', '日テレNEWS'], ['UCoQBJMzcwmXrRSHBFAlTsIw', 'FNNプライムオンライン'], ['UCHL12woHGeiqAqLrK-pJe7g', '日本経済新聞'],
+  ],
+  video: [
+    ['UCZf__ehlCEBPop-_sldpBUQ', 'HikakinTV'], ['UCgMPP6RRjktV7krOfyUewqw', 'はじめしゃちょー（hajime）'], ['UCibEhpu5HP45-w7Bq1ZIulw', "Fischer's-フィッシャーズ-"],
+    ['UCutJqz56653xV2wwSvut_hQ', '東海オンエア'], ['UCHL12woHGeiqAqLrK-pJe7g', '日本経済新聞'],
+  ],
+};
+function fillWithFeatured(list, kind, n) {
+  const have = new Set(list.map(x => x.id));
+  const out = list.slice();
+  for (const [id, title] of FEATURED_LOCAL[kind] || []) {
+    if (out.length >= Math.max(n, 5)) break;
+    if (!have.has(id)) { out.push({ id, title, thumb: '', source: 'pick' }); have.add(id); }
+  }
+  return out;
+}
 async function loadTop(n = 5, kind = 'live') {
   if (!PUBLIC) return [];
   const c = topCache[kind];
   if (c && Date.now() - c.at < 30 * 60 * 1000) return c.list.slice(0, n);
+  let list = [], ok = false;
   try {
     const u = new URL(BACKEND); u.searchParams.set('a', 'top'); u.searchParams.set('n', n); u.searchParams.set('k', kind);
     const j = await withTimeout(fetch(u).then(r => r.json()), 10000);
-    const list = j && j.ok && Array.isArray(j.list) ? j.list.filter(x => /^UC[\w-]{22}$/.test(x.id)) : [];
-    list.forEach(x => { topIndex[x.id] = x; });
-    topCache[kind] = { at: Date.now(), list };
-    return list.slice(0, n);
-  } catch (e) { return []; }
+    ok = !!(j && j.ok);
+    list = ok && Array.isArray(j.list) ? j.list.filter(x => /^UC[\w-]{22}$/.test(x.id)) : [];
+  } catch (e) {}
+  list = fillWithFeatured(list, kind, n);   // サーバーが古い・つながらない時もおすすめは必ず出す
+  list.forEach(x => { topIndex[x.id] = x; });
+  topCache[kind] = { at: ok ? Date.now() : Date.now() - 25 * 60 * 1000, list }; // 取れなかった時は5分後に再取得
+  return list.slice(0, n);
 }
 function topHTML(list, title, exclude) {
   const l = list.filter(c => c.id !== exclude);
@@ -1828,6 +1869,7 @@ $('#alarmList').addEventListener('change', e => {
 /* ---------- 設定 ---------- */
 function openSettings() {
   track('settings_open');
+  renderUpdateUI(latestVersion && verNum(latestVersion) > verNum(APP_VERSION));
   if (!PUBLIC) { $('#setKeyCard').innerHTML = keyCardHTML('s', false); bindKeyCard('s'); } else $('#setKeyCard').innerHTML = '';
   $('#sStats').checked = state.settings.stats !== false;
   $('#boxSiteUrl').style.display = SITE_PATTERN ? '' : 'none';
@@ -1839,6 +1881,10 @@ function openSettings() {
   openModal('mSettings');
 }
 $('#btnSettings').addEventListener('click', openSettings);
+$('#btnUpdBar').addEventListener('click', doUpdate);
+$('#btnDoUpdate').addEventListener('click', doUpdate);
+$('#btnUpdLater').addEventListener('click', () => { updDismissed = true; $('#updBar').style.display = 'none'; track('update_later'); });
+$('#btnCheckUpdate').addEventListener('click', () => checkUpdate(true));
 $('#btnSaveSettings').addEventListener('click', () => {
   const k = cleanKey($('#sKey')?.value);
   if (k !== state.apiKey) { state.apiKey = k; state.keyOK = false; testKey(k).then(() => { state.keyOK = true; save(); toast('APIキーを確認しました'); }).catch(e => showError(e)); }
@@ -2018,6 +2064,40 @@ function showEnvBanner() {
     : !storageOK ? '⚠️ このブラウザでは設定を保存できません（プライベートブラウズを解除してください）。' : '';
   if (msg) { b.innerHTML = msg; b.style.display = 'block'; track('env_problem', { env: ENV || 'nostorage' }); }
 }
+/* =========================================================
+ * 新しいバージョンの確認（ホーム画面アプリは古い画面が残りやすいため）
+ *  - 公開中の index.html を取りに行き、APP_VERSION が新しければ案内を出す
+ * ========================================================= */
+let latestVersion = null, updDismissed = false;
+const verNum = v => String(v || '0').split('.').map(x => parseInt(x, 10) || 0).reduce((a, x) => a * 1000 + x, 0);
+async function checkUpdate(manual) {
+  if (ENV === 'file' || ENV === 'frame') return;
+  try {
+    const r = await fetch(location.pathname + '?vcheck=' + Date.now(), { cache: 'no-store' });
+    const m = (await r.text()).match(/const APP_VERSION = '([\d.]+)'/);
+    if (!m) return;
+    latestVersion = m[1];
+    const newer = verNum(latestVersion) > verNum(APP_VERSION);
+    renderUpdateUI(newer);
+    if (manual) toast(newer ? `新しいバージョン ${latestVersion} があります` : 'いまのバージョンが最新です');
+    if (newer) track('update_available', { from: APP_VERSION, to: latestVersion });
+  } catch (e) { if (manual) toast('確認できませんでした。通信状態を確認してください'); }
+}
+function renderUpdateUI(newer) {
+  const bar = $('#updBar');
+  $('#verNow').textContent = APP_VERSION;
+  $('#btnDoUpdate').disabled = !newer;
+  $('#btnDoUpdate').textContent = newer ? `最新版（${latestVersion}）に更新する` : '最新版です';
+  bar.style.display = newer && !updDismissed && !standbyOn ? '' : 'none';
+  if (newer) $('#updVer').textContent = latestVersion;
+}
+function doUpdate() {
+  track('update_click', { from: APP_VERSION, to: latestVersion || '' });
+  flushStats(true);
+  // キャッシュを使わずに最新の画面を読み込み直す
+  setTimeout(() => location.replace(location.pathname + '?v=' + encodeURIComponent(latestVersion || Date.now())), 150);
+}
+
 function boot() {
   track('app_open', { first: firstVisit, env: ENV || '', alarms: state.alarms.length, ref: document.referrer ? new URL(document.referrer).hostname : '', reset: /[?&]reset=/.test(location.search) });
   if (/[?&]reset=/.test(location.search)) { history.replaceState(null, '', location.pathname); setTimeout(() => toast('すべての設定を削除しました'), 300); }
@@ -2038,6 +2118,11 @@ function boot() {
   if (!state.settings.introSeen || (PUBLIC && !state.settings.consentAt)) openIntro(0);
   else if (isIOS && !isStandalone) toast('ホーム画面に追加して使うのがおすすめです（？ボタン参照）', 5000);
   setInterval(render, 60 * 1000);
+  // 起動時・画面に戻った時・1時間ごとに新しいバージョンを確認
+  setTimeout(checkUpdate, 3000);
+  setInterval(() => { if (!standbyOn) checkUpdate(); }, 60 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !standbyOn) checkUpdate(); });
+  if (/[?&]v=/.test(location.search)) { history.replaceState(null, '', location.pathname); setTimeout(() => toast(`バージョン ${APP_VERSION} に更新しました`), 400); }
 }
 boot();
 </script>
