@@ -463,7 +463,7 @@ html:not(.public) .pubonly{display:none!important}
 <div id="toast"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 
-<script src="config.js?v=1.5.0"></script>
+<script src="config.js?v=1.5.1"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -486,7 +486,7 @@ const MODE_LABEL = { weekday:'平日（土日祝除く）', monfri:'月〜金', 
 const CFG = window.LIVE_ALARM_CONFIG || {};
 const BACKEND = /^https:\/\//.test(String(CFG.backendUrl || '').trim()) ? String(CFG.backendUrl).trim() : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.5.0'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.5.1'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -985,11 +985,8 @@ async function findLatestVideo(channelId) {
   // UULF = ショート・ライブを除いた動画だけの再生リスト。404 ならショート以外の動画がない
   try { list = await videoCandidates(await playlistIds('UULF' + suffix, 1)); }
   catch (e) {
-    if (e.status === 404) return null;
-    if (e.status !== 400) throw e;
-    // 古いサーバー（UULF 未対応）の間だけ、全アップロードから探す
-    try { list = await videoCandidates(await playlistIds('UU' + suffix, 1)); }
-    catch (e2) { if (e2.status !== 404) throw e2; }
+    if (e.status === 404) return null;   // ショート・ライブ以外の動画がない
+    throw e;                             // ショートを誤って流さないよう、他の方法では探さない
   }
   return list[0] || null;
 }
@@ -1069,7 +1066,7 @@ function topHTML(list, title, exclude) {
     return `<button type="button" class="topch" data-top="${esc(c.id)}" data-rank="${isRank ? rank : 0}">${isRank ? `<span class="rk">${rank}</span>` : '<span class="pk">おすすめ</span>'}${c.thumb ? `<img src="${esc(c.thumb)}" alt="">` : ''}<span class="nm">${esc(c.title)}</span></button>`;
   }).join('')}</div></div>`;
 }
-const TOP_TITLE = { live: 'ライブ配信でよく選ばれているチャンネル（タップで選択）', video: '最新の動画でよく選ばれているチャンネル（タップで選択）' };
+const TOP_TITLE = { live: 'ライブ配信の人気・おすすめチャンネル（タップで選択）', video: '最新の動画の人気・おすすめチャンネル（タップで選択）' };
 async function renderTop() {
   const box = $('#chTop'); if (!box) return;
   const kind = editPlay === 'video' ? 'video' : 'live';
