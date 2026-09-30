@@ -153,6 +153,13 @@ html:not(.public) .pubonly{display:none!important}
 @media (prefers-reduced-motion:reduce){.sleepbtn.night{animation:none}}
 .nightmsg{display:none;font-size:13px;color:var(--accent2);margin:-6px 0 10px}
 .nightmsg.on{display:block}
+.sleepsheet{text-align:center;padding-top:28px}
+.sleepmsg{font-size:17px;margin:0 0 22px;line-height:1.7}
+#btnSleepGo{padding:16px;font-size:19px;border-radius:14px}
+.sleeptest{display:block;margin:14px auto 0;font-size:12px;color:#6b7280;text-decoration:none;opacity:.7}
+#mSleep.fading{opacity:0;transition:opacity .6s ease}
+#standby{opacity:0;transition:opacity 1.4s ease}
+#standby.show{opacity:1}
 .checklist{list-style:none;padding:0;margin:8px 0 12px}
 .checklist li{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}
 .checklist li .ic{font-size:20px;width:26px;text-align:center;flex:none}
@@ -337,20 +344,11 @@ html:not(.public) .pubonly{display:none!important}
   <div class="footbar"><span class="spacer"></span><button class="btn primary" data-close>閉じる</button></div>
 </div></div>
 
-<!-- 寝る前の準備 -->
-<div class="modal" id="mSleep"><div class="sheet hasfoot">
-  <h2>🌙 寝る前の準備</h2>
-  <div class="okline" id="sleepNext" style="margin-top:0"></div>
-  <ul class="checklist" id="sleepChecklist"></ul>
-  <div class="note">
-    <b>音のテスト</b>（はじめての時・心配な時だけ）
-    <div class="testrow"><button class="btn sm" id="btnSoundTest">🔈 音のテストをする</button><span class="small muted" id="soundTestState">YouTube が数秒流れて止まります</span></div>
-  </div>
-  <div class="footbar">
-    <button class="btn" data-close>やめる</button>
-    <span class="spacer"></span>
-    <button class="btn primary" id="btnSleepGo" style="padding:12px 22px;font-size:17px">おやすみ（待機開始）</button>
-  </div>
+<!-- 寝る前：待機開始の確認（最小限の表示） -->
+<div class="modal" id="mSleep"><div class="sheet sleepsheet">
+  <p class="sleepmsg" id="sleepMsg"></p>
+  <button class="btn primary block" id="btnSleepGo">おやすみ（待機開始）</button>
+  <button class="btn link sleeptest" id="btnSoundTest">音のテスト</button>
 </div></div>
 
 <!-- 全削除の確認 -->
@@ -1181,7 +1179,8 @@ async function startStandby() {
   unlockAudio();
   standbyOn = true;
   if (state.settings.lockMode) { silentEl.src = SILENT_URL; silentEl.play().catch(() => {}); setMediaMeta('Live目覚まし', '待機中'); }
-  $('#standby').classList.add('open');
+  const sb = $('#standby'); sb.classList.remove('show'); sb.classList.add('open');
+  requestAnimationFrame(() => requestAnimationFrame(() => sb.classList.add('show')));
   await requestWake();
   standbyAt = Date.now();
   track('standby_start', { lock: !!state.settings.lockMode, wake: !!wakeLock, alarms: state.alarms.filter(a => a.enabled).length });
@@ -1189,7 +1188,7 @@ async function startStandby() {
 }
 function stopStandby() {
   if (standbyOn) track('standby_end', { min: Math.round((Date.now() - standbyAt) / 60000) });
-  standbyOn = false; $('#standby').classList.remove('open');
+  standbyOn = false; $('#standby').classList.remove('open', 'show');
   silentEl.pause();
   try { wakeLock && wakeLock.release(); } catch (e) {} wakeLock = null;
 }
@@ -1590,23 +1589,17 @@ function openSleepSheet() {
   const nx = nextOverall();
   if (!nx) { toast('先にアラームを作ってください'); openEditor(null); return; }
   unlockAudio(); // タップ中に音声を使えるようにしておく
-  $('#sleepNext').innerHTML = `⏰ <div><b>${esc(fmtDate(nx.at))}</b> に<br>「${esc(nx.alarm.channelTitle || '')}」の最新の配信を流します</div>`;
-  const items = isIOS ? [
-    ['🔌', '充電器につなぐ', '朝まで画面を点けたままにするため'],
-    ['🔊', '本体の音量を上げておく', 'マナーモード（消音スイッチ）がオンでも鳴ります。音量が0だと鳴りません'],
-    ['📱', 'このあと画面はそのまま置いておく', '自動で暗い時計の表示になります。ホームに戻ったりロックしたりしないでください'],
-  ] : [
-    ['🗂', 'このタブを閉じない', '別のタブや他のアプリを使っていても大丈夫です'],
-    ['💤', 'PC がスリープしない設定にしておく', 'スリープ中は鳴りません'],
-    ['🔊', 'PC の音量を確認', ''],
-  ];
-  $('#sleepChecklist').innerHTML = items.map(([ic, t, s]) => `<li><span class="ic">${ic}</span><div>${esc(t)}${s ? `<small>${esc(s)}</small>` : ''}</div></li>`).join('');
-  $('#soundTestState').textContent = sessGet('ytPrimed') ? '✓ テスト済み' : 'YouTube が数秒流れて止まります';
+  $('#sleepMsg').textContent = isIOS ? '自動で暗い時計の表示になります。' : '別のタブやアプリを使っていても大丈夫です。';
+  $('#mSleep').classList.remove('fading');
   track('sleep_sheet_open', { hour: new Date().getHours() });
   openModal('mSleep');
 }
 $('#btnSoundTest').addEventListener('click', () => { unlockAudio(); track('sound_test'); primePlayer(); });
-$('#btnSleepGo').addEventListener('click', () => { closeModal('mSleep'); startStandby(); });
+$('#btnSleepGo').addEventListener('click', () => {
+  startStandby();                        // タップ中に開始（音声・画面点灯維持の許可のため）
+  const m = $('#mSleep'); m.classList.add('fading');   // 確認画面はふわっと消え、時計の画面がゆっくり現れる
+  setTimeout(() => { closeModal('mSleep'); m.classList.remove('fading'); }, 600);
+});
 $('#sbExit').addEventListener('click', stopStandby);
 $('#standby').addEventListener('click', e => {
   if (e.target.closest('button')) return;
