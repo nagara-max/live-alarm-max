@@ -623,9 +623,15 @@ async function backendYt(path, params) {
   const u = new URL(BACKEND);
   u.searchParams.set('a', 'yt'); u.searchParams.set('p', path); u.searchParams.set('q', JSON.stringify(params)); u.searchParams.set('v', APP_VERSION);
   let r;
-  try { r = await fetch(u); } catch (err) { throw mkErr('network', { message: String(err && err.message || err) }); }
+  try { r = await fetch(u); }
+  catch (err) {
+    // 原因の切り分け：CORSなしで届くか試す。届く＝サーバーはあるが「全員に公開」になっていない／コード未反映の可能性
+    let reachable = false;
+    try { const pu = new URL(BACKEND); pu.searchParams.set('a', 'ping'); await fetch(pu, { mode: 'no-cors' }); reachable = true; } catch (_) {}
+    throw mkErr('network', { message: String(err && err.message || err), backend: true, reachable });
+  }
   const j = await r.json().catch(() => null);
-  if (!j) throw mkErr('api', { message: 'サーバーの応答を読み取れませんでした', status: r.status });
+  if (!j) throw mkErr('network', { message: 'サーバーの応答がJSONではありません（HTTP ' + r.status + '）', backend: true, reachable: true });
   if (!j.ok) {
     const E = j.error || {};
     const info = (E.details || []).find(d => /ErrorInfo/.test(d['@type'] || '')) || {};
@@ -674,6 +680,11 @@ function explain(e) {
     case 'network': {
       if (ENV === 'file') return { t: 'ファイルを直接開いているため通信できません', b: 'このアプリは Web サイトとして開く必要があります。GitHub Pages で公開したURL（https://…github.io/…）、または PC なら <code>http://localhost</code> で開いてください。' };
       if (ENV === 'frame') return { t: 'プレビュー画面の中では動きません', b: 'このページを Safari（PCならChrome等）で<b>直接</b>開いてください。チャットやファイルのプレビュー画面の中では通信や保存が制限されます。' };
+      if (e.backend && e.reachable) {
+        const ping = BACKEND + (BACKEND.includes('?') ? '&' : '?') + 'a=ping';
+        return { t: 'サーバー（Apps Script）の公開設定に問題があります', b: `サーバーには届いていますが、応答を受け取れませんでした。<br><b>運営者向け：</b>次のURLをブラウザで直接開いて確認してください。${copyLine(ping)}<ul><li><code>{"ok":true,…}</code> と表示 → 正常です。数分後に再度お試しください</li><li>Google のログイン画面になる → デプロイの「アクセスできるユーザー」を<b>全員</b>にして新しいバージョンでデプロイ</li><li>「スクリプト関数が見つかりません: doGet」→ コード.gs の保存前にデプロイしています。保存してから「デプロイを管理」→ 編集 →「新バージョン」でデプロイ</li><li>URL が <code>/dev</code> で終わっている → <code>/exec</code> で終わるURLを config.js に設定</li></ul>` };
+      }
+      if (e.backend) return { t: 'サーバーに接続できませんでした', b: '通信状態を確認して、もう一度お試しください。<br><b>運営者向け：</b>config.js の backendUrl が正しいか（<code>https://script.google.com/macros/s/…/exec</code>）確認してください。広告ブロック・コンテンツブロッカーを使っている場合は、このサイトでオフにしてください。' };
       return { t: 'インターネットに接続できませんでした', b: '通信状態を確認して、もう一度お試しください。広告ブロック・コンテンツブロッカーを使っている場合は、このサイトでオフにしてください。' };
     }
   }
