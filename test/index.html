@@ -7,9 +7,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Live目覚まし">
+<meta name="apple-mobile-web-app-title" content="推しと共に目覚ましアラーム(仮)">
 <meta name="theme-color" content="#0e1116">
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" href="manifest.webmanifest?v=1.7.1">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>推しと共に目覚ましアラーム(仮)</title>
@@ -78,8 +78,10 @@ header.top h1{margin:0;flex:1;min-width:0;font-weight:400;line-height:1.15}
 .acard.open .sched{white-space:normal}
 .acard.open .aname{white-space:normal;word-break:break-word}
 .acard.off .time,.acard.off .ainfo{opacity:.45}
+.acard{transition:border-color 1.2s ease,box-shadow 1.2s ease}
 .acard.isnew{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
-.newtag{display:inline-block;font-size:11px;font-weight:800;color:#1b0f05;background:var(--accent);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+.newtag.gone{opacity:0}
+.newtag{transition:opacity 1.2s ease;display:inline-block;font-size:11px;font-weight:800;color:#1b0f05;background:var(--accent);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:2px}
 .chip{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);margin:2px 4px 2px 0}
 .actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 /* toggle */
@@ -507,7 +509,7 @@ html:not(.public) .pubonly{display:none!important}
 <div id="toast"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 
-<script src="config.js?v=1.7.0"></script>
+<script src="config.js?v=1.7.1"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -535,7 +537,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.7.0'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.7.1'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -767,16 +769,22 @@ function mkErr(kind, extra = {}) { const e = new Error(extra.message || kind); e
 async function backendYt(path, params) {
   const u = new URL(BACKEND);
   u.searchParams.set('a', 'yt'); u.searchParams.set('p', path); u.searchParams.set('q', JSON.stringify(params)); u.searchParams.set('v', APP_VERSION);
-  let r;
-  try { r = await fetch(u); }
-  catch (err) {
-    // 原因の切り分け：CORSなしで届くか試す。届く＝サーバーはあるが「全員に公開」になっていない／コード未反映の可能性
-    let reachable = false;
-    try { const pu = new URL(BACKEND); pu.searchParams.set('a', 'ping'); await fetch(pu, { mode: 'no-cors' }); reachable = true; } catch (_) {}
-    throw mkErr('network', { message: String(err && err.message || err), backend: true, reachable });
+  let r, lastErr;
+  // Google のサーバーは一瞬だけ応答に失敗することがあるので、少し待って最大2回やり直す
+  for (let i = 0; i < 3; i++) {
+    if (i) await new Promise(res => setTimeout(res, i * 900));
+    try { r = await fetch(u); break; } catch (err) { lastErr = err; r = null; }
+  }
+  if (!r) {
+    // 原因の切り分け：ふつうの確認（ping）が通る＝サーバーは正常で一時的な失敗。
+    // CORS なしでしか届かない＝「全員に公開」になっていない等の設定の問題
+    let okPing = false, reachable = false;
+    try { const pu = new URL(BACKEND); pu.searchParams.set('a', 'ping'); const pr = await fetch(pu); okPing = pr.ok; reachable = true; } catch (_) {}
+    if (!okPing) { try { const pu = new URL(BACKEND); pu.searchParams.set('a', 'ping'); await fetch(pu, { mode: 'no-cors' }); reachable = true; } catch (_) {} }
+    throw mkErr('network', { message: String(lastErr && lastErr.message || lastErr), backend: true, reachable, temporary: okPing });
   }
   const j = await r.json().catch(() => null);
-  if (!j) throw mkErr('network', { message: 'サーバーの応答がJSONではありません（HTTP ' + r.status + '）', backend: true, reachable: true });
+  if (!j) throw mkErr('network', { message: 'サーバーの応答がJSONではありません（HTTP ' + r.status + '）', backend: true, reachable: true, temporary: r.status >= 500 });
   if (!j.ok) {
     const E = j.error || {};
     const info = (E.details || []).find(d => /ErrorInfo/.test(d['@type'] || '')) || {};
@@ -829,6 +837,7 @@ function explain(e) {
     case 'network': {
       if (ENV === 'file') return { t: 'ファイルを直接開いているため通信できません', b: 'このアプリは Web サイトとして開く必要があります。GitHub Pages で公開したURL（https://…github.io/…）、または PC なら <code>http://localhost</code> で開いてください。' };
       if (ENV === 'frame') return { t: 'プレビュー画面の中では動きません', b: 'このページを Safari（PCならChrome等）で<b>直接</b>開いてください。チャットやファイルのプレビュー画面の中では通信や保存が制限されます。' };
+      if (e.backend && e.temporary) return { t: '一時的に通信がうまくいきませんでした', b: 'サーバーは正常に動いています。少し待ってから、もう一度お試しください。' };
       if (e.backend && e.reachable) {
         const ping = BACKEND + (BACKEND.includes('?') ? '&' : '?') + 'a=ping';
         return { t: 'サーバー（Apps Script）の公開設定に問題があります', b: `サーバーには届いていますが、応答を受け取れませんでした。<br><b>運営者向け：</b>次のURLをブラウザで直接開いて確認してください。${copyLine(ping)}<ul><li><code>{"ok":true,…}</code> と表示 → 正常です。数分後に再度お試しください</li><li>Google のログイン画面になる → デプロイの「アクセスできるユーザー」を<b>全員</b>にして新しいバージョンでデプロイ</li><li>「スクリプト関数が見つかりません: doGet」→ コード.gs の保存前にデプロイしています。保存してから「デプロイを管理」→ 編集 →「新バージョン」でデプロイ</li><li>URL が <code>/dev</code> で終わっている → <code>/exec</code> で終わるURLを config.js に設定</li></ul>` };
@@ -1207,7 +1216,7 @@ function stopChime() {
     if (standbyOn && state.settings.lockMode) silentEl.play().catch(() => {});
   }
   $('#rStopChime').style.display = 'none';
-  setMediaMeta('Live目覚まし', '待機中');
+  setMediaMeta('推しと共に目覚ましアラーム', '待機中');
 }
 function setMediaMeta(title, artist) {
   if (!('mediaSession' in navigator)) return;
@@ -1284,17 +1293,20 @@ function onPlayerError(e) {
  * アラーム発火
  * ========================================================= */
 let pending = null;
+let ringSeq = 0;   // 再生画面を開くたび・閉じるたびに増える番号（閉じた後に、待っていた処理が画面を開き直さないように）
 async function fire(a, isTest = false) {
-  const firedAt = Date.now();
+  const firedAt = Date.now(), seq = ++ringSeq;
   let video = null, fromCache = false, errKind = '';
   track(isTest ? 'test_fire' : 'alarm_fire', { ch: a.channelId, title: a.channelTitle, mode: a.mode, play: a.play || 'live', standby: standbyOn, visible: document.visibilityState === 'visible' });
   ringIsTest = isTest;
   showRing(a, null, isTest ? 'テスト再生' : 'アラーム');
-  setRingMsg('流す動画を確認しています…');
-  // 数分前に先読みした結果があれば、それを使って YouTube API を使わない（テスト再生は確認し直す）
-  const fresh = !isTest && a.lastVideo && Date.now() - (a.lastVideo.checkedAt || 0) < 6 * 60 * 1000;
+  setRingMsg('⏳ 流す動画を確認しています…');
+  // 少し前に確認した結果があれば、それを使ってすぐ再生する（本番は先読みから6分以内、テスト再生は30分以内）
+  //  ※テスト再生はタップ直後に再生を始めないと、iPhone で自動再生が止められやすいため
+  const fresh = a.lastVideo && Date.now() - (a.lastVideo.checkedAt || 0) < (isTest ? 30 : 6) * 60 * 1000;
   try { video = fresh ? a.lastVideo : await withTimeout(resolveVideo(a), 12000); }
   catch (e) { errKind = e.kind || 'timeout'; video = a.lastVideo || null; fromCache = !!video; if (!video) setRingMsg('配信を取得できませんでした：' + (e.kind ? explain(e).t : e.message), 'warn'); }
+  if (seq !== ringSeq) return;   // 確認している間に「閉じる」が押された
   if (!video) {
     track('video_none', { ch: a.channelId, kind: errKind || 'nolive', test: isTest });
     if (isTest) { setRingMsg('再生できる動画が見つかりませんでした。本番では、この場合アラーム音で起こします。', 'warn'); return; }
@@ -1302,9 +1314,10 @@ async function fire(a, isTest = false) {
     startChime(a.volume); return;
   }
   track('video_found', { ch: a.channelId, title: a.channelTitle, vid: video.id, vtitle: video.title, live: video.isLive, cached: fromCache, test: isTest });
-  await startVideo(a, video, { test: isTest, firedAt });
+  await startVideo(a, video, { test: isTest, firedAt, seq });
 }
 async function startVideo(a, video, meta = {}) {
+  if (meta.seq && meta.seq !== ringSeq) return;
   current = { videoId: video.id, title: video.title, isLive: !!video.isLive, volume: a.volume, alarm: a, test: !!meta.test, firedAt: meta.firedAt || Date.now(), reported: false, shownAt: Date.now() };
   const reportNewTab = () => { current.reported = true; track(current.test ? 'test_play_start' : 'play_start', { ch: a.channelId, title: a.channelTitle, vid: video.id, vtitle: video.title, live: !!video.isLive, via: 'newtab', ms: Date.now() - current.firedAt }); };
   showRing(a, video);
@@ -1321,6 +1334,7 @@ async function startVideo(a, video, meta = {}) {
   if (hidden) { startChime(a.volume); pending = { a, video, meta }; notify(a, video); return; }
 
   const p = await ensurePlayer();
+  if (meta.seq && meta.seq !== ringSeq) return;
   try { p.loadVideoById(video.id); p.unMute(); p.setVolume(a.volume); p.playVideo(); } catch (e) {}
   $('#rVol').value = a.volume; $('#rVolLabel').textContent = a.volume;
   clearTimeout(verifyTimer);
@@ -1335,7 +1349,7 @@ async function startVideo(a, video, meta = {}) {
 function notify(a, video) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   try {
-    const n = new Notification('⏰ Live目覚まし', { body: video ? video.title : (a.channelTitle || ''), tag: 'live-alarm', requireInteraction: true });
+    const n = new Notification('⏰ 推しと共に目覚ましアラーム', { body: video ? video.title : (a.channelTitle || ''), tag: 'live-alarm', requireInteraction: true });
     n.onclick = () => { window.focus(); n.close(); };
   } catch (e) {}
 }
@@ -1358,7 +1372,7 @@ function setRingMsg(msg, kind) { const m = $('#rMsg'); m.style.display = ''; m.t
 function hideRingMsg() { $('#rMsg').style.display = 'none'; }
 function closeRing() {
   if ($('#ring').classList.contains('open') && current) track('ring_close', { ch: current.alarm?.channelId, vid: current.videoId, sec: Math.round((Date.now() - current.shownAt) / 1000), played: !!current.reported, test: !!current.test || testMode, play: current.alarm?.play || 'live', live: !!current.isLive });
-  $('#ring').classList.remove('open'); stopChime(); pending = null; clearTimeout(verifyTimer);
+  $('#ring').classList.remove('open'); stopChime(); pending = null; clearTimeout(verifyTimer); ringSeq++;
   try { player && player.stopVideo(); } catch (e) {}
   current = null;
 }
@@ -1415,7 +1429,7 @@ async function startStandby() {
   if (!state.alarms.some(a => a.enabled && a.channelId)) { toast('有効なアラームがありません。「＋ 追加」から作成してください'); return; }
   unlockAudio();
   standbyOn = true;
-  if (state.settings.lockMode) { silentEl.src = SILENT_URL; silentEl.play().catch(() => {}); setMediaMeta('Live目覚まし', '待機中'); }
+  if (state.settings.lockMode) { silentEl.src = SILENT_URL; silentEl.play().catch(() => {}); setMediaMeta('推しと共に目覚ましアラーム', '待機中'); }
   $('#sbMsg').textContent = isIOS ? '自動で暗い時計の表示になります。' : '別のタブやアプリを使っていても大丈夫です。';
   $('#app').classList.add('fadeout');   // 元の画面は約0.6秒でふわっと消え、時計の画面が約1.4秒かけて現れる
   const sb = $('#standby'); sb.classList.remove('show'); sb.classList.add('open');
@@ -1468,6 +1482,18 @@ async function primePlayer() {
  * ========================================================= */
 /* 一覧の開閉状態：基本は畳む。新しく追加したアラームだけ開いて「NEW」を付ける */
 const openCards = new Set(), justAdded = new Set();
+/* オレンジ枠と「NEW」は、追加した直後だけ目立たせて約6秒で自然に消す（開いた状態はそのまま） */
+let newMarkTimer = null;
+function fadeNewMark(id) {
+  clearTimeout(newMarkTimer);
+  newMarkTimer = setTimeout(() => {
+    justAdded.delete(id);
+    const el = document.querySelector(`[data-card="${id}"]`);
+    if (el) { el.classList.remove('isnew'); el.querySelector('.newtag')?.classList.add('gone'); }
+  }, 6000);
+}
+/* アプリを離れて戻ってきた時は、すべて畳んだ状態に戻す */
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && (openCards.size || justAdded.size)) { openCards.clear(); justAdded.clear(); render(); } });
 function render() {
   const list = $('#alarmList');
   if (!state.alarms.length) {
@@ -1750,7 +1776,7 @@ function renderChResult(html) {
   if (html !== undefined) { box.innerHTML = html; syncTop(); updateSaveBtn(); return; }
   if (!editChannel) { box.innerHTML = ''; syncTop(); updateSaveBtn(); return; }
   box.innerHTML = `<div class="okline">${editChannel.thumb ? `<img src="${esc(editChannel.thumb)}" alt="">` : ''}<div style="flex:1;min-width:0">✅ <b>${esc(editChannel.title)}</b></div></div>
-    <div id="chLatest">${editChannel.loading ? '<div class="hint"><span class="spin"></span>流す動画を確認中…</div>' : editChannel.previewErr ? `<div class="hint">流す動画は保存後に確認します（${esc(editChannel.previewErr)}）</div>` : latestHTML(editChannel.latest)}</div>${editChannel.extra || ''}`;
+    <div id="chLatest">${editChannel.loading ? '<div class="hint"><span class="spin"></span>流す動画を確認中…</div>' : editChannel.previewErr ? `<div class="hint">⚠️ 流す動画を確認できませんでした（${esc(editChannel.previewErr)}）。このまま保存しても大丈夫です（保存後にもう一度確認します）。<br><button type="button" class="btn sm" data-reprev style="margin-top:6px">もう一度確認する</button></div>` : latestHTML(editChannel.latest)}</div>${editChannel.extra || ''}`;
   syncTop();
   updateSaveBtn();
 }
@@ -1792,6 +1818,7 @@ async function loadLatestPreview() {
   renderChResult();
 }
 function pickChannel(c) { editChannel = { ...c, latest: undefined, loading: true }; renderChResult(); loadLatestPreview(); }
+$('#mEdit').addEventListener('click', e => { if (e.target.closest('[data-reprev]') && editChannel) loadLatestPreview(); });
 /* よく選ばれているチャンネルをタップ */
 $('#mEdit').addEventListener('click', e => {
   const b = e.target.closest('[data-top]'); if (!b) return;
@@ -1905,7 +1932,7 @@ $('#btnSave').addEventListener('click', async () => {
   editSaved = true;
   const firstTime = a.mode === 'custom' ? (a.days.find(Boolean) || a.time) : a.time;
   track('alarm_save', { isNew: editIsNew, ch: a.channelId, title: a.channelTitle, mode: a.mode, hour: +firstTime.split(':')[0], days: a.mode === 'custom' ? a.days.filter(Boolean).length : undefined, vol: a.volume, skipHol: a.skipHolidays, preferLive: a.preferLive, play: a.play, fallback: a.play === 'live' && !!a.lastVideo?.fallback, vid: a.play === 'fixed' ? a.fixedVideoId : undefined, alarms: state.alarms.length });
-  if (editIsNew) { justAdded.add(a.id); openCards.add(a.id); }
+  if (editIsNew) { justAdded.clear(); openCards.clear(); justAdded.add(a.id); openCards.add(a.id); fadeNewMark(a.id); }
   save(); closeModal('mEdit'); render();
   if (editIsNew) setTimeout(() => { const el = document.querySelector(`[data-card="${a.id}"]`); el && el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 80);
   const nx = nextOccurrence(a);
@@ -2022,7 +2049,7 @@ $('#importFile').addEventListener('change', async e => {
     if (['auto', 'embed', 'newtab'].includes(s0.openMode)) state.settings.openMode = s0.openMode;
     ['lockMode', 'chime'].forEach(k => { if (typeof s0[k] === 'boolean') state.settings[k] = s0[k]; });
     save(); render(); toast(`復元しました（アラーム${alarms.length}件）`); track('import', { alarms: alarms.length });
-  } catch (err) { toast('このファイルは読み込めませんでした（Live目覚ましのバックアップを選んでください）', 4500); }
+  } catch (err) { toast('このファイルは読み込めませんでした（このアプリのバックアップを選んでください）', 4500); }
   e.target.value = '';
 });
 
@@ -2031,7 +2058,10 @@ $('#importFile').addEventListener('change', async e => {
  *  - スマホは有効なアラームがある間、画面が自動で消えないようにする（消える＝ロックされると鳴らせない） */
 const hasActiveAlarm = () => state.alarms.some(a => a.enabled && a.channelId);
 function keepAwakeIfNeeded() { if (isMobile && hasActiveAlarm() && !wakeLock && document.visibilityState === 'visible') requestWake(); }
-['pointerdown', 'touchend', 'keydown'].forEach(t => document.addEventListener(t, () => { unlockAudio(); keepAwakeIfNeeded(); }, { capture: true, passive: true }));
+['pointerdown', 'touchend', 'keydown'].forEach(t => document.addEventListener(t, () => {
+  unlockAudio(); keepAwakeIfNeeded();
+  if (!playerP && !ENV && hasActiveAlarm()) ensurePlayer();   // YouTube プレーヤーを前もって用意しておく（最初の再生が遅れないように）
+}, { capture: true, passive: true }));
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepAwakeIfNeeded(); });
 
 /* ---------- おやすみモード操作 ---------- */
