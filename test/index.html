@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="推しと共に目覚ましアラーム(仮)">
 <meta name="theme-color" content="#0e1116">
-<link rel="manifest" href="manifest.webmanifest?v=1.7.3">
+<link rel="manifest" href="manifest.webmanifest?v=1.7.4">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>推しと共に目覚ましアラーム(仮)</title>
@@ -468,7 +468,7 @@ html:not(.public) .pubonly{display:none!important}
   <div class="slides" id="slides"></div>
   <div class="dots" id="dots"></div>
   <div class="row">
-    <button class="btn ghost" id="introClose">閉じる</button>
+    <button class="btn" id="introClose">✕ 閉じる</button>
     <span class="spacer"></span>
     <button class="btn" id="introPrev">戻る</button>
     <button class="btn primary" id="introNext">次へ</button>
@@ -510,7 +510,7 @@ html:not(.public) .pubonly{display:none!important}
 <div id="toast"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 
-<script src="config.js?v=1.7.3"></script>
+<script src="config.js?v=1.7.4"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -538,7 +538,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.7.3'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.7.4'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
