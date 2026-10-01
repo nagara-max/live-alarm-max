@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="推しと共に目覚ましアラーム(仮)">
 <meta name="theme-color" content="#0e1116">
-<link rel="manifest" href="manifest.webmanifest?v=1.8.0">
+<link rel="manifest" href="manifest.webmanifest?v=1.8.1">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>推しと共に目覚ましアラーム(仮)</title>
@@ -543,15 +543,17 @@ html:not(.public) .pubonly{display:none!important}
 
 <!-- 非対応ブラウザ -->
 <div id="block"><div class="box">
-  <h2>このブラウザでは使えません</h2>
+  <h2 id="blockTitle">このブラウザでは使えません</h2>
   <p id="blockMsg"></p>
-  <button class="btn primary" id="btnCopyUrl">このページのURLをコピー</button>
+  <a class="btn primary block" id="btnOpenSafari" style="display:none;margin-bottom:10px">🧭 Safari で開く</a>
+  <button class="btn block" id="btnCopyUrl">このページのURLをコピー</button>
+  <p class="hint" id="blockHint" style="margin-top:12px"></p>
 </div></div>
 
 <div id="toast"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 
-<script src="config.js?v=1.8.0"></script>
+<script src="config.js?v=1.8.1"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -579,7 +581,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.8.0'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.8.1'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -2376,12 +2378,34 @@ function boot() {
     lk: LINK_UID, tz, lang: (navigator.language || '').slice(0, 12), src: (qp.get('utm_source') || qp.get('ref') || '').slice(0, 40), med: (qp.get('utm_medium') || '').slice(0, 30), cmp: (qp.get('utm_campaign') || '').slice(0, 40) });
   if (/[?&]reset=/.test(location.search)) { history.replaceState(null, '', location.pathname); setTimeout(() => toast('すべての設定を削除しました'), 300); }
   if (isMobile && !isIOSSafari) {
-    track('env_blocked', { os: isIOS ? 'ios' : isAndroid ? 'android' : 'other' });
-    $('#blockMsg').innerHTML = isIOS
-      ? 'スマホ版は <b>Safari 専用</b>です。<br>URLをコピーして Safari に貼り付けて開き、共有ボタンから「ホーム画面に追加」してください。'
-      : 'スマホ版は <b>iPhone の Safari 専用</b>です。PC のブラウザでご利用ください。';
+    track('env_blocked', { os: isIOS ? 'ios' : isAndroid ? 'android' : 'other', br: browserName() });
+    $('#btnCopyUrl').addEventListener('click', () => { track('safari_copy'); copyText(location.href.replace(/[?&]openExternalBrowser=1/, '')); });
+    if (isIOS) {
+      /* iPhone の Safari 以外（Chrome・LINE・Instagram など）で開かれた時は、自動で Safari に切り替える
+       *  - LINE：URL に openExternalBrowser=1 を付けると外部ブラウザ（通常は Safari）で開き直す
+       *  - それ以外：x-safari-https:// で Safari を呼び出す（iOS 17 以降）
+       *  ※ iPhone の仕組み上「必ず」はできないため、開けなかった時のボタンと手順も出す */
+      const clean = location.href.replace(/[?&]openExternalBrowser=1/, '');
+      const safariUrl = 'x-safari-' + clean;
+      $('#blockTitle').textContent = 'Safari で開いています…';
+      $('#blockMsg').innerHTML = 'このアプリは iPhone の <b>Safari 専用</b>です。<br>自動で Safari に切り替わらない時は、下のボタンを押してください。';
+      const btn = $('#btnOpenSafari'); btn.href = safariUrl; btn.style.display = '';
+      btn.addEventListener('click', () => track('safari_open_tap', { br: browserName() }));
+      $('#blockHint').innerHTML = 'それでも開かない時：「URLをコピー」→ Safari を開いて、アドレス欄に貼り付けてください。<br>LINE の場合は、右下の「︙」→「ブラウザで開く」でも開けます。';
+      $('#block').classList.add('open');
+      const isLine = /Line\//.test(UA);
+      if (isLine && !/[?&]openExternalBrowser=1/.test(location.search)) {
+        track('safari_redirect', { via: 'line', br: browserName() }); flushStats(true);
+        setTimeout(() => location.replace(location.href + (location.search ? '&' : '?') + 'openExternalBrowser=1'), 300);
+      } else {
+        track('safari_redirect', { via: 'x-safari', br: browserName() }); flushStats(true);
+        setTimeout(() => { location.href = safariUrl; }, 300);
+        setTimeout(() => { $('#blockTitle').textContent = 'Safari で開いてください'; }, 2500);
+      }
+      return;
+    }
+    $('#blockMsg').innerHTML = 'スマホ版は <b>iPhone の Safari 専用</b>です。PC のブラウザでご利用ください。';
     $('#block').classList.add('open');
-    $('#btnCopyUrl').addEventListener('click', () => copyText(location.href));
     return;
   }
   showEnvBanner();
