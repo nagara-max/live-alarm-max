@@ -40,6 +40,7 @@ code{font-size:12.5px}
 // 本番とテストで「同じ内容」であるべきファイル
 const FILES = ['index.html', 'config.js', 'privacy.html', 'manifest.webmanifest',
   'guide/m1.webp', 'guide/m2.webp', 'guide/m3.webp', 'guide/p1.webp', 'guide/p2.webp', 'guide/p3.webp',
+  'guide/a1.webp', 'guide/a2.webp', 'guide/a3.webp', 'guide/a4.webp', 'guide/b1.webp',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 const base = location.href.replace(/[^/]*([?#].*)?$/, '');
 async function get(url) {
@@ -47,7 +48,16 @@ async function get(url) {
     const r = await fetch(url + '?nocache=' + Date.now(), { cache: 'no-store' });
     if (!r.ok) return { status: r.status };
     const buf = await r.arrayBuffer();
-    const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', buf))).map(b => b.toString(16).padStart(2, '0')).join('');
+    let data = buf;
+    if (/\.(webp|png)$/.test(url)) {   // 画像は「見た目（画素）」で比べる（保存のしかたでファイルの中身が少し変わることがあるため）
+      try {
+        const bmp = await createImageBitmap(new Blob([buf]));
+        const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
+        const g = c.getContext('2d'); g.drawImage(bmp, 0, 0);
+        data = g.getImageData(0, 0, c.width, c.height).data.buffer;
+      } catch (e) {}
+    }
+    const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', data))).map(b => b.toString(16).padStart(2, '0')).join('');
     let ver = '';
     if (/index\.html$/.test(url)) ver = (new TextDecoder().decode(buf).match(/const APP_VERSION = '([\d.]+)'/) || [])[1] || '';
     return { status: 200, hash, ver, size: buf.byteLength };

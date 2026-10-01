@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="推しと共に目覚ましアラーム(仮)">
 <meta name="theme-color" content="#0e1116">
-<link rel="manifest" href="manifest.webmanifest?v=1.7.4">
+<link rel="manifest" href="manifest.webmanifest?v=1.8.0">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>推しと共に目覚ましアラーム(仮)</title>
@@ -95,6 +95,25 @@ header.top h1{margin:0;flex:1;min-width:0;font-weight:400;line-height:1.15}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center;z-index:50}
 .modal.open{display:flex}
 #mGuide{z-index:80}
+#mA2hs{z-index:83}
+.iconbtn.helpbtn{font-size:13px;font-weight:700;padding:0 10px;white-space:nowrap}
+/* ホーム画面に追加の案内 */
+.a2card{background:linear-gradient(135deg,#1d2433,#1a1f2b);border:1px solid #33405a;border-radius:var(--radius);padding:14px 14px 12px;margin-bottom:12px}
+.a2card .a2t{font-size:15.5px;font-weight:800;margin-bottom:4px}
+.a2card .a2s{font-size:13px;color:#c9d2de;margin-bottom:10px}
+.a2why{list-style:none;padding:0;margin:4px 0 12px}
+.a2why li{display:flex;gap:8px;margin:7px 0;font-size:14px;line-height:1.5}
+.a2why li .ic{flex:none;width:22px;text-align:center}
+.a2why small{display:block;color:var(--muted);font-size:12px}
+.a2tabs{display:flex;gap:6px;margin:6px 0 10px}
+.a2tabs button{flex:1;border-radius:10px;border:1px solid var(--line);background:var(--bg);padding:8px 4px;font-size:12.5px;cursor:pointer;color:var(--text)}
+.a2tabs button.on{background:var(--accent);color:#1b0f05;border-color:var(--accent);font-weight:700}
+.a2step{border:1px solid var(--line);border-radius:14px;background:var(--panel2);padding:12px;margin:10px 0}
+.a2step .h{display:flex;gap:8px;align-items:flex-start;font-size:15px;font-weight:700;margin-bottom:8px;line-height:1.45}
+.a2step .h .n{flex:none;width:24px;height:24px;border-radius:50%;background:#ff3b30;color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center}
+.a2step img{display:block;width:100%;max-width:340px;margin:0 auto;border-radius:12px;border:1px solid #2b313c}
+.a2step .t{font-size:13px;color:var(--muted);margin-top:6px}
+.a2note{font-size:12px;color:var(--muted);margin-top:8px}
 #mError{z-index:85}
 .sheet{background:var(--panel);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));border:1px solid var(--line);-webkit-overflow-scrolling:touch}
 .sheet.hasfoot{padding-bottom:0}
@@ -272,7 +291,7 @@ html:not(.public) .pubonly{display:none!important}
 <div class="wrap" id="app">
   <header class="top">
     <h1 class="brand"><span class="b1">推しと共に</span><span class="b2">目覚ましアラーム<small>(仮)</small></span></h1>
-    <button class="iconbtn" id="btnHelp" aria-label="使い方">？</button>
+    <button class="iconbtn helpbtn" id="btnHelp">使いかた</button>
     <button class="iconbtn" id="btnSettings" aria-label="設定">⚙</button>
   </header>
 
@@ -285,6 +304,8 @@ html:not(.public) .pubonly{display:none!important}
     </div>
     <div class="hint" id="updHint">更新されない時は、アプリを一度閉じて（画面の下から上にスワイプして終了）、開き直してください。</div>
   </div>
+
+  <div id="a2hsCard" class="a2card" style="display:none"></div>
 
   <section class="card hero">
     <div class="label">次のアラーム</div>
@@ -463,6 +484,26 @@ html:not(.public) .pubonly{display:none!important}
   <div class="row" style="margin-top:14px"><span class="spacer"></span><button class="btn" data-close>やめる</button><button class="btn dangerfill" id="btnResetGo">削除する</button></div>
 </div></div>
 
+<!-- ホーム画面に追加のやり方 -->
+<div class="modal" id="mA2hs"><div class="sheet hasfoot">
+  <div class="sheethead"><h2>📲 ホーム画面に追加しよう</h2></div>
+  <ul class="a2why">
+    <li><span class="ic">🛡️</span><span><b>アラームの設定が消えにくくなる</b><small>Safari のままだと、7日ほど開かない日が続いた時に、設定が消えてしまうことがあります（iPhone の仕様）</small></span></li>
+    <li><span class="ic">🌙</span><span><b>全画面で、時計表示がきれいに</b><small>Safari のアドレスバーなどが出ないので、夜も画面が落ち着きます</small></span></li>
+    <li><span class="ic">👆</span><span><b>アイコンからワンタップで開ける</b><small>毎晩さがす手間がなくなります</small></span></li>
+    <li><span class="ic">🔁</span><span><b>いま作ったアラームはそのまま引き継がれます</b><small>iOS 17 以降。ホーム画面のアイコンから開くと、同じアラームが入っています</small></span></li>
+  </ul>
+  <div class="small muted" style="margin-bottom:4px">お使いの iPhone に近い方を選んでください</div>
+  <div class="a2tabs" id="a2Tabs"><button type="button" data-a2v="old">共有ボタンが下にある</button><button type="button" data-a2v="new">右下が「…」（iOS 26 以降）</button></div>
+  <div id="a2Steps"></div>
+  <div class="a2note">※ 画像はイメージ図です。iOS のバージョンによって見た目が少し違います。</div>
+  <div class="footbar">
+    <button class="btn ghost sm" id="a2Later">あとで</button>
+    <span class="spacer"></span>
+    <button class="btn primary" data-close>閉じる</button>
+  </div>
+</div></div>
+
 <!-- 使い方 -->
 <div class="modal" id="mIntro"><div class="sheet">
   <div class="slides" id="slides"></div>
@@ -510,7 +551,7 @@ html:not(.public) .pubonly{display:none!important}
 <div id="toast"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 
-<script src="config.js?v=1.7.4"></script>
+<script src="config.js?v=1.8.0"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -538,7 +579,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.7.4'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.8.0'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -556,8 +597,40 @@ const inFrame = (() => { try { return window.top !== window.self; } catch (e) { 
 const ENV = location.protocol === 'file:' ? 'file' : inFrame ? 'frame' : (!window.isSecureContext ? 'insecure' : null);
 const SITE_PATTERN = /^https?:$/.test(location.protocol) ? `${location.origin}/*` : null;
 
+/* ---------- Cookie（iPhone は「ホーム画面に追加」する時に Safari の Cookie をホーム画面版へ引き継ぐ） ---------- */
+const ckGet = k => { try { return decodeURIComponent((document.cookie.match('(?:^|; )' + k + '=([^;]*)') || [])[1] || ''); } catch (e) { return ''; } };
+const ckSet = (k, v, age = 34560000) => { try { document.cookie = `${k}=${encodeURIComponent(v)}; max-age=${age}; path=/; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`; } catch (e) {} };
+
 /* ---------- 保存データ ---------- */
 const STORE_KEY = IS_TEST ? 'liveAlarm.test.v1' : 'liveAlarm.v1';
+/* Safari で作ったアラームを、ホーム画面に追加した版へ引き継ぐための写し（Cookie・最大4つに分割） */
+const CK_CARRY = IS_TEST ? 'la_tcarry' : 'la_carry';
+const b64u = str => btoa(unescape(encodeURIComponent(str))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = b => decodeURIComponent(escape(atob(b.replace(/-/g, '+').replace(/_/g, '/'))));
+function writeCarry() {
+  if (!isIOS || isStandalone) return;
+  try {
+    const st = state.settings;
+    const pack = { v: 1, a: state.alarms.slice(0, 15).map(a => [a.play || 'live', a.channelId, (a.channelTitle || '').slice(0, 40), a.mode, a.time, (a.days || []).join(','), a.volume, a.skipHolidays ? 1 : 0, a.preferLive === false ? 0 : 1, a.enabled ? 1 : 0, (a.label || '').slice(0, 30), a.fixedVideoId || '']),
+      s: [st.introSeen ? 1 : 0, st.consentAt || 0, st.stats === false ? 0 : 1, st.chime ? 1 : 0, st.lockMode ? 1 : 0] };
+    const parts = b64u(JSON.stringify(pack)).match(/.{1,3000}/g) || [];
+    if (parts.length > 4) return;
+    for (let i = 0; i < 4; i++) ckSet(CK_CARRY + i, parts[i] || '', parts[i] ? 34560000 : 0);
+  } catch (e) {}
+}
+function readCarry() {
+  try {
+    let b = ''; for (let i = 0; i < 4; i++) b += ckGet(CK_CARRY + i);
+    if (!b) return null;
+    const pack = JSON.parse(unb64u(b));
+    if (!pack || pack.v !== 1 || !Array.isArray(pack.a)) return null;
+    const alarms = sanitizeAlarms(pack.a.map(x => ({ play: x[0], channelId: x[1], channelTitle: x[2], mode: x[3], time: x[4], days: String(x[5] || '').split(','), volume: x[6], skipHolidays: !!x[7], preferLive: !!x[8], enabled: !!x[9], label: x[10], fixedVideoId: x[11] || undefined })));
+    const s = pack.s || [];
+    return { alarms, settings: { introSeen: !!s[0], consentAt: Number(s[1]) || 0, stats: s[2] !== 0, chime: s[3] !== 0, lockMode: !!s[4] } };
+  } catch (e) { return null; }
+}
+let carried = -1;   // ホーム画面版の初回起動で引き継いだアラーム件数（-1＝引き継ぎなし）
+let firstStandaloneLaunch = false;
 const defaults = () => ({
   apiKey: '', keyOK: false,
   alarms: [],
@@ -569,12 +642,20 @@ let storageOK = true;
 let state = load();
 function load() {
   try {
-    const s = JSON.parse(localStorage.getItem(STORE_KEY));
+    const raw = localStorage.getItem(STORE_KEY);
+    const s = JSON.parse(raw);
     if (s) { const d = defaults(); return { ...d, ...s, settings: { ...d.settings, ...(s.settings || {}) } }; }
+    // ホーム画面版の初めての起動：Safari で作ったアラームがあれば引き継ぐ
+    if (!raw && isStandalone) {
+      firstStandaloneLaunch = true;
+      const c = readCarry();
+      if (c) { const d = defaults(); carried = c.alarms.length; return { ...d, alarms: c.alarms, settings: { ...d.settings, ...c.settings } }; }
+    }
   } catch (e) { storageOK = false; }
   return defaults();
 }
 function save() {
+  writeCarry();
   try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
   catch (e) { storageOK = false; toast('保存できませんでした（プライベートブラウズでは保存されません）'); }
 }
@@ -606,8 +687,6 @@ const UID_KEY = IS_TEST ? 'liveAlarm.test.uid' : 'liveAlarm.uid';
 /* 同じ端末の「Safari」と「ホーム画面アプリ」を同じ1台として数えるため、端末IDを Cookie にも保存する
  * （iPhone はホーム画面に追加する時に Safari の Cookie を引き継ぐ。localStorage は引き継がない） */
 const CK_UID = IS_TEST ? 'la_tuid' : 'la_uid';
-const ckGet = k => { try { return decodeURIComponent((document.cookie.match('(?:^|; )' + k + '=([^;]*)') || [])[1] || ''); } catch (e) { return ''; } };
-const ckSet = (k, v, age = 34560000) => { try { document.cookie = `${k}=${encodeURIComponent(v)}; max-age=${age}; path=/; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`; } catch (e) {} };
 let firstVisit = false, LINK_UID = '';
 const UID = (() => {
   const ck = /^[\w-]{6,64}$/.test(ckGet(CK_UID)) ? ckGet(CK_UID) : '';
@@ -1263,6 +1342,7 @@ function onPlayerState(e) {
     if (current) { try { player.unMute(); player.setVolume(current.volume); } catch (_) {} }
     if (current && !testMode && !current.reported) {
       current.reported = true;
+      if (!current.test && !state.settings.firstPlayAt) { state.settings.firstPlayAt = Date.now(); save(); }
       track(current.test ? 'test_play_start' : 'play_start', { ch: current.alarm.channelId, title: current.alarm.channelTitle, vid: current.videoId, vtitle: current.title, live: current.isLive, via: 'embed', ms: Date.now() - current.firedAt });
     }
     if (testMode) {
@@ -1540,6 +1620,7 @@ function render() {
   $('#nightMsg').classList.toggle('on', night && isIOS);
   $('#sleepBtnLabel').innerHTML = isMobile ? '画面を暗くする' : '🌙画面<span class="t1s">(本ウィンドウのみ)</span>を暗くする';
   updateStandby();
+  renderA2Card();
 }
 
 /* ---------- モーダル共通 ---------- */
@@ -1550,6 +1631,7 @@ function closeModal(id) {
   // 途中離脱の記録
   if (id === 'mEdit' && !editSaved) track('editor_cancel', { typed: !!$('#fChannel').value.trim(), ch_ok: !!editChannel, isNew: editIsNew });
   if (id === 'mIntro' && !introFinished) track('intro_close', { i: slideIdx, total: SLIDES.length });
+  if (id === 'mA2hs') track('a2hs_close', { where: a2Where, sec: Math.round((Date.now() - a2OpenedAt) / 1000) });
 }
 $$('.modal').forEach(m => m.addEventListener('click', e => {
   if (e.target === m || e.target.closest('[data-close]')?.closest('.modal') === m) closeModal(m.id);
@@ -1957,6 +2039,7 @@ $('#btnSave').addEventListener('click', async () => {
   const nx = nextOccurrence(a);
   toast(nx ? `保存しました。次は ${fmtDate(nx)} に鳴ります` : '保存しました');
   if (!a.lastVideo) resolveVideo(a).then(render).catch(() => {});
+  if (A2_ON && !state.settings.a2AutoShown) { state.settings.a2AutoShown = true; save(); setTimeout(() => openA2hs('after_save'), 1200); }
 });
 $('#btnDelete').addEventListener('click', () => {
   if (!editing || !confirm('このアラームを削除しますか？')) return;
@@ -2139,7 +2222,7 @@ ${isMobile
   ? `<div class="gtip">📱 スマホは<b>この画面を開いたまま</b>にしておく必要があります（画面ロック中・他のアプリを使用中は鳴りません）。<br>🌙 おすすめは、寝る前に<b>「画面を暗くする」</b>をタップ。充電しながら置いておけば、まぶしくない時計表示で待機します。</div>`
   : `<div class="gtip">💻 PC は<b>このタブを開いたまま</b>なら、他のタブやアプリで作業していても大丈夫。時刻になると YouTube が流れます。<br><span class="small muted">PC がスリープしないよう、電源の設定だけ確認してください。</span></div>`}
 <details class="gmore"><summary>📖 もっと詳しく（${isIOS ? 'ホーム画面に追加・ロック中のこと' : 'ポップアップ・スマホで使う時'}）</summary><div>${isIOS
-  ? `<b>Safari 専用です</b>（Chrome や LINE の中のブラウザでは使えません）。<br><b>ホーム画面に追加</b>するとアプリのように全画面で使えます：<ol><li>画面下の <span class="kbd">共有</span>（□に↑）をタップ（iOS 26 以降は <span class="kbd">…</span> → <span class="kbd">共有</span>）</li><li><span class="kbd">ホーム画面に追加</span> →「Webアプリとして開く」をオンにして <span class="kbd">追加</span></li></ol>マナーモードでも音は出ますが、<b>本体の音量が0だと鳴りません</b>。画面ロック中は YouTube を流せないため、⚙設定の「ロック中モード（実験的）」をオンにするとアラーム音で起こします。`
+  ? `<b>Safari 専用です</b>（Chrome や LINE の中のブラウザでは使えません）。<br><b>ホーム画面に追加</b>すると、設定が消えにくくなり、全画面で使えます。<br><button type="button" class="btn sm" data-a2hs="intro" style="margin:8px 0">📲 ホーム画面に追加するやり方（画像つき）</button><br>マナーモードでも音は出ますが、<b>本体の音量が0だと鳴りません</b>。画面ロック中は YouTube を流せないため、⚙設定の「ロック中モード（実験的）」をオンにするとアラーム音で起こします。`
   : `時刻になった時、このタブを見ていればページ内で再生（音量設定が効きます）、別のタブを見ている時は YouTube を新しいタブで開きます。新しいタブで開くには、このサイトの<b>ポップアップを許可</b>してください。<br>スマホ（iPhone）で使う時は、Safari でこのページを開いてください。`}</div></details>
 ${PUBLIC && !state.settings.consentAt ? `<p class="gfine">「同意してはじめる」を押すと、<a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">YouTube 利用規約</a>に同意したものとみなされます。サービス改善のため匿名の利用統計（操作・選んだチャンネル・エラーなど）を送信します。名前やメールアドレスは送りません（⚙設定でオフにできます）。<a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a></p>` : ''}`;
 let slideIdx = 0, introFinished = false, SLIDES = [];
@@ -2169,6 +2252,57 @@ $('#introNext').addEventListener('click', () => {
   if (!state.alarms.length) openEditor(null);
 });
 $('#btnHelp').addEventListener('click', () => openIntro(0));
+
+/* =========================================================
+ * ホーム画面に追加の案内（iPhone の Safari で開いている時だけ）
+ *  - トップに小さなカード（「あとで」で3日間出さない）
+ *  - 最初のアラームを保存した直後に1回だけ、やり方の画面を自動で開く
+ *  - アラームで再生できた翌朝は「明日からはワンタップで」と案内
+ * ========================================================= */
+const A2_ON = isIOS && isIOSSafari && !isStandalone && !ENV;
+const iosMajor = (() => { const m = UA.match(/Version\/(\d+)/); return m ? +m[1] : 0; })();
+let a2Variant = iosMajor >= 26 ? 'new' : 'old', a2OpenedAt = 0, a2Where = '';
+const A2_STEPS = {
+  old: [
+    ['画面の下にある <b>共有ボタン</b>（□に↑）をタップ', 'a1.webp', 'ボタンが見えない時は、画面を少し下にスクロールすると出てきます。'],
+    ['メニューを上にスクロールして <b>「ホーム画面に追加」</b> をタップ', 'a2.webp', ''],
+    ['<b>「Webアプリとして開く」</b>がオンになっているのを確かめて、右上の <b>「追加」</b>', 'a3.webp', '名前はそのままでOKです。'],
+    ['ホーム画面にできた <b>アイコン</b> から開く', 'a4.webp', '次からはこのアイコンから開いてください。Safari の方は閉じて大丈夫です。'],
+  ],
+  new: [
+    ['画面の右下にある <b>「…」</b> をタップして、<b>「共有」</b> を選ぶ', 'b1.webp', '「…」が見えない時は、画面を少し下にスクロールすると出てきます。'],
+    ['メニューを上にスクロールして <b>「ホーム画面に追加」</b> をタップ', 'a2.webp', '見当たらない時は「その他」の中にあります。'],
+    ['<b>「Webアプリとして開く」</b>がオンになっているのを確かめて、右上の <b>「追加」</b>', 'a3.webp', '名前はそのままでOKです。'],
+    ['ホーム画面にできた <b>アイコン</b> から開く', 'a4.webp', '次からはこのアイコンから開いてください。Safari の方は閉じて大丈夫です。'],
+  ],
+};
+function drawA2() {
+  $$('#a2Tabs button').forEach(b => b.classList.toggle('on', b.dataset.a2v === a2Variant));
+  $('#a2Steps').innerHTML = A2_STEPS[a2Variant].map((x, i) => `<div class="a2step"><div class="h"><span class="n">${i + 1}</span><span>${x[0]}</span></div><img src="guide/${x[1]}?v=${APP_VERSION}" alt="手順${i + 1}のイメージ" loading="lazy">${x[2] ? `<div class="t">${x[2]}</div>` : ''}</div>`).join('');
+}
+function openA2hs(where) {
+  a2Where = where; a2OpenedAt = Date.now();
+  drawA2(); openModal('mA2hs'); $('#mA2hs .sheet').scrollTop = 0;
+  track('a2hs_open', { where, ios: iosMajor, variant: a2Variant });
+}
+$('#a2Tabs').addEventListener('click', e => { const b = e.target.closest('[data-a2v]'); if (!b) return; a2Variant = b.dataset.a2v; drawA2(); track('a2hs_variant', { variant: a2Variant, ios: iosMajor }); });
+$('#a2Later').addEventListener('click', () => { a2Later('sheet'); closeModal('mA2hs'); });
+function a2Later(where) { state.settings.a2LaterUntil = Date.now() + 3 * 864e5; save(); track('a2hs_later', { where }); renderA2Card(); }
+document.addEventListener('click', e => { const b = e.target.closest('[data-a2hs]'); if (b) { e.preventDefault(); openA2hs(b.dataset.a2hs); } });
+let a2CardTracked = false;
+function renderA2Card() {
+  const box = $('#a2hsCard'); if (!box) return;
+  const show = A2_ON && state.alarms.length > 0 && !(state.settings.a2LaterUntil > Date.now());
+  box.style.display = show ? '' : 'none';
+  if (!show) return;
+  const morning = !!state.settings.firstPlayAt;
+  box.innerHTML = morning
+    ? `<div class="a2t">☀️ 明日からは、ホーム画面からワンタップで</div><div class="a2s">ホーム画面に追加すると、設定が消えにくくなり、全画面で使えます。作ったアラームはそのまま引き継がれます。</div>`
+    : `<div class="a2t">📲 ホーム画面に追加がおすすめ</div><div class="a2s">Safari のままだと、しばらく開かない日が続いた時に設定が消えることがあります。追加すると全画面で使えて、作ったアラームもそのまま引き継がれます。</div>`;
+  box.innerHTML += `<div class="row"><button class="btn primary sm" data-a2hs="${morning ? 'card_morning' : 'card'}">やり方を見る（約30秒）</button><button class="btn ghost sm" id="a2CardLater">あとで</button></div>`;
+  $('#a2CardLater').addEventListener('click', () => a2Later(morning ? 'card_morning' : 'card'));
+  if (!a2CardTracked) { a2CardTracked = true; track('a2hs_shown', { where: morning ? 'card_morning' : 'card', ios: iosMajor }); }
+}
 $('#introClose').addEventListener('click', () => closeModal('mIntro'));
 $('#btnAdd').addEventListener('click', () => openEditor(null));
 
@@ -2257,7 +2391,10 @@ function boot() {
   startTicker();
   loadYTApi();
   if (!state.settings.introSeen || (PUBLIC && !state.settings.consentAt)) openIntro(0);
-  else if (isIOS && !isStandalone) toast('ホーム画面に追加して使うのがおすすめです（？ボタン参照）', 5000);
+  if (firstStandaloneLaunch) {
+    track('a2hs_installed', { carried: Math.max(carried, 0), via: carried >= 0 ? 'cookie' : 'none' });
+    if (carried > 0) { save(); setTimeout(() => toast(`Safari で作ったアラーム（${carried}件）を引き継ぎました`, 5000), 600); }
+  }
   setInterval(render, 60 * 1000);
   // 起動時・画面に戻った時・1時間ごとに新しいバージョンを確認
   setTimeout(checkUpdate, 3000);
