@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="推しと共に目覚ましアラーム(仮)">
 <meta name="theme-color" content="#0e1116">
-<link rel="manifest" href="manifest.webmanifest?v=1.7.1">
+<link rel="manifest" href="manifest.webmanifest?v=1.7.3">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>推しと共に目覚ましアラーム(仮)</title>
@@ -468,8 +468,9 @@ html:not(.public) .pubonly{display:none!important}
   <div class="slides" id="slides"></div>
   <div class="dots" id="dots"></div>
   <div class="row">
-    <button class="btn" id="introPrev">戻る</button>
+    <button class="btn ghost" id="introClose">閉じる</button>
     <span class="spacer"></span>
+    <button class="btn" id="introPrev">戻る</button>
     <button class="btn primary" id="introNext">次へ</button>
   </div>
 </div></div>
@@ -509,7 +510,7 @@ html:not(.public) .pubonly{display:none!important}
 <div id="toast"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 
-<script src="config.js?v=1.7.1"></script>
+<script src="config.js?v=1.7.3"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -537,7 +538,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.7.1'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.7.3'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -1887,7 +1888,25 @@ $('#fChannel').addEventListener('input', () => {
 });
 $('#fChannel').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(chTimer); checkChannel(true); } });
 $('#fChannel').addEventListener('paste-done', () => { clearTimeout(chTimer); checkChannel(true); });
-$('#fMode').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setMode(b.dataset.v); });
+$('#fMode').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const prev = editing.mode, next = b.dataset.v;
+  if (prev === next) return;
+  if (next === 'custom') {
+    // 「平日」「月〜金」「毎日」で選んでいた時刻を、各曜日に入れる（鳴る曜日も引き継ぐ）
+    const t = $('#fTime').value || '06:30';
+    const on = prev === 'everyday' ? [0, 1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5];
+    for (let i = 0; i < 7; i++) {
+      $(`[data-daytime="${i}"]`).value = t;
+      $(`[data-dayon="${i}"]`).checked = on.includes(i);
+    }
+  } else if (prev === 'custom') {
+    // 曜日ごと → 他に切り替えた時は、最初に鳴る曜日の時刻を使う
+    const first = [1, 2, 3, 4, 5, 6, 0].find(i => $(`[data-dayon="${i}"]`).checked);
+    if (first !== undefined && $(`[data-daytime="${first}"]`).value) $('#fTime').value = $(`[data-daytime="${first}"]`).value;
+  }
+  setMode(next);
+});
 $('#fVol').addEventListener('input', e => $('#fVolLabel').textContent = e.target.value);
 $('#fPreferLive').addEventListener('change', () => { if (editChannel) { editChannel.latest = undefined; renderChResult(); loadLatestPreview(); } });
 $('#btnSave').addEventListener('click', async () => {
@@ -2133,10 +2152,11 @@ function openIntro(i = 0) {
 function drawIntro() {
   $$('#slides .slide').forEach((s, k) => s.classList.toggle('on', k === slideIdx));
   $('#dots').innerHTML = SLIDES.map((_, k) => `<i class="${k === slideIdx ? 'on' : ''}"></i>`).join('');
-  $('#introPrev').style.visibility = slideIdx ? 'visible' : 'hidden';
+  $('#introPrev').style.display = slideIdx ? '' : 'none';
   const last = slideIdx === SLIDES.length - 1;
   $('#introNext').textContent = last ? (PUBLIC && !state.settings.consentAt ? '同意してはじめる' : state.alarms.length ? '閉じる' : 'アラームを作ってみる') : '次へ';
   $('#mIntro .sheet').scrollTop = 0;
+  $('#introClose').style.display = last && $('#introNext').textContent === '閉じる' ? 'none' : '';   // 「次へ」が「閉じる」になる最後の画面では1つだけに
   track('intro_view', { i: slideIdx, total: SLIDES.length });
 }
 $('#introPrev').addEventListener('click', () => { slideIdx = Math.max(0, slideIdx - 1); drawIntro(); });
@@ -2149,6 +2169,7 @@ $('#introNext').addEventListener('click', () => {
   if (!state.alarms.length) openEditor(null);
 });
 $('#btnHelp').addEventListener('click', () => openIntro(0));
+$('#introClose').addEventListener('click', () => closeModal('mIntro'));
 $('#btnAdd').addEventListener('click', () => openEditor(null));
 
 /* =========================================================
