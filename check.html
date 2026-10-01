@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>公開チェック（運営者用）</title>
+<style>
+:root{--bg:#0e1116;--panel:#171b22;--line:#2b313c;--text:#e9edf3;--muted:#9aa4b2;--ok:#3ecf8e;--ng:#ff6b6b;--warn:#f5c04a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;line-height:1.6}
+.wrap{max-width:760px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:8px 0 4px}
+.muted{color:var(--muted);font-size:13px}
+.result{border-radius:14px;padding:16px;margin:14px 0;font-size:17px;font-weight:700;border:1px solid var(--line);background:var(--panel)}
+.result.ok{border-color:#1f4a37;background:#12261e;color:var(--ok)}
+.result.ng{border-color:#5b2a2a;background:#231314;color:#ffb4b4}
+.result small{display:block;font-weight:400;font-size:13.5px;color:var(--text);margin-top:6px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600}
+td.j{white-space:nowrap}
+.ok{color:var(--ok)}.ng{color:var(--ng)}
+button{font:inherit;border-radius:10px;padding:9px 14px;background:#ff8a3d;border:0;color:#1b0f05;font-weight:700;cursor:pointer}
+code{font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>公開チェック（運営者用）</h1>
+  <div class="muted">テスト環境（test フォルダ）で確認したファイルが、本番（リポジトリの一番上）にも同じ内容で上がっているかを調べます。アップロードして1〜2分たってから開いてください。</div>
+  <div id="res" class="result">調べています…</div>
+  <button id="again">もう一度調べる</button>
+  <div style="height:12px"></div>
+  <table><thead><tr><th>ファイル</th><th>本番</th><th>テスト</th><th>判定</th></tr></thead><tbody id="rows"></tbody></table>
+  <p class="muted">❌ がある時は、Mac の「01_アプリ（公開するファイル）」を開き、中身を<b>全部選択（⌘A）してまとめてドラッグ</b>し直してください（guide・icons フォルダも含めて）。</p>
+</div>
+<script>
+'use strict';
+// 本番とテストで「同じ内容」であるべきファイル
+const FILES = ['index.html', 'config.js', 'privacy.html', 'manifest.webmanifest',
+  'guide/m1.webp', 'guide/m2.webp', 'guide/m3.webp', 'guide/p1.webp', 'guide/p2.webp', 'guide/p3.webp',
+  'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
+const base = location.href.replace(/[^/]*([?#].*)?$/, '');
+async function get(url) {
+  try {
+    const r = await fetch(url + '?nocache=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return { status: r.status };
+    const buf = await r.arrayBuffer();
+    const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', buf))).map(b => b.toString(16).padStart(2, '0')).join('');
+    let ver = '';
+    if (/index\.html$/.test(url)) ver = (new TextDecoder().decode(buf).match(/const APP_VERSION = '([\d.]+)'/) || [])[1] || '';
+    return { status: 200, hash, ver, size: buf.byteLength };
+  } catch (e) { return { status: 0 }; }
+}
+const cell = x => x.status === 200 ? (x.ver ? 'v' + x.ver : '✓ あり') : x.status === 404 ? '<span class="ng">ない</span>' : '<span class="ng">取得失敗</span>';
+async function run() {
+  const res = document.getElementById('res'), rows = document.getElementById('rows');
+  res.className = 'result'; res.textContent = '調べています…'; rows.innerHTML = '';
+  let ng = 0, pv = '', tv = '';
+  for (const f of FILES) {
+    const [p, t] = await Promise.all([get(base + f), get(base + 'test/' + f)]);
+    if (f === 'index.html') { pv = p.ver; tv = t.ver; }
+    let j;
+    if (p.status !== 200) j = '<span class="ng">❌ 本番にありません</span>';
+    else if (t.status !== 200) j = '<span class="ng">❌ テストにありません</span>';
+    else if (p.hash !== t.hash) j = '<span class="ng">❌ 内容が違います</span>';
+    else j = '<span class="ok">✅ 同じ</span>';
+    if (!/✅/.test(j)) ng++;
+    rows.insertAdjacentHTML('beforeend', `<tr><td><code>${f}</code></td><td>${cell(p)}</td><td>${cell(t)}</td><td class="j">${j}</td></tr>`);
+  }
+  if (!ng) { res.className = 'result ok'; res.innerHTML = `✅ 本番はテストと同じです（バージョン ${pv}）<small>利用者には「🆕 新しいバージョンがあります」の案内が出ます。</small>`; }
+  else { res.className = 'result ng'; res.innerHTML = `❌ 本番に反映されていないファイルが ${ng} 件あります<small>本番 ${pv ? 'v' + pv : '（不明）'} ／ テスト ${tv ? 'v' + tv : '（不明）'}。下の表で ❌ のファイルを確認してください。</small>`; }
+}
+document.getElementById('again').addEventListener('click', run);
+run();
+</script>
+</body>
+</html>

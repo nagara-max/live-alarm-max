@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="推しと共に目覚ましアラーム(仮)">
 <meta name="theme-color" content="#0e1116">
-<link rel="manifest" href="manifest.webmanifest?v=1.7.2">
+<link rel="manifest" href="manifest.webmanifest?v=1.7.4">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>推しと共に目覚ましアラーム(仮)</title>
@@ -33,10 +33,11 @@ a{color:var(--accent2)}
 header.top{display:flex;align-items:center;gap:10px;padding:8px 0 16px}
 header.top h1{margin:0;flex:1;min-width:0;font-weight:400;line-height:1.15}
 .brand{font-family:"Mochiy Pop One","Hiragino Maru Gothic ProN","M PLUS Rounded 1c","Arial Rounded MT Bold",sans-serif}
-.brand .b1{display:inline-block;font-size:12px;color:#fff;background:#ff0033;border-radius:999px;padding:2px 10px 1px;letter-spacing:.12em;margin-bottom:5px;box-shadow:0 2px 0 #9e0020}
-.brand .b2{display:block;font-size:clamp(19px,5.6vw,25px);letter-spacing:.03em;color:#fff;
-  text-shadow:2px 2px 0 #ff0033,3px 3px 0 #9e0020}
-.brand small{font-size:.5em;color:#aaa;text-shadow:none;margin-left:3px;letter-spacing:0;vertical-align:middle}
+.brand .b1{display:block;font-size:12.5px;color:#ff9ec4;letter-spacing:.12em;margin-bottom:2px}
+.brand .b2{display:inline-block;font-size:clamp(19px,5.6vw,25px);letter-spacing:.03em;
+  background:linear-gradient(90deg,#ffd166 0%,#ff8a3d 48%,#ff5fa2 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 2px 0 rgba(0,0,0,.35))}
+.brand small{font-size:.5em;color:var(--muted);-webkit-text-fill-color:var(--muted);margin-left:3px;letter-spacing:0;vertical-align:middle}
 .iconbtn{background:var(--panel);border:1px solid var(--line);border-radius:10px;height:40px;min-width:40px;padding:0 12px;cursor:pointer}
 .btn{border-radius:12px;padding:11px 16px;cursor:pointer;background:var(--panel2);border:1px solid var(--line);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#1b0f05;font-weight:700}
@@ -467,7 +468,7 @@ html:not(.public) .pubonly{display:none!important}
   <div class="slides" id="slides"></div>
   <div class="dots" id="dots"></div>
   <div class="row">
-    <button class="btn ghost" id="introClose">閉じる</button>
+    <button class="btn" id="introClose">✕ 閉じる</button>
     <span class="spacer"></span>
     <button class="btn" id="introPrev">戻る</button>
     <button class="btn primary" id="introNext">次へ</button>
@@ -509,7 +510,7 @@ html:not(.public) .pubonly{display:none!important}
 <div id="toast"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 
-<script src="config.js?v=1.7.2"></script>
+<script src="config.js?v=1.7.4"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -537,7 +538,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.7.2'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.7.4'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
