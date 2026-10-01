@@ -9,10 +9,31 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="推しと共に目覚ましアラーム(仮)">
 <meta name="theme-color" content="#0e1116">
-<link rel="manifest" href="manifest.webmanifest?v=1.8.1">
+<link rel="manifest" href="manifest.webmanifest?v=1.8.2">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>推しと共に目覚ましアラーム(仮)</title>
+<script>
+/* iPhone の Safari 以外（LINE・Chrome・Instagram など）で開かれたら、画面を読み込む前に Safari へ切り替える */
+(function () {
+  try {
+    var ua = navigator.userAgent;
+    var ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    if (!ios || navigator.standalone === true) return;
+    var non = /CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|GSA\/|YaBrowser|DuckDuckGo|Brave|Line\/|FBAN|FBAV|FBIOS|Instagram|Twitter|MicroMessenger|KAKAOTALK|Snapchat|Pinterest|YJApp|Yahoo/i;
+    var safari = /Safari\//.test(ua) && /Version\//.test(ua) && !non.test(ua);
+    if (safari) return;
+    var clean = location.href.replace(/[?&]openExternalBrowser=1/, '');
+    if (/Line\//.test(ua) && !/[?&]openExternalBrowser=1/.test(location.search)) {
+      window.__toSafari = 'line';
+      location.replace(location.href + (location.search ? '&' : '?') + 'openExternalBrowser=1');
+      return;
+    }
+    window.__toSafari = 'x-safari';
+    setTimeout(function () { location.href = 'x-safari-' + clean; }, 200);
+  } catch (e) {}
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&display=swap&text=%E6%8E%A8%E3%81%97%E3%81%A8%E5%85%B1%E3%81%AB%E7%9B%AE%E8%A6%9A%E3%81%BE%E3%81%97%E3%82%A2%E3%83%A9%E3%83%BC%E3%83%A0%28%E4%BB%AE%29%E4%BD%BF%E3%81%84%E6%96%B9%E3%81%AE%E6%B5%81%E3%82%8C">
@@ -322,7 +343,7 @@ html:not(.public) .pubonly{display:none!important}
   </div>
   <div id="alarmList"></div>
 
-  <div class="foot">映像は YouTube 公式埋め込みプレーヤーで再生します<br>
+  <div class="foot">映像は YouTube 公式埋め込みプレーヤーで再生します。ご利用には YouTube 利用規約への同意が必要です<br>
     <a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a> ・ <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">YouTube 利用規約</a> ・ <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google プライバシーポリシー</a></div>
 </div>
 
@@ -553,7 +574,7 @@ html:not(.public) .pubonly{display:none!important}
 <div id="toast"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 
-<script src="config.js?v=1.8.1"></script>
+<script src="config.js?v=1.8.2"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -581,7 +602,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.8.1'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.8.2'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -1632,7 +1653,16 @@ function closeModal(id) {
   m.classList.remove('open');
   // 途中離脱の記録
   if (id === 'mEdit' && !editSaved) track('editor_cancel', { typed: !!$('#fChannel').value.trim(), ch_ok: !!editChannel, isNew: editIsNew });
-  if (id === 'mIntro' && !introFinished) track('intro_close', { i: slideIdx, total: SLIDES.length });
+  if (id === 'mIntro' && !introFinished) {
+    track('intro_close', { i: slideIdx, total: SLIDES.length });
+    // 閉じた場合も「見た」として記録し、次から自動では出さない（いつでも「使いかた」から見られる）
+    if (!state.settings.introSeen || (PUBLIC && !state.settings.consentAt)) {
+      state.settings.introSeen = true;
+      if (PUBLIC && !state.settings.consentAt) state.settings.consentAt = Date.now();
+      save();
+      if (!state.alarms.length) setTimeout(() => toast('使い方は右上の「使いかた」からいつでも見られます', 3500), 300);
+    }
+  }
   if (id === 'mA2hs') track('a2hs_close', { where: a2Where, sec: Math.round((Date.now() - a2OpenedAt) / 1000) });
 }
 $$('.modal').forEach(m => m.addEventListener('click', e => {
@@ -2393,15 +2423,9 @@ function boot() {
       btn.addEventListener('click', () => track('safari_open_tap', { br: browserName() }));
       $('#blockHint').innerHTML = 'それでも開かない時：「URLをコピー」→ Safari を開いて、アドレス欄に貼り付けてください。<br>LINE の場合は、右下の「︙」→「ブラウザで開く」でも開けます。';
       $('#block').classList.add('open');
-      const isLine = /Line\//.test(UA);
-      if (isLine && !/[?&]openExternalBrowser=1/.test(location.search)) {
-        track('safari_redirect', { via: 'line', br: browserName() }); flushStats(true);
-        setTimeout(() => location.replace(location.href + (location.search ? '&' : '?') + 'openExternalBrowser=1'), 300);
-      } else {
-        track('safari_redirect', { via: 'x-safari', br: browserName() }); flushStats(true);
-        setTimeout(() => { location.href = safariUrl; }, 300);
-        setTimeout(() => { $('#blockTitle').textContent = 'Safari で開いてください'; }, 2500);
-      }
+      // 切り替え自体はページ先頭のスクリプトで実行済み。ここでは記録と、開けなかった時の表示だけ
+      track('safari_redirect', { via: window.__toSafari || 'none', br: browserName() }); flushStats(true);
+      setTimeout(() => { $('#blockTitle').textContent = 'Safari で開いてください'; }, 2500);
       return;
     }
     $('#blockMsg').innerHTML = 'スマホ版は <b>iPhone の Safari 専用</b>です。PC のブラウザでご利用ください。';
