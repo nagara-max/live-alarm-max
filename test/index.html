@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="推しと共に目覚ましアラーム(仮)">
 <meta name="theme-color" content="#0e1116">
-<link rel="manifest" href="manifest.webmanifest?v=1.9.2">
+<link rel="manifest" href="manifest.webmanifest?v=1.9.3">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>推しと共に目覚ましアラーム(仮)</title>
@@ -287,6 +287,7 @@ html:not(.public) .pubonly{display:none!important}
 #standby .st b{color:#6b7280;font-weight:500}
 #standby .sbtns{position:absolute;bottom:calc(24px + env(safe-area-inset-bottom));display:flex;gap:10px}
 #standby .sbtns .btn{background:#111;border-color:#222;color:#666;font-size:14px}
+#standby .sbtns #sbPrime{color:#b98a5a;border-color:#3a2a1a}
 /* ringing / player */
 #ring{position:fixed;inset:0;background:rgba(5,6,9,.97);z-index:60;display:none;flex-direction:column;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));overflow:auto}
 #ring.open{display:flex}
@@ -547,6 +548,7 @@ html:not(.public) .pubonly{display:none!important}
   <div class="sbmsg" id="sbMsg"></div>
   <div class="st" id="sbStatus"></div>
   <div class="sbtns">
+    <button class="btn" id="sbPrime" style="display:none">🔈 朝の音を準備する</button>
     <button class="btn" id="sbExit">終了</button>
   </div>
 </div>
@@ -579,7 +581,7 @@ html:not(.public) .pubonly{display:none!important}
 <div id="toast"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 
-<script src="config.js?v=1.9.2"></script>
+<script src="config.js?v=1.9.3"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -607,7 +609,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.9.2'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.9.3'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -1433,7 +1435,7 @@ function cueNext() {   // 次に鳴るアラームの動画を前もって読み
   if (!v || cuedId === v.id) return;
   try { player.cueVideoById(v.id); cuedId = v.id; } catch (e) {}
 }
-function primeForMorning() {
+function primeForMorning(manualOnly) {
   if (!isMobile || priming || !player || typeof player.playVideo !== 'function' || $('#ring').classList.contains('open')) return false;
   if (primedAt) return false;   // このページではもう準備できている
   const nx = nextOverall(), v = nx && nx.alarm.lastVideo;
@@ -1442,17 +1444,32 @@ function primeForMorning() {
   $('#ring').classList.add('open', 'prime');
   $('#rTitle').textContent = '朝の準備';
   $('#rName').textContent = nx.alarm.channelTitle || '';
-  setRingMsg('🔈 朝に YouTube の音が自動で出るように、映像を1秒だけ流して準備しています（音は出ません）。');
-  try { player.mute(); if (cuedId === v.id) player.playVideo(); else player.loadVideoById(v.id); } catch (e) {}
-  // 2秒たっても自動で始まらない時は、プレーヤーの ▶ を押してもらう（プレーヤーを直接タップするのが、いちばん確実に許可を得られる）
-  clearTimeout(primeTimer);
-  primeTimer = setTimeout(() => {
+  const askTap = () => {
     if (!priming) return;
     setRingMsg('プレーヤーの ▶ をタップしてください（音は出ません）。1秒流れたら、自動で暗い画面に切り替わります。', 'warn');
     track('prime_manual');
-    primeTimer = setTimeout(() => endPrime(false), 20000);
-  }, 2000);
+    clearTimeout(primeTimer); primeTimer = setTimeout(() => endPrime(false), 30000);
+  };
+  clearTimeout(primeTimer);
+  if (manualOnly) {
+    // タップから時間がたっている時は自動では始めず、プレーヤーの ▶ を押してもらう（いちばん確実）
+    try { player.mute(); player.cueVideoById(v.id); cuedId = v.id; } catch (e) {}
+    askTap();
+  } else {
+    setRingMsg('🔈 朝に YouTube の音が自動で出るように、映像を1秒だけ流して準備しています（音は出ません）。');
+    try { player.mute(); if (cuedId === v.id) player.playVideo(); else player.loadVideoById(v.id); } catch (e) {}
+    primeTimer = setTimeout(askTap, 2000);   // 2秒たっても始まらない時は ▶ を押してもらう
+  }
   return true;
+}
+/* 暗い時計の画面の「朝の音を準備する」ボタン */
+async function primeFromButton() {
+  if (priming || primedAt) return;
+  const nx = nextOverall(); if (!nx) return;
+  if (player && typeof player.playVideo === 'function' && nx.alarm.lastVideo) { primeForMorning(false); return; }   // すぐ始められる時（タップの中）
+  toast('準備しています…', 4000);
+  try { await ensurePlayer(); if (!nx.alarm.lastVideo) await withTimeout(resolveVideo(nx.alarm), 12000); } catch (e) {}
+  if (!primeForMorning(true)) toast('いまは準備できませんでした。朝はアラーム音で起こし、ボタン1回で YouTube の音に切り替えられます', 5000);
 }
 function endPrime(ok) {
   if (!priming) return;
@@ -1463,6 +1480,7 @@ function endPrime(ok) {
   syncAudioMode();
   if (ok) primedAt = Date.now();
   track('prime', { ok: !!ok });
+  updateStandby();
 }
 
 let pending = null;
@@ -1654,7 +1672,9 @@ function updateStandby() {
   lines.push(`画面の点灯維持：<b>${wakeLock ? 'ON' : ('wakeLock' in navigator ? 'OFF（画面をタップで再取得）' : '非対応（自動ロックを「なし」に）')}</b>`);
   if (state.settings.lockMode) lines.push(`ロック中モード：<b>${!silentEl.paused ? '待機音 再生中' : '停止中（画面をタップで再開）'}</b>`);
   if (testAlarm) lines.push(`テスト：${pad(testAlarm.at.getHours())}:${pad(testAlarm.at.getMinutes())} に鳴ります`);
+  if (isMobile) lines.push(`朝の音の準備：<b>${primedAt ? '済み（YouTube の音が自動で出やすい状態）' : 'まだ（下のボタンで準備できます）'}</b>`);
   $('#sbStatus').innerHTML = lines.join('<br>');
+  $('#sbPrime').style.display = isMobile && !primedAt && !priming ? '' : 'none';
 }
 function updateClock(now) {
   if (!standbyOn) return;
@@ -2303,6 +2323,7 @@ $('#btnStandby').addEventListener('click', () => {
 });
 
 $('#sbExit').addEventListener('click', stopStandby);
+$('#sbPrime').addEventListener('click', primeFromButton);
 $('#standby').addEventListener('click', e => {
   if (e.target.closest('button')) return;
   setPlaybackSession();
