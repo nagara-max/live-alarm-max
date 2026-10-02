@@ -180,6 +180,7 @@ input[type=range]{width:100%}
 .dayrow .d.sun{color:#ff7b7b}.dayrow .d.sat{color:#7bb8ff}
 .dayrow input[type=time]{flex:1;font-size:18px;padding:8px 10px}
 .chbox{display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer}
+.chbox:has(input:disabled){opacity:.5;cursor:not-allowed}
 .chbox input{width:20px;height:20px;flex:none}
 .hint{font-size:12.5px;color:var(--muted);margin-top:6px}
 .okline{display:flex;gap:10px;align-items:center;margin-top:10px;padding:10px;border-radius:10px;background:#12261e;border:1px solid #1f4a37;font-size:14px}
@@ -457,11 +458,15 @@ html:not(.public) .pubonly{display:none!important}
     <div class="hint">新しいタブで開くには、ブラウザでこのサイトの<b>ポップアップを許可</b>してください。</div>
     <button class="btn sm" id="btnNotif" style="margin-top:8px">デスクトップ通知を許可する</button>
   </div>
-  <div class="field" id="boxLockMode">
-    <label class="chbox"><input type="checkbox" id="sLockMode"> ロック中モード（実験的）</label>
-    <div class="hint">待機画面の間は無音を流し続け、画面ロック中でも時刻になったら<b>アラーム音</b>を鳴らします。ロックを解除すると YouTube の配信が始まります。電池消費が増えます。</div>
+  <div class="field">
+    <span class="flabel">アラーム音（YouTube の代わりに鳴る、このアプリの音）</span>
+    <div><label class="chbox" style="font-size:15px"><input type="checkbox" id="sChime" checked> <span>YouTube の音が出せない時は、アラーム音で起こす</span></label></div>
+    <div class="hint"><b>画面を開いたまま</b>朝を迎えた時の保険です。配信が見つからない・音を自動で出せなかった時に、アラーム音を鳴らします。オフにすると、その時は何も鳴りません。</div>
+    <div id="boxLockMode">
+      <label class="chbox" style="margin-top:10px;font-size:15px"><input type="checkbox" id="sLockMode"> <span>画面ロック中も、アラーム音で起こす <small style="color:var(--muted);white-space:nowrap">（実験的）</small></span></label>
+      <div class="hint">「画面を暗くする」を押したあとに <b>iPhone の画面をロック（消灯）した</b>時のための設定です。オフだと、ロック中は何も鳴りません。オンにすると時刻にアラーム音が鳴り、ロックを解除すると YouTube が始まります（ロック中は YouTube を流せないため）。電池を多く使います。<span id="lockNeedsChime" style="display:none;color:var(--accent)"><br>※ 上の「アラーム音で起こす」がオンの時だけ使えます。</span></div>
+    </div>
   </div>
-  <label class="chbox"><input type="checkbox" id="sChime" checked> YouTube が再生できない時はアラーム音で代わりに鳴らす</label>
   <div class="field pubonly" style="margin-top:8px">
     <label class="chbox"><input type="checkbox" id="sStats" checked> 匿名の利用統計を送信して改善に協力する</label>
     <div class="hint">送るのは操作の流れ・選んだチャンネル・エラーなどです。名前・メールアドレスなどの個人情報は送りません。<a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a></div>
@@ -620,7 +625,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.9.6'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.9.7'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -1311,7 +1316,7 @@ let audioUnlocked = false, chimeOn = false, chimeViaSilent = false, chimeStopTim
 
 /* 音の出し方（iPhone）
  *  ふだん        ：ほかのアプリの音（小窓で流している動画や音楽など）を止めない設定にしておく
- *  アラームの時  ：マナーモードでも鳴るようにし、ほかの音より優先する（鳴っている間・ロック中モードの待機中） */
+ *  アラームの時  ：マナーモードでも鳴るようにし、ほかの音より優先する（鳴っている間・「画面ロック中も鳴らす」設定の待機中） */
 function syncAudioMode() {
   try {
     if (!navigator.audioSession) return;
@@ -1683,7 +1688,7 @@ function updateStandby() {
   $('#sbNext').textContent = nx ? `次: ${fmtDate(nx.at)}　${nx.alarm.channelTitle || ''}` : 'アラームなし';
   const lines = [];
   lines.push(`画面の点灯維持：<b>${wakeLock ? 'ON' : ('wakeLock' in navigator ? 'OFF（画面をタップで再取得）' : '非対応（自動ロックを「なし」に）')}</b>`);
-  if (state.settings.lockMode) lines.push(`ロック中モード：<b>${!silentEl.paused ? '待機音 再生中' : '停止中（画面をタップで再開）'}</b>`);
+  if (state.settings.lockMode) lines.push(`ロック中のアラーム音：<b>${!silentEl.paused ? '準備OK' : '止まっています（画面をタップで再開）'}</b>`);
   if (testAlarm) lines.push(`テスト：${pad(testAlarm.at.getHours())}:${pad(testAlarm.at.getMinutes())} に鳴ります`);
   if (isMobile) lines.push(`朝の音の準備：<b>${primedAt ? '済み（YouTube の音が自動で出やすい状態）' : 'まだ（下のボタンで準備できます）'}</b>`);
   $('#sbStatus').innerHTML = lines.join('<br>');
@@ -2233,6 +2238,8 @@ $('#alarmList').addEventListener('change', e => {
 });
 
 /* ---------- 設定 ---------- */
+/* 「画面をロックしても鳴らす」は、アラーム音そのものがオンの時だけ使える */
+function syncLockOpt() { const on = $('#sChime').checked; $('#sLockMode').disabled = !on; if (!on) $('#sLockMode').checked = false; $('#lockNeedsChime').style.display = on ? 'none' : ''; }
 function openSettings() {
   track('settings_open');
   renderUpdateUI(latestVersion && verNum(latestVersion) > verNum(APP_VERSION));
@@ -2242,11 +2249,12 @@ function openSettings() {
   $('#siteUrlLine').innerHTML = SITE_PATTERN ? copyLine(SITE_PATTERN) : '';
   $('#sOpenMode').value = state.settings.openMode; $('#sLockMode').checked = state.settings.lockMode; $('#sChime').checked = state.settings.chime;
   $('#boxOpenMode').style.display = isMobile ? 'none' : '';
-  $('#boxLockMode').style.display = isIOS ? '' : 'none';
+  $('#boxLockMode').style.display = isIOS ? '' : 'none'; syncLockOpt();
   $('#btnNotif').style.display = ('Notification' in window && Notification.permission !== 'granted') ? '' : 'none';
   openModal('mSettings');
 }
 $('#btnSettings').addEventListener('click', openSettings);
+$('#sChime').addEventListener('change', syncLockOpt);
 $('#btnUpdBar').addEventListener('click', doUpdate);
 $('#btnDoUpdate').addEventListener('click', doUpdate);
 $('#btnUpdLater').addEventListener('click', () => { updDismissed = true; $('#updBar').style.display = 'none'; track('update_later'); });
@@ -2254,7 +2262,7 @@ $('#btnCheckUpdate').addEventListener('click', () => checkUpdate(true));
 $('#btnSaveSettings').addEventListener('click', () => {
   const k = cleanKey($('#sKey')?.value);
   if (k !== state.apiKey) { state.apiKey = k; state.keyOK = false; testKey(k).then(() => { state.keyOK = true; save(); toast('APIキーを確認しました'); }).catch(e => showError(e)); }
-  state.settings.openMode = $('#sOpenMode').value; state.settings.lockMode = $('#sLockMode').checked; state.settings.chime = $('#sChime').checked;
+  state.settings.openMode = $('#sOpenMode').value; state.settings.chime = $('#sChime').checked; state.settings.lockMode = $('#sLockMode').checked && state.settings.chime;
   track('settings_save', { openMode: state.settings.openMode, lock: state.settings.lockMode, chime: state.settings.chime, stats: $('#sStats').checked });
   if (PUBLIC && state.settings.stats !== false && !$('#sStats').checked) { track('stats_off'); flushStats(true); }
   state.settings.stats = $('#sStats').checked;
@@ -2403,7 +2411,7 @@ ${isMobile
   ? `<div class="gtip">📱 スマホは<b>この画面を開いたまま</b>にしておく必要があります（画面ロック中・他のアプリを使用中は鳴りません）。<br>🌙 おすすめは、寝る前に<b>「画面を暗くする」</b>をタップ。まぶしくない時計表示で待機し、朝に YouTube の音が自動で出やすくなります（押さなかった朝は、アラーム音で起こします）。</div>`
   : `<div class="gtip">💻 PC は<b>このタブを開いたまま</b>なら、他のタブやアプリで作業していても大丈夫。時刻になると YouTube が流れます。<br><span class="small muted">PC がスリープしないよう、電源の設定だけ確認してください。</span></div>`}
 <details class="gmore"><summary>📖 もっと詳しく（${isIOS ? 'ホーム画面に追加・ロック中のこと' : 'ポップアップ・スマホで使う時'}）</summary><div>${isIOS
-  ? `<b>Safari 専用です</b>（Chrome や LINE の中のブラウザでは使えません）。<br><b>ホーム画面に追加</b>すると、設定が消えにくくなり、全画面で使えます。<br><button type="button" class="btn sm" data-a2hs="intro" style="margin:8px 0">📲 ホーム画面に追加するやり方（画像つき）</button><br>マナーモードでも音は出ますが、<b>本体の音量が0だと鳴りません</b>。画面ロック中は YouTube を流せないため、⚙設定の「ロック中モード（実験的）」をオンにするとアラーム音で起こします。`
+  ? `<b>Safari 専用です</b>（Chrome や LINE の中のブラウザでは使えません）。<br><b>ホーム画面に追加</b>すると、設定が消えにくくなり、全画面で使えます。<br><button type="button" class="btn sm" data-a2hs="intro" style="margin:8px 0">📲 ホーム画面に追加するやり方（画像つき）</button><br>マナーモードでも音は出ますが、<b>本体の音量が0だと鳴りません</b>。画面ロック中は YouTube を流せないため、⚙設定の「画面ロック中も、アラーム音で起こす（実験的）」をオンにするとアラーム音で起こします。`
   : `時刻になった時、このタブを見ていればページ内で再生（音量設定が効きます）、別のタブを見ている時は YouTube を新しいタブで開きます。新しいタブで開くには、このサイトの<b>ポップアップを許可</b>してください。<br>スマホ（iPhone）で使う時は、Safari でこのページを開いてください。`}</div></details>
 ${PUBLIC && !state.settings.consentAt ? `<p class="gfine">「同意してはじめる」を押すと、<a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">YouTube 利用規約</a>に同意したものとみなされます。サービス改善のため匿名の利用統計（操作・選んだチャンネル・エラーなど）を送信します。名前やメールアドレスは送りません（⚙設定でオフにできます）。<a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a></p>` : ''}`;
 let slideIdx = 0, introFinished = false, SLIDES = [];
