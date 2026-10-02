@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="推しと共に目覚ましアラーム(仮)">
 <meta name="theme-color" content="#0e1116">
-<link rel="manifest" href="manifest.webmanifest?v=1.8.2">
+<link rel="manifest" href="manifest.webmanifest?v=1.9.1">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>推しと共に目覚ましアラーム(仮)</title>
@@ -293,6 +293,8 @@ html:not(.public) .pubonly{display:none!important}
 #ring .rtitle{font-size:14px;color:var(--muted)}
 #ring .rname{font-size:18px;font-weight:700;margin:2px 0 10px}
 .playerbox{position:relative;width:100%;max-width:960px;margin:0 auto;aspect-ratio:16/9;min-height:200px;background:#000;border-radius:12px;overflow:hidden;flex:none}
+#ring.prime .rbtns,#ring.prime .vol,#ring.prime .tapsound{display:none!important}
+.tapsound{display:block;width:100%;max-width:960px;margin:12px auto 0;padding:18px 12px;font-size:19px;font-weight:800;border-radius:16px;animation:glow 1.6s ease-in-out infinite}
 .playerbox iframe,#ytPlayer{position:absolute;inset:0;width:100%;height:100%}
 #ring .rmsg{margin:10px auto;max-width:960px;width:100%}
 #ring .rbtns{display:flex;gap:10px;flex-wrap:wrap;max-width:960px;width:100%;margin:10px auto 0}
@@ -553,6 +555,7 @@ html:not(.public) .pubonly{display:none!important}
   <div class="rtitle" id="rTitle">アラーム</div>
   <div class="rname" id="rName"></div>
   <div class="playerbox" id="ytHolder"><div id="ytPlayer"></div></div>
+  <button class="btn primary tapsound" id="tapSound" style="display:none">🔊 ここをタップして YouTube の音を出す</button>
   <div class="rmsg note" id="rMsg" style="display:none"></div>
   <div class="vol" id="rVolBox"><label class="small muted">音量 <b id="rVolLabel"></b></label><input type="range" id="rVol" min="0" max="100" step="5"></div>
   <div class="rbtns">
@@ -574,7 +577,7 @@ html:not(.public) .pubonly{display:none!important}
 <div id="toast"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 
-<script src="config.js?v=1.8.2"></script>
+<script src="config.js?v=1.9.1"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -602,7 +605,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.8.2'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.9.1'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -1358,15 +1361,20 @@ function ensurePlayer() {
   return playerP;
 }
 function onPlayerState(e) {
+  if (priming) { if (e.data === YT.PlayerState.PLAYING) setTimeout(() => endPrime(true), 1000); return; }
   playing = e.data === YT.PlayerState.PLAYING;
   if (playing) {
     if (current) current.everPlayed = true;
-    stopChime(); hideRingMsg();
-    if (current) { try { player.unMute(); player.setVolume(current.volume); } catch (_) {} }
+    const mutedAuto = !!(current && current.mutedAuto && !current.userTapped);   // 音なしで映像だけ流している状態
+    if (!mutedAuto) {
+      primedAt = Date.now();   // 音つきで再生できた＝このあとは自動でも音を出しやすい
+      stopChime(); hideRingMsg(); showTapSound(false);
+      if (current) { try { player.unMute(); player.setVolume(current.volume); } catch (_) {} }
+    }
     if (current && !testMode && !current.reported) {
       current.reported = true;
       if (!current.test && !state.settings.firstPlayAt) { state.settings.firstPlayAt = Date.now(); save(); }
-      track(current.test ? 'test_play_start' : 'play_start', { ch: current.alarm.channelId, title: current.alarm.channelTitle, vid: current.videoId, vtitle: current.title, live: current.isLive, via: 'embed', ms: Date.now() - current.firedAt });
+      track(current.test ? 'test_play_start' : 'play_start', { ch: current.alarm.channelId, title: current.alarm.channelTitle, vid: current.videoId, vtitle: current.title, live: current.isLive, via: 'embed', muted: mutedAuto, ms: Date.now() - current.firedAt });
     }
     if (testMode) {
       track('prime_ok');
@@ -1376,6 +1384,7 @@ function onPlayerState(e) {
   }
 }
 function onPlayerError(e) {
+  if (priming) { endPrime(false); return; }
   const code = e.data;
   track('player_error', { code, vid: current?.videoId, ch: current?.alarm?.channelId, env: ENV || '' });
   // 153 = 埋め込み元のURLが分からない（ファイルを直接開いた時など）/ 101・150 = 配信者が埋め込みを禁止
@@ -1396,12 +1405,50 @@ function onPlayerError(e) {
 /* =========================================================
  * アラーム発火
  * ========================================================= */
+/* =========================================================
+ * 朝の準備（スマホ）：「画面を暗くする」を押した時に、映像を1秒だけ音なしで流しておく
+ *  - iPhone は「タップをきっかけに一度再生したプレーヤー」なら、あとから自動で音つき再生できることが多い
+ *  - 規約上プレーヤーを隠して再生してはいけないので、見える状態で1秒だけ流す
+ *  - うまくいかなかった朝は、アラーム音＋「音を出す」ボタンで補う
+ * ========================================================= */
+let priming = false, primedAt = 0, primeTimer = null, cuedId = '';
+function cueNext() {   // 次に鳴るアラームの動画を前もって読み込んでおく（タップした瞬間に再生を始められるように）
+  if (!isMobile || priming || !player || typeof player.cueVideoById !== 'function' || $('#ring').classList.contains('open')) return;
+  const nx = nextOverall(), v = nx && nx.alarm.lastVideo;
+  if (!v || cuedId === v.id) return;
+  try { player.cueVideoById(v.id); cuedId = v.id; } catch (e) {}
+}
+function primeForMorning() {
+  if (!isMobile || priming || !player || typeof player.playVideo !== 'function' || $('#ring').classList.contains('open')) return false;
+  if (primedAt) return false;   // このページではもう準備できている
+  const nx = nextOverall(), v = nx && nx.alarm.lastVideo;
+  if (!v) return false;
+  priming = true;
+  $('#ring').classList.add('open', 'prime');
+  $('#rTitle').textContent = '朝の準備';
+  $('#rName').textContent = nx.alarm.channelTitle || '';
+  setRingMsg('🔈 朝に YouTube の音が自動で出るように、映像を1秒だけ流して準備しています（音は出ません）。');
+  try { player.mute(); if (cuedId === v.id) player.playVideo(); else player.loadVideoById(v.id); } catch (e) {}
+  clearTimeout(primeTimer); primeTimer = setTimeout(() => endPrime(false), 5000);
+  return true;
+}
+function endPrime(ok) {
+  if (!priming) return;
+  priming = false; clearTimeout(primeTimer);
+  try { player.pauseVideo(); } catch (e) {}
+  cuedId = ''; playing = false;
+  $('#ring').classList.remove('open', 'prime'); hideRingMsg();
+  if (ok) primedAt = Date.now();
+  track('prime', { ok: !!ok });
+}
+
 let pending = null;
 let ringSeq = 0;   // 再生画面を開くたび・閉じるたびに増える番号（閉じた後に、待っていた処理が画面を開き直さないように）
 async function fire(a, isTest = false) {
+  if (priming) endPrime(false);
   const firedAt = Date.now(), seq = ++ringSeq;
   let video = null, fromCache = false, errKind = '';
-  track(isTest ? 'test_fire' : 'alarm_fire', { ch: a.channelId, title: a.channelTitle, mode: a.mode, play: a.play || 'live', standby: standbyOn, visible: document.visibilityState === 'visible' });
+  track(isTest ? 'test_fire' : 'alarm_fire', { ch: a.channelId, title: a.channelTitle, mode: a.mode, play: a.play || 'live', standby: standbyOn, visible: document.visibilityState === 'visible', primed: !!primedAt });
   ringIsTest = isTest;
   showRing(a, null, isTest ? 'テスト再生' : 'アラーム');
   setRingMsg('⏳ 流す動画を確認しています…');
@@ -1439,17 +1486,39 @@ async function startVideo(a, video, meta = {}) {
 
   const p = await ensurePlayer();
   if (meta.seq && meta.seq !== ringSeq) return;
+  playing = false;
   try { p.loadVideoById(video.id); p.unMute(); p.setVolume(a.volume); p.playVideo(); } catch (e) {}
   $('#rVol').value = a.volume; $('#rVolLabel').textContent = a.volume;
+  showTapSound(false);
   clearTimeout(verifyTimer);
-  verifyTimer = setTimeout(() => {
-    if (!playing && current?.videoId === video.id && !current.everPlayed) {
-      track('play_blocked', { ch: a.channelId, vid: video.id, test: !!meta.test });
-      startChime(a.volume);
-      setRingMsg(meta.test ? 'プレーヤーの ▶ をタップすると再生が始まります（本番のアラームでは、再生が始まらない時にアラーム音で起こします）。' : '自動再生がブロックされました。プレーヤーの ▶ をタップしてください。', 'warn');
-    }
-  }, 8000);
+  /* 音つきの自動再生ができたか確認する（iPhone などは、タップなしでは音を出せない）
+   *  - 2.5秒後から1秒ごとに確認。読み込み中（バッファ中）なら最大8秒まで待つ
+   *  - 止められていたら：映像だけ音なしで流し、アラーム音で起こし、大きなボタン1回で YouTube の音に切り替える */
+  const startedAt = Date.now();
+  const check = () => {
+    if (current?.videoId !== video.id || (meta.seq && meta.seq !== ringSeq)) return;
+    if (playing || current.everPlayed) return;
+    let st = -1; try { st = p.getPlayerState(); } catch (e) {}
+    if (st === 3 && Date.now() - startedAt < 8000) { verifyTimer = setTimeout(check, 1000); return; }
+    track('play_blocked', { ch: a.channelId, vid: video.id, test: !!meta.test, st, primed: !!primedAt });
+    current.mutedAuto = true;
+    try { p.mute(); p.playVideo(); } catch (e) {}
+    showTapSound(true);
+    startChime(a.volume);   // テスト再生では鳴らさない
+    // プレーヤーの中のボタンで音を出した場合も、同じように切り替える
+    const c = current;
+    const watch = setInterval(() => {
+      if (current !== c || !c.mutedAuto) { clearInterval(watch); return; }
+      let muted = true; try { muted = p.isMuted(); } catch (e) {}
+      if (!muted) { clearInterval(watch); c.userTapped = true; c.mutedAuto = false; stopChime(); showTapSound(false); hideRingMsg(); }
+    }, 1000);
+    setRingMsg(meta.test
+      ? '音つきの自動再生が止められました。オレンジのボタンをタップすると YouTube の音が出ます（本番ではこの時、アラーム音で起こします）。'
+      : (isIOS ? 'iPhone は自動では YouTube の音を出せないため、アラーム音で起こしています。' : 'ブラウザが音つきの自動再生を止めたため、アラーム音で起こしています。') + 'オレンジのボタンをタップすると、YouTube の音に切り替わります。', 'warn');
+  };
+  verifyTimer = setTimeout(check, 2500);
 }
+function showTapSound(on) { const b = $('#tapSound'); if (b) b.style.display = on ? '' : 'none'; }
 function notify(a, video) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   try {
@@ -1476,7 +1545,7 @@ function setRingMsg(msg, kind) { const m = $('#rMsg'); m.style.display = ''; m.t
 function hideRingMsg() { $('#rMsg').style.display = 'none'; }
 function closeRing() {
   if ($('#ring').classList.contains('open') && current) track('ring_close', { ch: current.alarm?.channelId, vid: current.videoId, sec: Math.round((Date.now() - current.shownAt) / 1000), played: !!current.reported, test: !!current.test || testMode, play: current.alarm?.play || 'live', live: !!current.isLive });
-  $('#ring').classList.remove('open'); stopChime(); pending = null; clearTimeout(verifyTimer); ringSeq++;
+  $('#ring').classList.remove('open'); stopChime(); pending = null; clearTimeout(verifyTimer); ringSeq++; showTapSound(false);
   try { player && player.stopVideo(); } catch (e) {}
   current = null;
 }
@@ -1532,6 +1601,7 @@ async function requestWake() {
 async function startStandby() {
   if (!state.alarms.some(a => a.enabled && a.channelId)) { toast('有効なアラームがありません。「＋ 追加」から作成してください'); return; }
   unlockAudio();
+  const didPrime = primeForMorning();   // タップの中で実行（iPhone はタップの中でしか「音を出す許可」を得られない）
   standbyOn = true;
   if (state.settings.lockMode) { silentEl.src = SILENT_URL; silentEl.play().catch(() => {}); setMediaMeta('推しと共に目覚ましアラーム', '待機中'); }
   $('#sbMsg').textContent = isIOS ? '自動で暗い時計の表示になります。' : '別のタブやアプリを使っていても大丈夫です。';
@@ -1540,7 +1610,7 @@ async function startStandby() {
   requestAnimationFrame(() => requestAnimationFrame(() => sb.classList.add('show')));
   await requestWake();
   standbyAt = Date.now();
-  track('standby_start', { lock: !!state.settings.lockMode, wake: !!wakeLock, alarms: state.alarms.filter(a => a.enabled).length });
+  track('standby_start', { lock: !!state.settings.lockMode, wake: !!wakeLock, alarms: state.alarms.filter(a => a.enabled).length, prime: didPrime });
   ensurePlayer();
 }
 function stopStandby() {
@@ -1636,7 +1706,7 @@ function render() {
   $('#nextTime').textContent = nx ? fmtDate(nx.at) : '—';
   $('#nextSub').textContent = nx ? `${nx.alarm.channelTitle || ''}${nx.alarm.label ? ' ・ ' + nx.alarm.label : ''}` : 'アラームが設定されていません';
   $('#standbyHint').textContent = isIOS
-    ? 'この画面を開いたままにしておけば鳴ります（画面ロック中・他のアプリを使用中は鳴りません）。寝る前にボタンを押すと、暗い時計表示になってまぶしくありません。'
+    ? 'この画面を開いたままにしておけば鳴ります（画面ロック中・他のアプリを使用中は鳴りません）。寝る前にボタンを押すと、暗い時計表示になり、朝に YouTube の音が自動で出やすくなります。'
     : 'PC はこのタブを開いたままにしておけば鳴ります。ボタンを押すと、画面が消えないよう時計表示で待機します。';
   const hr = new Date().getHours(), night = !!nx && (hr >= 20 || hr < 4);
   $('#btnStandby').classList.toggle('night', night);
@@ -2194,7 +2264,7 @@ const hasActiveAlarm = () => state.alarms.some(a => a.enabled && a.channelId);
 function keepAwakeIfNeeded() { if (isMobile && hasActiveAlarm() && !wakeLock && document.visibilityState === 'visible') requestWake(); }
 ['pointerdown', 'touchend', 'keydown'].forEach(t => document.addEventListener(t, () => {
   unlockAudio(); keepAwakeIfNeeded();
-  if (!playerP && !ENV && hasActiveAlarm()) ensurePlayer();   // YouTube プレーヤーを前もって用意しておく（最初の再生が遅れないように）
+  if (!ENV && hasActiveAlarm()) ensurePlayer().then(cueNext).catch(() => {});   // YouTube プレーヤーと次の動画を前もって用意しておく
 }, { capture: true, passive: true }));
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepAwakeIfNeeded(); });
 
@@ -2223,6 +2293,23 @@ $('#rClose').addEventListener('click', () => {
   if (!standbyOn && hasActiveAlarm()) startStandby();   // 本番のアラーム → 暗い時計の画面へ
 });
 $('#rStopChime').addEventListener('click', stopChime);
+/* 「音を出す」ボタン：タップの中で音を出す指示を送る（タップがあれば iPhone でも音を出せる） */
+$('#tapSound').addEventListener('click', () => {
+  if (!current || !player) return;
+  const c = current;
+  c.userTapped = true; c.mutedAuto = false;
+  stopChime(); showTapSound(false);
+  try { player.unMute(); player.setVolume(c.volume); player.playVideo(); } catch (e) {}
+  track('unmute_tap', { ch: c.alarm?.channelId, vid: c.videoId, test: !!c.test, ms: Date.now() - c.firedAt });
+  hideRingMsg();
+  // うまく切り替わらなかった時（映像が止まった・音が出ないまま）だけ、次の手を案内する
+  setTimeout(() => {
+    if (current !== c) return;
+    let st = -1, muted = false; try { st = player.getPlayerState(); muted = player.isMuted(); } catch (e) {}
+    if (st !== 1 && st !== 3) setRingMsg('プレーヤーの ▶ をタップすると、音つきで再生が始まります。', 'warn');
+    else if (muted) setRingMsg('音が出ない時は、プレーヤーの中のスピーカーのマーク（ミュート解除）をタップしてください。', 'warn');
+  }, 1800);
+});
 $('#rVol').addEventListener('input', e => { $('#rVolLabel').textContent = e.target.value; try { player.setVolume(+e.target.value); } catch (_) {} });
 $('#rOpenYT').addEventListener('click', () => { track('open_youtube', { vid: current?.videoId, ch: current?.alarm?.channelId }); stopChime(); });
 
@@ -2251,7 +2338,7 @@ const SLIDE_3 = () => `<span class="gstepno">STEP 3 / 3</span>
 <h3 class="gt"><span class="gbig">操作はこれだけ！</span><br>実際にセットしてみよう</h3>
 <div class="gimg g3"><img src="${GIMG(3)}" alt="アラームをセットした後の画面"></div>
 ${isMobile
-  ? `<div class="gtip">📱 スマホは<b>この画面を開いたまま</b>にしておく必要があります（画面ロック中・他のアプリを使用中は鳴りません）。<br>🌙 おすすめは、寝る前に<b>「画面を暗くする」</b>をタップ。充電しながら置いておけば、まぶしくない時計表示で待機します。</div>`
+  ? `<div class="gtip">📱 スマホは<b>この画面を開いたまま</b>にしておく必要があります（画面ロック中・他のアプリを使用中は鳴りません）。<br>🌙 おすすめは、寝る前に<b>「画面を暗くする」</b>をタップ。まぶしくない時計表示で待機し、朝に YouTube の音が自動で出やすくなります（押さなかった朝は、アラーム音で起こします）。</div>`
   : `<div class="gtip">💻 PC は<b>このタブを開いたまま</b>なら、他のタブやアプリで作業していても大丈夫。時刻になると YouTube が流れます。<br><span class="small muted">PC がスリープしないよう、電源の設定だけ確認してください。</span></div>`}
 <details class="gmore"><summary>📖 もっと詳しく（${isIOS ? 'ホーム画面に追加・ロック中のこと' : 'ポップアップ・スマホで使う時'}）</summary><div>${isIOS
   ? `<b>Safari 専用です</b>（Chrome や LINE の中のブラウザでは使えません）。<br><b>ホーム画面に追加</b>すると、設定が消えにくくなり、全画面で使えます。<br><button type="button" class="btn sm" data-a2hs="intro" style="margin:8px 0">📲 ホーム画面に追加するやり方（画像つき）</button><br>マナーモードでも音は出ますが、<b>本体の音量が0だと鳴りません</b>。画面ロック中は YouTube を流せないため、⚙設定の「ロック中モード（実験的）」をオンにするとアラーム音で起こします。`
