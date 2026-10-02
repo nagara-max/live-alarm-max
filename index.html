@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="推しと共に目覚ましアラーム(仮)">
 <meta name="theme-color" content="#0e1116">
-<link rel="manifest" href="manifest.webmanifest?v=1.9.1">
+<link rel="manifest" href="manifest.webmanifest?v=1.9.3">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>推しと共に目覚ましアラーム(仮)</title>
@@ -287,6 +287,7 @@ html:not(.public) .pubonly{display:none!important}
 #standby .st b{color:#6b7280;font-weight:500}
 #standby .sbtns{position:absolute;bottom:calc(24px + env(safe-area-inset-bottom));display:flex;gap:10px}
 #standby .sbtns .btn{background:#111;border-color:#222;color:#666;font-size:14px}
+#standby .sbtns #sbPrime{color:#b98a5a;border-color:#3a2a1a}
 /* ringing / player */
 #ring{position:fixed;inset:0;background:rgba(5,6,9,.97);z-index:60;display:none;flex-direction:column;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));overflow:auto}
 #ring.open{display:flex}
@@ -294,6 +295,7 @@ html:not(.public) .pubonly{display:none!important}
 #ring .rname{font-size:18px;font-weight:700;margin:2px 0 10px}
 .playerbox{position:relative;width:100%;max-width:960px;margin:0 auto;aspect-ratio:16/9;min-height:200px;background:#000;border-radius:12px;overflow:hidden;flex:none}
 #ring.prime .rbtns,#ring.prime .vol,#ring.prime .tapsound{display:none!important}
+#ring.prime #primeSkip{display:block!important;margin:12px auto 0;max-width:960px;width:100%}
 .tapsound{display:block;width:100%;max-width:960px;margin:12px auto 0;padding:18px 12px;font-size:19px;font-weight:800;border-radius:16px;animation:glow 1.6s ease-in-out infinite}
 .playerbox iframe,#ytPlayer{position:absolute;inset:0;width:100%;height:100%}
 #ring .rmsg{margin:10px auto;max-width:960px;width:100%}
@@ -546,6 +548,7 @@ html:not(.public) .pubonly{display:none!important}
   <div class="sbmsg" id="sbMsg"></div>
   <div class="st" id="sbStatus"></div>
   <div class="sbtns">
+    <button class="btn" id="sbPrime" style="display:none">🔈 朝の音を準備する</button>
     <button class="btn" id="sbExit">終了</button>
   </div>
 </div>
@@ -556,6 +559,7 @@ html:not(.public) .pubonly{display:none!important}
   <div class="rname" id="rName"></div>
   <div class="playerbox" id="ytHolder"><div id="ytPlayer"></div></div>
   <button class="btn primary tapsound" id="tapSound" style="display:none">🔊 ここをタップして YouTube の音を出す</button>
+  <button class="btn" id="primeSkip" style="display:none">準備をとばす</button>
   <div class="rmsg note" id="rMsg" style="display:none"></div>
   <div class="vol" id="rVolBox"><label class="small muted">音量 <b id="rVolLabel"></b></label><input type="range" id="rVol" min="0" max="100" step="5"></div>
   <div class="rbtns">
@@ -577,7 +581,7 @@ html:not(.public) .pubonly{display:none!important}
 <div id="toast"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 
-<script src="config.js?v=1.9.1"></script>
+<script src="config.js?v=1.9.3"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -605,7 +609,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.9.1'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.9.3'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -1294,9 +1298,21 @@ const chimeEl = new Audio(); chimeEl.loop = true; chimeEl.preload = 'auto'; chim
 let ringIsTest = false;   // いま表示中の再生画面がテスト再生かどうか
 let audioUnlocked = false, chimeOn = false, chimeViaSilent = false, chimeStopTimer = null;
 
-function setPlaybackSession() { try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {} }
+/* 音の出し方（iPhone）
+ *  ふだん        ：ほかのアプリの音（小窓で流している動画や音楽など）を止めない設定にしておく
+ *  アラームの時  ：マナーモードでも鳴るようにし、ほかの音より優先する（鳴っている間・ロック中モードの待機中） */
+function syncAudioMode() {
+  try {
+    if (!navigator.audioSession) return;
+    const ringOpen = document.getElementById('ring').classList.contains('open') && !priming;
+    const alarm = chimeOn || ringOpen || (standbyOn && state.settings.lockMode);
+    const type = alarm ? 'playback' : 'ambient';
+    if (navigator.audioSession.type !== type) navigator.audioSession.type = type;
+  } catch (e) {}
+}
+function setPlaybackSession() { syncAudioMode(); }
 function unlockAudio() { // タップ操作の中で呼ぶ → 以後スクリプトから音を出せる
-  setPlaybackSession();
+  syncAudioMode();
   if (audioUnlocked) return;
   chimeEl.src = SILENT_URL;
   chimeEl.play().then(() => { chimeEl.pause(); audioUnlocked = true; }).catch(() => {});
@@ -1306,7 +1322,7 @@ function unlockAudio() { // タップ操作の中で呼ぶ → 以後スクリ�
 function startChime(vol) {
   if (!state.settings.chime || chimeOn || ringIsTest) return;   // テスト再生ではアラーム音を鳴らさない
   track('chime', { ch: current?.alarm?.channelId, hidden: document.visibilityState !== 'visible' });
-  chimeOn = true; setPlaybackSession();
+  chimeOn = true; syncAudioMode();
   chimeEl.src = chimeURL(vol); chimeEl.loop = true;
   chimeEl.play().catch(() => { chimeViaSilent = true; silentEl.src = chimeURL(vol); silentEl.play().catch(() => {}); });
   setMediaMeta('⏰ アラーム', 'ロック解除で YouTube を再生します');
@@ -1322,6 +1338,7 @@ function stopChime() {
     if (standbyOn && state.settings.lockMode) silentEl.play().catch(() => {});
   }
   $('#rStopChime').style.display = 'none';
+  syncAudioMode();
   setMediaMeta('推しと共に目覚ましアラーム', '待機中');
 }
 function setMediaMeta(title, artist) {
@@ -1418,7 +1435,7 @@ function cueNext() {   // 次に鳴るアラームの動画を前もって読み
   if (!v || cuedId === v.id) return;
   try { player.cueVideoById(v.id); cuedId = v.id; } catch (e) {}
 }
-function primeForMorning() {
+function primeForMorning(manualOnly) {
   if (!isMobile || priming || !player || typeof player.playVideo !== 'function' || $('#ring').classList.contains('open')) return false;
   if (primedAt) return false;   // このページではもう準備できている
   const nx = nextOverall(), v = nx && nx.alarm.lastVideo;
@@ -1427,10 +1444,32 @@ function primeForMorning() {
   $('#ring').classList.add('open', 'prime');
   $('#rTitle').textContent = '朝の準備';
   $('#rName').textContent = nx.alarm.channelTitle || '';
-  setRingMsg('🔈 朝に YouTube の音が自動で出るように、映像を1秒だけ流して準備しています（音は出ません）。');
-  try { player.mute(); if (cuedId === v.id) player.playVideo(); else player.loadVideoById(v.id); } catch (e) {}
-  clearTimeout(primeTimer); primeTimer = setTimeout(() => endPrime(false), 5000);
+  const askTap = () => {
+    if (!priming) return;
+    setRingMsg('プレーヤーの ▶ をタップしてください（音は出ません）。1秒流れたら、自動で暗い画面に切り替わります。', 'warn');
+    track('prime_manual');
+    clearTimeout(primeTimer); primeTimer = setTimeout(() => endPrime(false), 30000);
+  };
+  clearTimeout(primeTimer);
+  if (manualOnly) {
+    // タップから時間がたっている時は自動では始めず、プレーヤーの ▶ を押してもらう（いちばん確実）
+    try { player.mute(); player.cueVideoById(v.id); cuedId = v.id; } catch (e) {}
+    askTap();
+  } else {
+    setRingMsg('🔈 朝に YouTube の音が自動で出るように、映像を1秒だけ流して準備しています（音は出ません）。');
+    try { player.mute(); if (cuedId === v.id) player.playVideo(); else player.loadVideoById(v.id); } catch (e) {}
+    primeTimer = setTimeout(askTap, 2000);   // 2秒たっても始まらない時は ▶ を押してもらう
+  }
   return true;
+}
+/* 暗い時計の画面の「朝の音を準備する」ボタン */
+async function primeFromButton() {
+  if (priming || primedAt) return;
+  const nx = nextOverall(); if (!nx) return;
+  if (player && typeof player.playVideo === 'function' && nx.alarm.lastVideo) { primeForMorning(false); return; }   // すぐ始められる時（タップの中）
+  toast('準備しています…', 4000);
+  try { await ensurePlayer(); if (!nx.alarm.lastVideo) await withTimeout(resolveVideo(nx.alarm), 12000); } catch (e) {}
+  if (!primeForMorning(true)) toast('いまは準備できませんでした。朝はアラーム音で起こし、ボタン1回で YouTube の音に切り替えられます', 5000);
 }
 function endPrime(ok) {
   if (!priming) return;
@@ -1438,8 +1477,10 @@ function endPrime(ok) {
   try { player.pauseVideo(); } catch (e) {}
   cuedId = ''; playing = false;
   $('#ring').classList.remove('open', 'prime'); hideRingMsg();
+  syncAudioMode();
   if (ok) primedAt = Date.now();
   track('prime', { ok: !!ok });
+  updateStandby();
 }
 
 let pending = null;
@@ -1451,6 +1492,7 @@ async function fire(a, isTest = false) {
   track(isTest ? 'test_fire' : 'alarm_fire', { ch: a.channelId, title: a.channelTitle, mode: a.mode, play: a.play || 'live', standby: standbyOn, visible: document.visibilityState === 'visible', primed: !!primedAt });
   ringIsTest = isTest;
   showRing(a, null, isTest ? 'テスト再生' : 'アラーム');
+  syncAudioMode();   // ここからは音を優先（マナーモードでも鳴らす）
   setRingMsg('⏳ 流す動画を確認しています…');
   // 少し前に確認した結果があれば、それを使ってすぐ再生する（本番は先読みから6分以内、テスト再生は30分以内）
   //  ※テスト再生はタップ直後に再生を始めないと、iPhone で自動再生が止められやすいため
@@ -1546,6 +1588,7 @@ function hideRingMsg() { $('#rMsg').style.display = 'none'; }
 function closeRing() {
   if ($('#ring').classList.contains('open') && current) track('ring_close', { ch: current.alarm?.channelId, vid: current.videoId, sec: Math.round((Date.now() - current.shownAt) / 1000), played: !!current.reported, test: !!current.test || testMode, play: current.alarm?.play || 'live', live: !!current.isLive });
   $('#ring').classList.remove('open'); stopChime(); pending = null; clearTimeout(verifyTimer); ringSeq++; showTapSound(false);
+  setTimeout(syncAudioMode, 0);
   try { player && player.stopVideo(); } catch (e) {}
   current = null;
 }
@@ -1603,6 +1646,7 @@ async function startStandby() {
   unlockAudio();
   const didPrime = primeForMorning();   // タップの中で実行（iPhone はタップの中でしか「音を出す許可」を得られない）
   standbyOn = true;
+  syncAudioMode();
   if (state.settings.lockMode) { silentEl.src = SILENT_URL; silentEl.play().catch(() => {}); setMediaMeta('推しと共に目覚ましアラーム', '待機中'); }
   $('#sbMsg').textContent = isIOS ? '自動で暗い時計の表示になります。' : '別のタブやアプリを使っていても大丈夫です。';
   $('#app').classList.add('fadeout');   // 元の画面は約0.6秒でふわっと消え、時計の画面が約1.4秒かけて現れる
@@ -1616,6 +1660,7 @@ async function startStandby() {
 function stopStandby() {
   if (standbyOn) track('standby_end', { min: Math.round((Date.now() - standbyAt) / 60000) });
   standbyOn = false; $('#standby').classList.remove('open', 'show'); $('#app').classList.remove('fadeout');
+  syncAudioMode();
   silentEl.pause();
   if (!(isMobile && hasActiveAlarm())) { try { wakeLock && wakeLock.release(); } catch (e) {} wakeLock = null; }
 }
@@ -1627,7 +1672,9 @@ function updateStandby() {
   lines.push(`画面の点灯維持：<b>${wakeLock ? 'ON' : ('wakeLock' in navigator ? 'OFF（画面をタップで再取得）' : '非対応（自動ロックを「なし」に）')}</b>`);
   if (state.settings.lockMode) lines.push(`ロック中モード：<b>${!silentEl.paused ? '待機音 再生中' : '停止中（画面をタップで再開）'}</b>`);
   if (testAlarm) lines.push(`テスト：${pad(testAlarm.at.getHours())}:${pad(testAlarm.at.getMinutes())} に鳴ります`);
+  if (isMobile) lines.push(`朝の音の準備：<b>${primedAt ? '済み（YouTube の音が自動で出やすい状態）' : 'まだ（下のボタンで準備できます）'}</b>`);
   $('#sbStatus').innerHTML = lines.join('<br>');
+  $('#sbPrime').style.display = isMobile && !primedAt && !priming ? '' : 'none';
 }
 function updateClock(now) {
   if (!standbyOn) return;
@@ -2276,6 +2323,7 @@ $('#btnStandby').addEventListener('click', () => {
 });
 
 $('#sbExit').addEventListener('click', stopStandby);
+$('#sbPrime').addEventListener('click', primeFromButton);
 $('#standby').addEventListener('click', e => {
   if (e.target.closest('button')) return;
   setPlaybackSession();
@@ -2293,6 +2341,7 @@ $('#rClose').addEventListener('click', () => {
   if (!standbyOn && hasActiveAlarm()) startStandby();   // 本番のアラーム → 暗い時計の画面へ
 });
 $('#rStopChime').addEventListener('click', stopChime);
+$('#primeSkip').addEventListener('click', () => endPrime(false));
 /* 「音を出す」ボタン：タップの中で音を出す指示を送る（タップがあれば iPhone でも音を出せる） */
 $('#tapSound').addEventListener('click', () => {
   if (!current || !player) return;
