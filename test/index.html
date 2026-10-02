@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="推しと共に目覚ましアラーム(仮)">
 <meta name="theme-color" content="#0e1116">
-<link rel="manifest" href="manifest.webmanifest?v=1.9.5">
+<link rel="manifest" href="manifest.webmanifest?v=1.9.6">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>推しと共に目覚ましアラーム(仮)</title>
@@ -226,7 +226,12 @@ details.more summary{cursor:pointer;color:var(--muted);font-size:14px;padding:8p
 .dots{display:flex;gap:6px;justify-content:center;margin:12px 0}
 .dots i{width:8px;height:8px;border-radius:50%;background:var(--line)}
 .dots i.on{background:var(--accent)}
-.swipehint{text-align:center;font-size:11.5px;color:var(--muted);margin:-6px 0 10px}
+/* 使い方のボタンは、スクロールしなくてもいつも画面の下に見えるようにする */
+.introfoot{position:sticky;bottom:0;z-index:2;background:var(--panel);border-top:1px solid var(--line);margin:12px -16px 0;padding:8px 16px calc(12px + env(safe-area-inset-bottom))}
+.introfoot .dots{margin:2px 0 8px}
+.introfoot .btn{white-space:nowrap;padding:11px 12px}
+@media (max-width:360px){.introfoot .btn{padding:10px 9px;font-size:14px}}
+#slides{user-select:none;-webkit-user-select:none;cursor:grab}
 #slides{touch-action:pan-y}
 .kbd{display:inline-block;border:1px solid var(--line);background:var(--panel2);border-radius:6px;padding:0 6px;font-size:13px}
 /* 使い方（画像つき3ステップ） */
@@ -534,15 +539,16 @@ html:not(.public) .pubonly{display:none!important}
 </div></div>
 
 <!-- 使い方 -->
-<div class="modal" id="mIntro"><div class="sheet">
+<div class="modal" id="mIntro"><div class="sheet hasfoot">
   <div class="slides" id="slides"></div>
-  <div class="dots" id="dots"></div>
-  <div class="swipehint" id="swipeHint">← 左右にスワイプでも切り替えられます →</div>
-  <div class="row">
-    <button class="btn" id="introClose">✕ 閉じる</button>
-    <span class="spacer"></span>
-    <button class="btn" id="introPrev">戻る</button>
-    <button class="btn primary" id="introNext">次へ</button>
+  <div class="introfoot">
+    <div class="dots" id="dots"></div>
+    <div class="row">
+      <button class="btn" id="introClose">✕ 閉じる</button>
+      <span class="spacer"></span>
+      <button class="btn" id="introPrev">戻る</button>
+      <button class="btn primary" id="introNext">次へ</button>
+    </div>
   </div>
 </div></div>
 
@@ -586,7 +592,7 @@ html:not(.public) .pubonly{display:none!important}
 <div id="toast"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 
-<script src="config.js?v=1.9.5"></script>
+<script src="config.js?v=1.9.6"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -614,7 +620,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.9.5'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.9.6'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -2414,22 +2420,41 @@ function drawIntro() {
   const last = slideIdx === SLIDES.length - 1;
   $('#introNext').textContent = last ? (PUBLIC && !state.settings.consentAt ? '同意してはじめる' : state.alarms.length ? '閉じる' : 'アラームを作ってみる') : '次へ';
   $('#mIntro .sheet').scrollTop = 0;
-  $('#swipeHint').style.display = 'ontouchstart' in window ? '' : 'none';
   $('#introClose').style.display = last && $('#introNext').textContent === '閉じる' ? 'none' : '';   // 「次へ」が「閉じる」になる最後の画面では1つだけに
   track('intro_view', { i: slideIdx, total: SLIDES.length });
 }
 $('#introPrev').addEventListener('click', () => { slideIdx = Math.max(0, slideIdx - 1); drawIntro(); });
-/* 横にスワイプして前後のページへ（縦のスクロールや、画像の上の操作とは区別する） */
+/* 横にスワイプして前後のページへ（スマホ：指でスワイプ／PC：マウスでドラッグ・トラックパッドの横スワイプ・←→キー） */
 (() => {
-  const el = $('#mIntro .sheet'); let x0 = 0, y0 = 0, t0 = 0, on = false;
-  el.addEventListener('touchstart', e => { if (e.touches.length !== 1) { on = false; return; } on = true; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now(); }, { passive: true });
-  el.addEventListener('touchend', e => {
+  const el = $('#mIntro .sheet'); let x0 = 0, y0 = 0, t0 = 0, on = false, wheelX = 0, wheelAt = 0, lockUntil = 0;
+  const go = (dir, how) => {
+    if (dir > 0 && slideIdx < SLIDES.length - 1) { slideIdx++; drawIntro(); track('intro_swipe', { dir: 'next', i: slideIdx, how }); return true; }
+    if (dir < 0 && slideIdx > 0) { slideIdx--; drawIntro(); track('intro_swipe', { dir: 'prev', i: slideIdx, how }); return true; }
+    return false;
+  };
+  const end = (x, y, how) => {
     if (!on) return; on = false;
-    const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
-    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5 || Date.now() - t0 > 800) return;
-    if (dx < 0 && slideIdx < SLIDES.length - 1) { slideIdx++; drawIntro(); track('intro_swipe', { dir: 'next', i: slideIdx }); }
-    else if (dx > 0 && slideIdx > 0) { slideIdx--; drawIntro(); track('intro_swipe', { dir: 'prev', i: slideIdx }); }
+    const dx = x - x0, dy = y - y0;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5 || Date.now() - t0 > 900) return;
+    if (go(dx < 0 ? 1 : -1, how) && how === 'mouse') { try { getSelection().removeAllRanges(); } catch (e) {} }
+  };
+  el.addEventListener('touchstart', e => { if (e.touches.length !== 1) { on = false; return; } on = true; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now(); }, { passive: true });
+  el.addEventListener('touchend', e => { const t = e.changedTouches[0]; end(t.clientX, t.clientY, 'touch'); }, { passive: true });
+  el.addEventListener('dragstart', e => e.preventDefault());   // 画像をつかんで「画像のドラッグ」になるのを止める（止めないとマウスを離した合図が来ない）
+  el.addEventListener('mousedown', e => { if (e.button !== 0 || e.target.closest('button,a,summary,input')) return; if (e.target.tagName === 'IMG') e.preventDefault(); on = true; x0 = e.clientX; y0 = e.clientY; t0 = Date.now(); });
+  addEventListener('mouseup', e => { if ($('#mIntro').classList.contains('open')) end(e.clientX, e.clientY, 'mouse'); else on = false; });
+  el.addEventListener('wheel', e => {   // トラックパッドの横スワイプ
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+    const now = Date.now();
+    if (now < lockUntil) return;
+    if (now - wheelAt > 300) wheelX = 0;
+    wheelAt = now; wheelX += e.deltaX;
+    if (Math.abs(wheelX) > 90) { go(wheelX > 0 ? 1 : -1, 'wheel'); wheelX = 0; lockUntil = now + 700; }
   }, { passive: true });
+  addEventListener('keydown', e => {
+    if (!$('#mIntro').classList.contains('open') || $('#mA2hs').classList.contains('open')) return;
+    if (e.key === 'ArrowRight') go(1, 'key'); else if (e.key === 'ArrowLeft') go(-1, 'key');
+  });
 })();
 $('#introNext').addEventListener('click', () => {
   if (slideIdx < SLIDES.length - 1) { slideIdx++; drawIntro(); return; }
