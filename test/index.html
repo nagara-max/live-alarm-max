@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="推しと共に目覚ましアラーム(仮)">
 <meta name="theme-color" content="#0e1116">
-<link rel="manifest" href="manifest.webmanifest?v=1.9.1">
+<link rel="manifest" href="manifest.webmanifest?v=1.9.2">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>推しと共に目覚ましアラーム(仮)</title>
@@ -294,6 +294,7 @@ html:not(.public) .pubonly{display:none!important}
 #ring .rname{font-size:18px;font-weight:700;margin:2px 0 10px}
 .playerbox{position:relative;width:100%;max-width:960px;margin:0 auto;aspect-ratio:16/9;min-height:200px;background:#000;border-radius:12px;overflow:hidden;flex:none}
 #ring.prime .rbtns,#ring.prime .vol,#ring.prime .tapsound{display:none!important}
+#ring.prime #primeSkip{display:block!important;margin:12px auto 0;max-width:960px;width:100%}
 .tapsound{display:block;width:100%;max-width:960px;margin:12px auto 0;padding:18px 12px;font-size:19px;font-weight:800;border-radius:16px;animation:glow 1.6s ease-in-out infinite}
 .playerbox iframe,#ytPlayer{position:absolute;inset:0;width:100%;height:100%}
 #ring .rmsg{margin:10px auto;max-width:960px;width:100%}
@@ -556,6 +557,7 @@ html:not(.public) .pubonly{display:none!important}
   <div class="rname" id="rName"></div>
   <div class="playerbox" id="ytHolder"><div id="ytPlayer"></div></div>
   <button class="btn primary tapsound" id="tapSound" style="display:none">🔊 ここをタップして YouTube の音を出す</button>
+  <button class="btn" id="primeSkip" style="display:none">準備をとばす</button>
   <div class="rmsg note" id="rMsg" style="display:none"></div>
   <div class="vol" id="rVolBox"><label class="small muted">音量 <b id="rVolLabel"></b></label><input type="range" id="rVol" min="0" max="100" step="5"></div>
   <div class="rbtns">
@@ -577,7 +579,7 @@ html:not(.public) .pubonly{display:none!important}
 <div id="toast"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 
-<script src="config.js?v=1.9.1"></script>
+<script src="config.js?v=1.9.2"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -605,7 +607,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.9.1'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.9.2'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -1294,9 +1296,21 @@ const chimeEl = new Audio(); chimeEl.loop = true; chimeEl.preload = 'auto'; chim
 let ringIsTest = false;   // いま表示中の再生画面がテスト再生かどうか
 let audioUnlocked = false, chimeOn = false, chimeViaSilent = false, chimeStopTimer = null;
 
-function setPlaybackSession() { try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {} }
+/* 音の出し方（iPhone）
+ *  ふだん        ：ほかのアプリの音（小窓で流している動画や音楽など）を止めない設定にしておく
+ *  アラームの時  ：マナーモードでも鳴るようにし、ほかの音より優先する（鳴っている間・ロック中モードの待機中） */
+function syncAudioMode() {
+  try {
+    if (!navigator.audioSession) return;
+    const ringOpen = document.getElementById('ring').classList.contains('open') && !priming;
+    const alarm = chimeOn || ringOpen || (standbyOn && state.settings.lockMode);
+    const type = alarm ? 'playback' : 'ambient';
+    if (navigator.audioSession.type !== type) navigator.audioSession.type = type;
+  } catch (e) {}
+}
+function setPlaybackSession() { syncAudioMode(); }
 function unlockAudio() { // タップ操作の中で呼ぶ → 以後スクリプトから音を出せる
-  setPlaybackSession();
+  syncAudioMode();
   if (audioUnlocked) return;
   chimeEl.src = SILENT_URL;
   chimeEl.play().then(() => { chimeEl.pause(); audioUnlocked = true; }).catch(() => {});
@@ -1306,7 +1320,7 @@ function unlockAudio() { // タップ操作の中で呼ぶ → 以後スクリ�
 function startChime(vol) {
   if (!state.settings.chime || chimeOn || ringIsTest) return;   // テスト再生ではアラーム音を鳴らさない
   track('chime', { ch: current?.alarm?.channelId, hidden: document.visibilityState !== 'visible' });
-  chimeOn = true; setPlaybackSession();
+  chimeOn = true; syncAudioMode();
   chimeEl.src = chimeURL(vol); chimeEl.loop = true;
   chimeEl.play().catch(() => { chimeViaSilent = true; silentEl.src = chimeURL(vol); silentEl.play().catch(() => {}); });
   setMediaMeta('⏰ アラーム', 'ロック解除で YouTube を再生します');
@@ -1322,6 +1336,7 @@ function stopChime() {
     if (standbyOn && state.settings.lockMode) silentEl.play().catch(() => {});
   }
   $('#rStopChime').style.display = 'none';
+  syncAudioMode();
   setMediaMeta('推しと共に目覚ましアラーム', '待機中');
 }
 function setMediaMeta(title, artist) {
@@ -1429,7 +1444,14 @@ function primeForMorning() {
   $('#rName').textContent = nx.alarm.channelTitle || '';
   setRingMsg('🔈 朝に YouTube の音が自動で出るように、映像を1秒だけ流して準備しています（音は出ません）。');
   try { player.mute(); if (cuedId === v.id) player.playVideo(); else player.loadVideoById(v.id); } catch (e) {}
-  clearTimeout(primeTimer); primeTimer = setTimeout(() => endPrime(false), 5000);
+  // 2秒たっても自動で始まらない時は、プレーヤーの ▶ を押してもらう（プレーヤーを直接タップするのが、いちばん確実に許可を得られる）
+  clearTimeout(primeTimer);
+  primeTimer = setTimeout(() => {
+    if (!priming) return;
+    setRingMsg('プレーヤーの ▶ をタップしてください（音は出ません）。1秒流れたら、自動で暗い画面に切り替わります。', 'warn');
+    track('prime_manual');
+    primeTimer = setTimeout(() => endPrime(false), 20000);
+  }, 2000);
   return true;
 }
 function endPrime(ok) {
@@ -1438,6 +1460,7 @@ function endPrime(ok) {
   try { player.pauseVideo(); } catch (e) {}
   cuedId = ''; playing = false;
   $('#ring').classList.remove('open', 'prime'); hideRingMsg();
+  syncAudioMode();
   if (ok) primedAt = Date.now();
   track('prime', { ok: !!ok });
 }
@@ -1451,6 +1474,7 @@ async function fire(a, isTest = false) {
   track(isTest ? 'test_fire' : 'alarm_fire', { ch: a.channelId, title: a.channelTitle, mode: a.mode, play: a.play || 'live', standby: standbyOn, visible: document.visibilityState === 'visible', primed: !!primedAt });
   ringIsTest = isTest;
   showRing(a, null, isTest ? 'テスト再生' : 'アラーム');
+  syncAudioMode();   // ここからは音を優先（マナーモードでも鳴らす）
   setRingMsg('⏳ 流す動画を確認しています…');
   // 少し前に確認した結果があれば、それを使ってすぐ再生する（本番は先読みから6分以内、テスト再生は30分以内）
   //  ※テスト再生はタップ直後に再生を始めないと、iPhone で自動再生が止められやすいため
@@ -1546,6 +1570,7 @@ function hideRingMsg() { $('#rMsg').style.display = 'none'; }
 function closeRing() {
   if ($('#ring').classList.contains('open') && current) track('ring_close', { ch: current.alarm?.channelId, vid: current.videoId, sec: Math.round((Date.now() - current.shownAt) / 1000), played: !!current.reported, test: !!current.test || testMode, play: current.alarm?.play || 'live', live: !!current.isLive });
   $('#ring').classList.remove('open'); stopChime(); pending = null; clearTimeout(verifyTimer); ringSeq++; showTapSound(false);
+  setTimeout(syncAudioMode, 0);
   try { player && player.stopVideo(); } catch (e) {}
   current = null;
 }
@@ -1603,6 +1628,7 @@ async function startStandby() {
   unlockAudio();
   const didPrime = primeForMorning();   // タップの中で実行（iPhone はタップの中でしか「音を出す許可」を得られない）
   standbyOn = true;
+  syncAudioMode();
   if (state.settings.lockMode) { silentEl.src = SILENT_URL; silentEl.play().catch(() => {}); setMediaMeta('推しと共に目覚ましアラーム', '待機中'); }
   $('#sbMsg').textContent = isIOS ? '自動で暗い時計の表示になります。' : '別のタブやアプリを使っていても大丈夫です。';
   $('#app').classList.add('fadeout');   // 元の画面は約0.6秒でふわっと消え、時計の画面が約1.4秒かけて現れる
@@ -1616,6 +1642,7 @@ async function startStandby() {
 function stopStandby() {
   if (standbyOn) track('standby_end', { min: Math.round((Date.now() - standbyAt) / 60000) });
   standbyOn = false; $('#standby').classList.remove('open', 'show'); $('#app').classList.remove('fadeout');
+  syncAudioMode();
   silentEl.pause();
   if (!(isMobile && hasActiveAlarm())) { try { wakeLock && wakeLock.release(); } catch (e) {} wakeLock = null; }
 }
@@ -2293,6 +2320,7 @@ $('#rClose').addEventListener('click', () => {
   if (!standbyOn && hasActiveAlarm()) startStandby();   // 本番のアラーム → 暗い時計の画面へ
 });
 $('#rStopChime').addEventListener('click', stopChime);
+$('#primeSkip').addEventListener('click', () => endPrime(false));
 /* 「音を出す」ボタン：タップの中で音を出す指示を送る（タップがあれば iPhone でも音を出せる） */
 $('#tapSound').addEventListener('click', () => {
   if (!current || !player) return;
