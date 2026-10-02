@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="推しと共に目覚ましアラーム(仮)">
 <meta name="theme-color" content="#0e1116">
-<link rel="manifest" href="manifest.webmanifest?v=1.9.3">
+<link rel="manifest" href="manifest.webmanifest?v=1.9.4">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>推しと共に目覚ましアラーム(仮)</title>
@@ -581,7 +581,7 @@ html:not(.public) .pubonly{display:none!important}
 <div id="toast"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 
-<script src="config.js?v=1.9.3"></script>
+<script src="config.js?v=1.9.4"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -609,7 +609,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.9.3'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.9.4'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -1463,13 +1463,14 @@ function primeForMorning(manualOnly) {
   return true;
 }
 /* 暗い時計の画面の「朝の音を準備する」ボタン */
-async function primeFromButton() {
+async function primeFromButton(auto) {
   if (priming || primedAt) return;
   const nx = nextOverall(); if (!nx) return;
-  if (player && typeof player.playVideo === 'function' && nx.alarm.lastVideo) { primeForMorning(false); return; }   // すぐ始められる時（タップの中）
-  toast('準備しています…', 4000);
-  try { await ensurePlayer(); if (!nx.alarm.lastVideo) await withTimeout(resolveVideo(nx.alarm), 12000); } catch (e) {}
-  if (!primeForMorning(true)) toast('いまは準備できませんでした。朝はアラーム音で起こし、ボタン1回で YouTube の音に切り替えられます', 5000);
+  if (auto !== true && player && typeof player.playVideo === 'function' && nx.alarm.lastVideo) { primeForMorning(false); return; }   // すぐ始められる時（タップの中）
+  if (auto !== true) toast('準備しています…', 4000);
+  try { await withTimeout(ensurePlayer(), 15000); if (!nx.alarm.lastVideo) await withTimeout(resolveVideo(nx.alarm), 12000); } catch (e) {}
+  if (!standbyOn || primedAt || priming) return;
+  if (!primeForMorning(true) && auto !== true) toast('いまは準備できませんでした。朝はアラーム音で起こし、ボタン1回で YouTube の音に切り替えられます', 5000);
 }
 function endPrime(ok) {
   if (!priming) return;
@@ -1655,6 +1656,7 @@ async function startStandby() {
   await requestWake();
   standbyAt = Date.now();
   track('standby_start', { lock: !!state.settings.lockMode, wake: !!wakeLock, alarms: state.alarms.filter(a => a.enabled).length, prime: didPrime });
+  if (!didPrime && isMobile && !primedAt && !priming) primeFromButton(true);   // プレーヤーの読み込みが間に合わなかった時
   ensurePlayer();
 }
 function stopStandby() {
@@ -2323,7 +2325,7 @@ $('#btnStandby').addEventListener('click', () => {
 });
 
 $('#sbExit').addEventListener('click', stopStandby);
-$('#sbPrime').addEventListener('click', primeFromButton);
+$('#sbPrime').addEventListener('click', () => primeFromButton());
 $('#standby').addEventListener('click', e => {
   if (e.target.closest('button')) return;
   setPlaybackSession();
@@ -2574,6 +2576,7 @@ function boot() {
   refreshHolidays();
   startTicker();
   loadYTApi();
+  if (!ENV && isMobile && hasActiveAlarm()) ensurePlayer().then(cueNext).catch(() => {});
   if (!state.settings.introSeen || (PUBLIC && !state.settings.consentAt)) openIntro(0);
   if (firstStandaloneLaunch) {
     track('a2hs_installed', { carried: Math.max(carried, 0), via: carried >= 0 ? 'cookie' : 'none' });
