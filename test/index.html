@@ -146,12 +146,20 @@ header.top h1{margin:0;flex:1;min-width:0;font-weight:400;line-height:1.15}
 .sheethead{display:flex;align-items:center;gap:8px;margin-bottom:12px}
 .sheethead h2{margin:0;flex:1}
 .footbar{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);margin:14px -16px 0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;gap:8px;align-items:center}
+/* 下の帯のボタン：文字が変わっても（保存⇔確認中…）ほかのボタンが動かないよう、幅を決めておく */
+.footbar .btn{white-space:nowrap}
+#btnSave{min-width:98px}
+@media (max-width:360px){.footbar .btn:not(.sm){padding:10px 10px}}
 .field{margin-bottom:16px}
 .field>label,.flabel{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
 .step{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#1b0f05;font-size:12px;font-weight:700;margin-right:6px}
 .input{width:100%;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px}
 .input:focus{outline:2px solid var(--accent);outline-offset:-1px}
 input[type=time].input{font-size:24px;font-variant-numeric:tabular-nums}
+/* iPhone：時刻の入力欄が自分の枠より大きく描かれ、右にはみ出すのを防ぐ（見た目を自前の枠にそろえる） */
+html.ios input[type=time].input{-webkit-appearance:none;appearance:none;display:block;width:100%;max-width:100%;min-width:0;min-height:54px;margin:0}
+html.ios input[type=time]::-webkit-date-and-time-value{margin:0;min-height:1.2em}
+#boxTime{overflow:hidden;border-radius:10px}
 input[type=range]{width:100%}
 .seg{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
 @media(min-width:520px){.seg{grid-template-columns:repeat(4,1fr)}}
@@ -180,6 +188,7 @@ input[type=range]{width:100%}
 .dayrow .d{width:28px;font-weight:700}
 .dayrow .d.sun{color:#ff7b7b}.dayrow .d.sat{color:#7bb8ff}
 .dayrow input[type=time]{flex:1;font-size:18px;padding:8px 10px}
+html.ios .dayrow input[type=time].input{width:auto;min-height:42px}
 .chbox{display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer}
 .chbox:has(input:disabled){opacity:.5;cursor:not-allowed}
 .chbox input{width:20px;height:20px;flex:none}
@@ -628,7 +637,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.9.9'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.9.10'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -636,6 +645,7 @@ const hasApi = () => PUBLIC || !!state.apiKey;
 const UA = navigator.userAgent;
 const isIPadOS = /Macintosh/.test(UA) && navigator.maxTouchPoints > 1;
 const isIOS = /iPhone|iPad|iPod/.test(UA) || isIPadOS;
+if (isIOS) document.documentElement.classList.add('ios');
 const isAndroid = /Android/i.test(UA);
 const isMobile = isIOS || isAndroid || /Mobile|Silk|Kindle/i.test(UA);
 const isStandalone = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
@@ -709,13 +719,18 @@ function save() {
   catch (e) { storageOK = false; toast('保存できませんでした（プライベートブラウズでは保存されません）'); }
 }
 
-function toast(msg, ms = 3000) {
-  const t = $('#toast'); t.textContent = msg; t.style.display = 'block';
-  // 開いている画面の下に「キャンセル／保存」などのボタンの帯がある時は、ボタンに重ならないよう帯の上に出す
-  let up = 0;
+/* お知らせの位置：開いている画面の下に「キャンセル／保存」などのボタンの帯がある時は、ボタンに重ならないよう帯の上に出す */
+function placeToast() {
+  const t = $('#toast'); let up = 0;
   $$('.modal.open .footbar, .modal.open .introfoot').forEach(f => { const r = f.getBoundingClientRect(); if (r.height > 0 && r.top < innerHeight) up = Math.max(up, innerHeight - r.top); });
   t.style.bottom = up ? (Math.round(up) + 10) + 'px' : '';
-  clearTimeout(toast._t); toast._t = setTimeout(() => t.style.display = 'none', ms);
+}
+function toast(msg, ms = 3000) {
+  const t = $('#toast'); t.textContent = msg; t.style.display = 'block';
+  placeToast();
+  // 表示している間に別の画面が開閉しても重ならないよう、位置を合わせ直す
+  clearInterval(toast._i); toast._i = setInterval(placeToast, 150);
+  clearTimeout(toast._t); toast._t = setTimeout(() => { t.style.display = 'none'; clearInterval(toast._i); }, ms);
 }
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); toast('コピーしました'); return; } catch (e) {}
@@ -2039,11 +2054,20 @@ function renderChResult(html) {
 }
 /* 確認中は「保存」を押せないようにする */
 let chBusy = false, vBusy = false;
+/* iPhone で、下に固定した帯の中身を変えた時に前の表示が残ることがあるので、帯ごと描き直させる */
+function repaintBar(el) {
+  if (!el) return;
+  el.style.opacity = '0.999';
+  requestAnimationFrame(() => requestAnimationFrame(() => { el.style.opacity = ''; }));
+}
 function updateSaveBtn() {
   const btn = $('#btnSave'); if (!btn) return;
   const busy = editPlay === 'fixed' ? vBusy : (chBusy || !!(editChannel && editChannel.loading));
+  const label = busy ? '確認中…' : '保存';
+  if (btn.disabled === busy && btn.textContent === label) return;
   btn.disabled = busy;
-  btn.textContent = busy ? '確認中…' : '保存';
+  btn.textContent = label;
+  repaintBar(btn.closest('.footbar'));
 }
 async function loadLatestPreview() {
   const ch = editChannel; if (!ch) return;
@@ -2436,6 +2460,7 @@ function drawIntro() {
   $('#introNext').textContent = last ? (PUBLIC && !state.settings.consentAt ? '同意してはじめる' : state.alarms.length ? '閉じる' : 'アラームを作ってみる') : '次へ';
   $('#mIntro .sheet').scrollTop = 0;
   $('#introClose').style.display = last && $('#introNext').textContent === '閉じる' ? 'none' : '';   // 「次へ」が「閉じる」になる最後の画面では1つだけに
+  repaintBar($('#mIntro .introfoot'));
   track('intro_view', { i: slideIdx, total: SLIDES.length });
 }
 $('#introPrev').addEventListener('click', () => { slideIdx = Math.max(0, slideIdx - 1); drawIntro(); });
