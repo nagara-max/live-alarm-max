@@ -316,7 +316,7 @@ html:not(.public) .pubonly{display:none!important}
 #block{position:fixed;inset:0;background:var(--bg);z-index:100;display:none;align-items:center;justify-content:center;padding:24px;text-align:center}
 #block.open{display:flex}
 #block .box{max-width:420px}
-#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#000;border:1px solid var(--line);padding:10px 16px;border-radius:12px;z-index:200;display:none;font-size:14px;max-width:90vw}
+#toast{position:fixed;left:0;right:0;margin:0 auto;width:fit-content;text-align:center;bottom:calc(24px + env(safe-area-inset-bottom));background:#000;border:1px solid var(--line);padding:10px 16px;border-radius:12px;z-index:200;display:none;font-size:14px;max-width:calc(100vw - 32px)}
 .empty{text-align:center;color:var(--muted);padding:28px 8px}
 .foot{color:#5c6470;font-size:12px;text-align:center;margin:24px 0 8px}
 </style>
@@ -625,7 +625,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.9.7'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.9.8'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -708,6 +708,10 @@ function save() {
 
 function toast(msg, ms = 3000) {
   const t = $('#toast'); t.textContent = msg; t.style.display = 'block';
+  // 開いている画面の下に「キャンセル／保存」などのボタンの帯がある時は、ボタンに重ならないよう帯の上に出す
+  let up = 0;
+  $$('.modal.open .footbar, .modal.open .introfoot').forEach(f => { const r = f.getBoundingClientRect(); if (r.height > 0 && r.top < innerHeight) up = Math.max(up, innerHeight - r.top); });
+  t.style.bottom = up ? (Math.round(up) + 10) + 'px' : '';
   clearTimeout(toast._t); toast._t = setTimeout(() => t.style.display = 'none', ms);
 }
 async function copyText(text) {
