@@ -47,7 +47,8 @@
 html,body{margin:0;background:var(--bg);color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Yu Gothic UI",sans-serif;
   -webkit-text-size-adjust:100%;line-height:1.55}
-body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);overflow-wrap:anywhere}
+.btn,.time,.clock,input,select{overflow-wrap:normal}
 button,input,select{font:inherit;color:inherit}
 a{color:var(--accent2)}
 .wrap{max-width:720px;margin:0 auto;padding:16px}
@@ -136,7 +137,7 @@ header.top h1{margin:0;flex:1;min-width:0;font-weight:400;line-height:1.15}
 .a2step .t{font-size:13px;color:var(--muted);margin-top:6px}
 .a2note{font-size:12px;color:var(--muted);margin-top:8px}
 #mError{z-index:85}
-.sheet{--panel:#222b3b;--panel2:#2b3547;--line:#42506a;--bg:#141a25;background:var(--panel);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));border:1px solid #4a5a78;border-top:4px solid var(--accent);box-shadow:0 -10px 44px rgba(0,0,0,.65),0 0 0 1px rgba(255,138,61,.18);animation:sheetin .22s ease-out;-webkit-overflow-scrolling:touch}
+.sheet{--panel:#222b3b;--panel2:#2b3547;--line:#42506a;--bg:#141a25;background:var(--panel);width:100%;max-width:640px;max-height:92vh;overflow:hidden auto;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));border:1px solid #4a5a78;border-top:4px solid var(--accent);box-shadow:0 -10px 44px rgba(0,0,0,.65),0 0 0 1px rgba(255,138,61,.18);animation:sheetin .22s ease-out;-webkit-overflow-scrolling:touch}
 @keyframes sheetin{from{transform:translateY(18px);opacity:.4}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){.sheet{animation:none}}
 .sheet.hasfoot{padding-bottom:0}
@@ -183,9 +184,11 @@ input[type=range]{width:100%}
 .chbox:has(input:disabled){opacity:.5;cursor:not-allowed}
 .chbox input{width:20px;height:20px;flex:none}
 .hint{font-size:12.5px;color:var(--muted);margin-top:6px}
-.okline{display:flex;gap:10px;align-items:center;margin-top:10px;padding:10px;border-radius:10px;background:#12261e;border:1px solid #1f4a37;font-size:14px}
+.okline{display:flex;gap:10px;align-items:center;margin-top:10px;padding:10px;border-radius:10px;background:#12261e;border:1px solid #1f4a37;font-size:14px;overflow-wrap:anywhere;min-width:0}
+.okline>div{min-width:0}
 .okline img{width:36px;height:36px;border-radius:50%;flex:none}
 .latest{display:flex;gap:10px;margin-top:8px;font-size:13px;color:var(--muted)}
+.latest>div{min-width:0}
 .latest img{width:112px;border-radius:8px;flex:none;aspect-ratio:16/9;object-fit:cover}
 .cands{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .cand{display:flex;align-items:center;gap:10px;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer}
@@ -194,7 +197,7 @@ input[type=range]{width:100%}
 .note.warn{border-color:#5a4a1a;color:#f0d9a0;background:#221d10}
 .keycard{background:#1c1712;border:1px solid #4a3620;border-radius:12px;padding:14px;margin-bottom:16px}
 .keycard.ok{background:#12261e;border-color:#1f4a37}
-.errbox{margin-top:10px;border:1px solid #5b2a2a;background:#231314;border-radius:10px;padding:12px;font-size:14px}
+.errbox{margin-top:10px;border:1px solid #5b2a2a;background:#231314;border-radius:10px;padding:12px;font-size:14px;overflow-wrap:anywhere}
 .errbox .et{font-weight:700;color:#ffb4b4;margin-bottom:4px}
 .errbox .eb{color:#e6cfcf}
 .errbox .eb ol{margin:6px 0;padding-left:1.3em}
@@ -625,7 +628,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.9.8'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.9.9'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
