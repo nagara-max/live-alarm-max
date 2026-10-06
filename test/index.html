@@ -430,6 +430,7 @@ html:not(.public) .pubonly{display:none!important}
     <span class="flabel"><span class="step">4</span>音量 <b id="fVolLabel">60</b></span>
     <input type="range" id="fVol" min="0" max="100" step="5" value="60">
     <div class="hint" id="volNote"></div>
+    <div id="boxVolDef"><label class="chbox" style="font-size:14px"><input type="checkbox" id="fVolDef"> <span>この音量を、次に作るアラームの初期値にする<span id="volDefNow" style="color:var(--muted)"></span></span></label></div>
   </div>
 
   <details class="more">
@@ -469,6 +470,11 @@ html:not(.public) .pubonly{display:none!important}
     </select>
     <div class="hint">新しいタブで開くには、ブラウザでこのサイトの<b>ポップアップを許可</b>してください。</div>
     <button class="btn sm" id="btnNotif" style="margin-top:8px">デスクトップ通知を許可する</button>
+  </div>
+  <div class="field">
+    <span class="flabel">新しいアラームの音量（初期値） <b id="sDefVolLabel">60</b></span>
+    <input type="range" id="sDefVol" min="0" max="100" step="5" value="60">
+    <div class="hint">「＋ 追加」で新しく作るアラームの音量が、最初からこの値になります。すでにあるアラームの音量は変わりません。<span id="sDefVolNote"></span></div>
   </div>
   <div class="field">
     <span class="flabel">アラーム音（YouTube の代わりに鳴る、このアプリの音）</span>
@@ -637,7 +643,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.9.10'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.10.0'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -666,12 +672,14 @@ const STORE_KEY = IS_TEST ? 'liveAlarm.test.v1' : 'liveAlarm.v1';
 const CK_CARRY = IS_TEST ? 'la_tcarry' : 'la_carry';
 const b64u = str => btoa(unescape(encodeURIComponent(str))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = b => decodeURIComponent(escape(atob(b.replace(/-/g, '+').replace(/_/g, '/'))));
+/* 音量を 0〜100・5きざみの数にそろえる（数でなければ 60） */
+function normVol(v) { return typeof v === 'number' && isFinite(v) ? Math.min(100, Math.max(0, Math.round(v / 5) * 5)) : 60; }
 function writeCarry() {
   if (!isIOS || isStandalone) return;
   try {
     const st = state.settings;
     const pack = { v: 1, a: state.alarms.slice(0, 15).map(a => [a.play || 'live', a.channelId, (a.channelTitle || '').slice(0, 40), a.mode, a.time, (a.days || []).join(','), a.volume, a.skipHolidays ? 1 : 0, a.preferLive === false ? 0 : 1, a.enabled ? 1 : 0, (a.label || '').slice(0, 30), a.fixedVideoId || '']),
-      s: [st.introSeen ? 1 : 0, st.consentAt || 0, st.stats === false ? 0 : 1, st.chime ? 1 : 0, st.lockMode ? 1 : 0] };
+      s: [st.introSeen ? 1 : 0, st.consentAt || 0, st.stats === false ? 0 : 1, st.chime ? 1 : 0, st.lockMode ? 1 : 0, normVol(st.defaultVolume)] };
     const parts = b64u(JSON.stringify(pack)).match(/.{1,3000}/g) || [];
     if (parts.length > 4) return;
     for (let i = 0; i < 4; i++) ckSet(CK_CARRY + i, parts[i] || '', parts[i] ? 34560000 : 0);
@@ -685,7 +693,7 @@ function readCarry() {
     if (!pack || pack.v !== 1 || !Array.isArray(pack.a)) return null;
     const alarms = sanitizeAlarms(pack.a.map(x => ({ play: x[0], channelId: x[1], channelTitle: x[2], mode: x[3], time: x[4], days: String(x[5] || '').split(','), volume: x[6], skipHolidays: !!x[7], preferLive: !!x[8], enabled: !!x[9], label: x[10], fixedVideoId: x[11] || undefined })));
     const s = pack.s || [];
-    return { alarms, settings: { introSeen: !!s[0], consentAt: Number(s[1]) || 0, stats: s[2] !== 0, chime: s[3] !== 0, lockMode: !!s[4] } };
+    return { alarms, settings: { introSeen: !!s[0], consentAt: Number(s[1]) || 0, stats: s[2] !== 0, chime: s[3] !== 0, lockMode: !!s[4], defaultVolume: normVol(s[5]) } };
   } catch (e) { return null; }
 }
 let carried = -1;   // ホーム画面版の初回起動で引き継いだアラーム件数（-1＝引き継ぎなし）
@@ -693,7 +701,7 @@ let firstStandaloneLaunch = false;
 const defaults = () => ({
   apiKey: '', keyOK: false,
   alarms: [],
-  settings: { openMode: 'auto', lockMode: false, chime: true, introSeen: false, stats: true, consentAt: 0 },
+  settings: { openMode: 'auto', lockMode: false, chime: true, introSeen: false, stats: true, consentAt: 0, defaultVolume: 60 },
   lastFired: {},
   holidayCache: null,
 });
@@ -1869,9 +1877,16 @@ function openGuide() {
  * アラーム編集
  * ========================================================= */
 let editing = null, editChannel = null, chSeq = 0, lastChecked = '', editSaved = false, editIsNew = true, editPlay = 'live', editVideo = null, vSeq = 0, vLast = '';
+/* 新しいアラームの音量の初期値（⚙設定、または追加画面のチェックで変えられる） */
+function defVol() { return normVol(state.settings.defaultVolume); }
+function updateVolDef() {   // 追加画面のチェック：いまの初期値と同じ音量の時は選べないようにする
+  const cb = $('#fVolDef'), same = +$('#fVol').value === defVol();
+  cb.disabled = same; if (same) cb.checked = false;
+  $('#volDefNow').textContent = same ? '（いまの初期値です）' : `（いまの初期値：${defVol()}）`;
+}
 function newAlarm() {
   return { id: 'a' + Date.now().toString(36), enabled: true, label: '', channelInput: '', channelId: '', channelTitle: '', channelThumb: '',
-    mode: 'weekday', time: '06:30', days: ['', '06:30', '06:30', '06:30', '06:30', '06:30', ''], skipHolidays: false, volume: 60, preferLive: true, play: 'live' };
+    mode: 'weekday', time: '06:30', days: ['', '06:30', '06:30', '06:30', '06:30', '06:30', ''], skipHolidays: false, volume: defVol(), preferLive: true, play: 'live' };
 }
 function renderEditKeyCard() {
   const box = $('#editKeyCard');
@@ -1899,6 +1914,7 @@ function openEditor(a, asCopy) {
   fillSchedule(editing);
   $('#fLabel').value = editing.label || '';
   $('#volNote').textContent = isIOS ? 'iPhone では YouTube の音量は本体の音量ボタンで調整します。ここの音量はアラーム音に使われます。' : '';
+  $('#fVolDef').checked = false; updateVolDef();
   renderEditKeyCard();
   renderChResult();
   renderVideoResult();
@@ -1968,7 +1984,7 @@ $('#fVideo').addEventListener('paste-done', () => { clearTimeout(vTimer); checkV
 
 /* 時刻・曜日・音量などを画面に反映 */
 function fillSchedule(src) {
-  $('#fTime').value = src.time; $('#fVol').value = src.volume; $('#fVolLabel').textContent = src.volume;
+  $('#fTime').value = src.time; $('#fVol').value = src.volume; $('#fVolLabel').textContent = src.volume; updateVolDef();
   $('#fSkipHol').checked = !!src.skipHolidays; $('#fPreferLive').checked = src.preferLive !== false;
   $('#dayRows').innerHTML = [1,2,3,4,5,6,0].map(i => `<div class="dayrow">
       <input type="checkbox" data-dayon="${i}" ${src.days[i] ? 'checked' : ''} style="width:20px;height:20px">
@@ -2187,7 +2203,8 @@ $('#fMode').addEventListener('click', e => {
   }
   setMode(next);
 });
-$('#fVol').addEventListener('input', e => $('#fVolLabel').textContent = e.target.value);
+$('#fVol').addEventListener('input', e => { $('#fVolLabel').textContent = e.target.value; updateVolDef(); });
+$('#sDefVol').addEventListener('input', e => $('#sDefVolLabel').textContent = e.target.value);
 $('#fPreferLive').addEventListener('change', () => { if (editChannel) { editChannel.latest = undefined; renderChResult(); loadLatestPreview(); } });
 $('#btnSave').addEventListener('click', async () => {
   const btn = $('#btnSave');
@@ -2226,6 +2243,8 @@ $('#btnSave').addEventListener('click', async () => {
   if (pre) a.lastVideo = { ...pre, checkedAt: Date.now() };
   else if (changed) delete a.lastVideo;
   a.savedAt = Date.now();
+  const setDef = $('#fVolDef').checked && a.volume !== defVol();
+  if (setDef) { state.settings.defaultVolume = a.volume; track('defvol_set', { vol: a.volume, from: 'editor' }); }
   const i = state.alarms.findIndex(x => x.id === a.id);
   if (i >= 0) state.alarms[i] = a; else state.alarms.push(a);
   editSaved = true;
@@ -2279,6 +2298,8 @@ function openSettings() {
   $('#boxSiteUrl').style.display = SITE_PATTERN ? '' : 'none';
   $('#siteUrlLine').innerHTML = SITE_PATTERN ? copyLine(SITE_PATTERN) : '';
   $('#sOpenMode').value = state.settings.openMode; $('#sLockMode').checked = state.settings.lockMode; $('#sChime').checked = state.settings.chime;
+  $('#sDefVol').value = defVol(); $('#sDefVolLabel').textContent = defVol();
+  $('#sDefVolNote').textContent = isIOS ? ' iPhone では、この音量はアラーム音に使われます（YouTube の音量は本体の音量ボタンで調整します）。' : '';
   $('#boxOpenMode').style.display = isMobile ? 'none' : '';
   $('#boxLockMode').style.display = isIOS ? '' : 'none'; syncLockOpt();
   $('#btnNotif').style.display = ('Notification' in window && Notification.permission !== 'granted') ? '' : 'none';
@@ -2294,6 +2315,9 @@ $('#btnSaveSettings').addEventListener('click', () => {
   const k = cleanKey($('#sKey')?.value);
   if (k !== state.apiKey) { state.apiKey = k; state.keyOK = false; testKey(k).then(() => { state.keyOK = true; save(); toast('APIキーを確認しました'); }).catch(e => showError(e)); }
   state.settings.openMode = $('#sOpenMode').value; state.settings.chime = $('#sChime').checked; state.settings.lockMode = $('#sLockMode').checked && state.settings.chime;
+  const dv = normVol(+$('#sDefVol').value);
+  if (dv !== defVol()) track('defvol_set', { vol: dv, from: 'settings' });
+  state.settings.defaultVolume = dv;
   track('settings_save', { openMode: state.settings.openMode, lock: state.settings.lockMode, chime: state.settings.chime, stats: $('#sStats').checked });
   if (PUBLIC && state.settings.stats !== false && !$('#sStats').checked) { track('stats_off'); flushStats(true); }
   state.settings.stats = $('#sStats').checked;
@@ -2351,6 +2375,7 @@ $('#importFile').addEventListener('change', async e => {
     const s0 = j.settings || {};
     if (['auto', 'embed', 'newtab'].includes(s0.openMode)) state.settings.openMode = s0.openMode;
     ['lockMode', 'chime'].forEach(k => { if (typeof s0[k] === 'boolean') state.settings[k] = s0[k]; });
+    if (typeof s0.defaultVolume === 'number') state.settings.defaultVolume = normVol(s0.defaultVolume);
     save(); render(); toast(`復元しました（アラーム${alarms.length}件）`); track('import', { alarms: alarms.length });
   } catch (err) { toast('このファイルは読み込めませんでした（このアプリのバックアップを選んでください）', 4500); }
   e.target.value = '';
