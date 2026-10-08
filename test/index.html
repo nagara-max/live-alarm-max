@@ -13,6 +13,20 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>推しと共に目覚ましアラーム(仮)</title>
+<meta name="description" content="決めた時刻に、推しの YouTube（最新のライブ配信・最新の動画・決まった動画）が流れる無料の目覚まし。アプリのインストールも会員登録もいりません。">
+<link rel="canonical" href="https://nagara-max.github.io/live-alarm-max/">
+<!-- X・LINE などに URL を貼った時のカード -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="推しと共に目覚ましアラーム(仮)">
+<meta property="og:title" content="推しと共に目覚ましアラーム(仮)｜毎朝、推しの配信で目覚めよう">
+<meta property="og:description" content="決めた時刻に、推しの YouTube が流れる無料の目覚まし。インストール・会員登録なしで今夜から使えます。">
+<meta property="og:url" content="https://nagara-max.github.io/live-alarm-max/">
+<meta property="og:image" content="https://nagara-max.github.io/live-alarm-max/ogp.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://nagara-max.github.io/live-alarm-max/ogp.png">
 <script>
 /* iPhone の Safari 以外（LINE・Chrome・Instagram など）で開かれたら、画面を読み込む前に Safari へ切り替える */
 (function () {
@@ -370,7 +384,7 @@ html:not(.public) .pubonly{display:none!important}
   <div id="alarmList"></div>
 
   <div class="foot">映像は YouTube 公式埋め込みプレーヤーで再生します。ご利用には YouTube 利用規約への同意が必要です<br>
-    <a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a> ・ <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">YouTube 利用規約</a> ・ <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google プライバシーポリシー</a></div>
+    <a href="about.html">このアプリについて</a> ・ <a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a> ・ <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">YouTube 利用規約</a> ・ <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google プライバシーポリシー</a></div>
 </div>
 
 <!-- アラーム編集 -->
@@ -643,7 +657,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.10.0'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.11.0'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
