@@ -113,7 +113,8 @@ section.alt{background:var(--bg2);border-top:1px solid rgba(255,255,255,.04);bor
 /* こんな朝に */
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:22px 20px}
-.card .ico{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;background:rgba(255,138,61,.12);margin-bottom:14px}
+.card .ico{width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:rgba(255,138,61,.12);margin-bottom:14px}
+.card .ico img{width:52px;height:52px}
 .card h3{margin:0 0 8px;font-size:17.5px;line-height:1.45}
 .card p{margin:0;color:#c3cbd6;font-size:14.5px}
 @media (max-width:960px){.cards{grid-template-columns:repeat(2,1fr)}}
@@ -222,10 +223,10 @@ footer p{margin:4px 0}
       <p>流す動画は、チャンネルごとに3種類から選べます。</p>
     </div>
     <div class="cards">
-      <div class="card"><div class="ico">🎙️</div><h3>推しの朝配信で起きる</h3><p>「最新のライブ配信」なら、いま配信中のライブを流します。配信がない日は、直近のライブ配信のアーカイブを流します。</p></div>
-      <div class="card"><div class="ico">🎬</div><h3>新しい動画をいち早く</h3><p>「最新の動画」なら、そのチャンネルのいちばん新しい動画が流れます。新作を朝いちばんにチェックできます。</p></div>
-      <div class="card"><div class="ico">💌</div><h3>お気に入りの1本で</h3><p>「決まった動画」なら、好きな歌や応援メッセージなど、毎朝同じ動画で起きられます。</p></div>
-      <div class="card"><div class="ico">📰</div><h3>ニュースや音楽にも</h3><p>推しのほかにも、ニュースのライブ配信や好きな音楽チャンネルで。平日と休日で分けて設定できます。</p></div>
+      <div class="card"><div class="ico"><img src="lp/icon-live.webp" alt="" width="52" height="52"></div><h3>推しの朝配信で起きる</h3><p>「最新のライブ配信」なら、いま配信中のライブを流します。配信がない日は、直近のライブ配信のアーカイブを流します。</p></div>
+      <div class="card"><div class="ico"><img src="lp/icon-video.webp" alt="" width="52" height="52"></div><h3>新しい動画をいち早く</h3><p>「最新の動画」なら、そのチャンネルのいちばん新しい動画が流れます。新作を朝いちばんにチェックできます。</p></div>
+      <div class="card"><div class="ico"><img src="lp/icon-fixed.webp" alt="" width="52" height="52"></div><h3>お気に入りの1本で</h3><p>「決まった動画」なら、好きな歌や応援メッセージなど、毎朝同じ動画で起きられます。</p></div>
+      <div class="card"><div class="ico"><img src="lp/icon-news.webp" alt="" width="52" height="52"></div><h3>ニュースや音楽にも</h3><p>推しのほかにも、ニュースのライブ配信や好きな音楽チャンネルで。平日と休日で分けて設定できます。</p></div>
     </div>
   </div>
 </section>
