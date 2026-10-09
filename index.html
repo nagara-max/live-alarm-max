@@ -14,19 +14,19 @@
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>推しと共に目覚ましアラーム(仮)</title>
 <meta name="description" content="決めた時刻に、推しの YouTube（最新のライブ配信・最新の動画・決まった動画）が流れる無料の目覚まし。アプリのインストールも会員登録もいりません。">
-<link rel="canonical" href="https://nagara-max.github.io/live-alarm-max/">
+<link rel="canonical" href="https://nagara-alarm.pages.dev/">
 <!-- X・LINE などに URL を貼った時のカード -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="推しと共に目覚ましアラーム(仮)">
 <meta property="og:title" content="推しと共に目覚ましアラーム(仮)｜毎朝、推しの配信で目覚めよう">
 <meta property="og:description" content="決めた時刻に、推しの YouTube が流れる無料の目覚まし。インストール・会員登録なしで今夜から使えます。">
-<meta property="og:url" content="https://nagara-max.github.io/live-alarm-max/">
-<meta property="og:image" content="https://nagara-max.github.io/live-alarm-max/ogp.png">
+<meta property="og:url" content="https://nagara-alarm.pages.dev/">
+<meta property="og:image" content="https://nagara-alarm.pages.dev/ogp.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:locale" content="ja_JP">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://nagara-max.github.io/live-alarm-max/ogp.png">
+<meta name="twitter:image" content="https://nagara-alarm.pages.dev/ogp.png">
 <script>
 /* iPhone の Safari 以外（LINE・Chrome・Instagram など）で開かれたら、画面を読み込む前に Safari へ切り替える */
 (function () {
@@ -216,6 +216,9 @@ html.ios .dayrow input[type=time].input{width:auto;min-height:42px}
 .cands{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .cand{display:flex;align-items:center;gap:10px;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer}
 .cand img{width:32px;height:32px;border-radius:50%;flex:none}
+.movebar{display:flex;align-items:center;gap:10px;background:linear-gradient(90deg,rgba(255,138,61,.18),rgba(255,95,162,.14));border:1px solid rgba(255,138,61,.5);border-radius:12px;padding:10px 12px;margin:0 0 14px;font-size:14px}
+.movebar b{display:block}
+.movebar .sm2{color:var(--muted);font-size:12.5px}
 .note{font-size:13px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0}
 .note.warn{border-color:#5a4a1a;color:#f0d9a0;background:#221d10}
 .keycard{background:#1c1712;border:1px solid #4a3620;border-radius:12px;padding:14px;margin-bottom:16px}
@@ -350,6 +353,8 @@ html:not(.public) .pubonly{display:none!important}
 <body>
 
 <div class="wrap" id="app">
+  <!-- 古い住所（GitHub Pages）で開いた時だけ表示 -->
+  <div class="movebar" id="moveBar" style="display:none"><div style="flex:1;min-width:0"><b>🚚 新しい住所に引っ越しました</b><span class="sm2">アラームはボタン1つで引き継げます</span></div><button class="btn primary sm" id="moveBarBtn">引っ越す</button></div>
   <header class="top">
     <h1 class="brand"><span class="b1">推しと共に</span><span class="b2">目覚ましアラーム<small>(仮)</small></span></h1>
     <button class="iconbtn helpbtn" id="btnHelp">使いかた</button>
@@ -556,6 +561,21 @@ html:not(.public) .pubonly{display:none!important}
 </div></div>
 
 <!-- ホーム画面に追加のやり方 -->
+<!-- 引っ越しの案内（古い住所） -->
+<div class="modal" id="mMove"><div class="sheet hasfoot">
+  <h2 style="margin:4px 0 10px">🚚 新しい住所に引っ越しました</h2>
+  <p style="margin:0 0 10px">このアプリは <b>nagara-alarm.pages.dev</b> に引っ越しました。下のボタンを押すと、<b>今のアラーム（<span id="moveCount">0</span>件）と設定をそのまま</b>新しい住所に引き継げます。</p>
+  <div class="note" id="moveIosNote" style="display:none">📲 ホーム画面から使っている方は、引き継いだあと新しい住所で<b>「ホーム画面に追加」をし直してください</b>。古いアイコンは長押しして削除してかまいません。</div>
+  <p class="hint">引っ越すまでは、ここでもアラームはこれまでどおり鳴ります。</p>
+  <div class="footbar"><button class="btn" id="moveLater">あとで</button><span class="spacer"></span><button class="btn primary" id="moveGo">アラームを引き継いで引っ越す</button></div>
+</div></div>
+<!-- 引っ越し完了（新しい住所） -->
+<div class="modal" id="mMoved"><div class="sheet hasfoot">
+  <h2 style="margin:4px 0 10px">✅ 引っ越しが完了しました</h2>
+  <p style="margin:0 0 10px" id="movedMsg"></p>
+  <div class="note" id="movedIosNote" style="display:none">📲 <b>ホーム画面に追加し直してください。</b>アプリのように全画面で使えて、設定も消えにくくなります。古いホーム画面のアイコンは、長押しして削除してかまいません。<br><button type="button" class="btn sm" data-a2hs="moved" style="margin-top:8px">ホーム画面に追加するやり方（画像つき）</button></div>
+  <div class="footbar"><span class="spacer"></span><button class="btn primary" data-close>閉じる</button></div>
+</div></div>
 <div class="modal" id="mA2hs"><div class="sheet hasfoot">
   <div class="sheethead"><h2>📲 ホーム画面に追加しよう</h2></div>
   <ul class="a2why">
@@ -657,7 +677,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.11.0'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.12.0'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -710,6 +730,25 @@ function readCarry() {
     return { alarms, settings: { introSeen: !!s[0], consentAt: Number(s[1]) || 0, stats: s[2] !== 0, chime: s[3] !== 0, lockMode: !!s[4], defaultVolume: normVol(s[5]) } };
   } catch (e) { return null; }
 }
+/* ---------- 新しい住所への引っ越し（GitHub Pages → Cloudflare Pages） ----------
+ *  古い住所で開くと案内を出し、アラーム・設定・ブラウザIDを URL の # の後ろに入れて新しい住所へ運ぶ
+ *  （# の後ろはサーバーに送られない）。新しい住所では、受け取ったら保存して # を消す */
+const NEW_ORIGIN = 'https://nagara-alarm.pages.dev';
+const OLD_HOST = 'nagara-max.github.io';
+const LOCAL_DEV = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+const ON_OLD_SITE = location.hostname === OLD_HOST || (LOCAL_DEV && /[?&]oldsite=1/.test(location.search));   // 手元の確認用に ?oldsite=1 で古い住所のふりができる
+const NEW_BASE = LOCAL_DEV ? location.origin + location.pathname : NEW_ORIGIN + (/\/test\//.test(location.pathname) ? '/test/' : '/');
+let movedIn = null;
+(function readMove() {
+  const m = location.hash.match(/^#move=([\w-]{10,200000})$/);
+  if (!m) return;
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  try {
+    const p = JSON.parse(unb64u(m[1]));
+    if (!p || p.v !== 1 || !Array.isArray(p.a)) return;
+    movedIn = { alarms: sanitizeAlarms(p.a), s: p.s || {}, uid: /^[\w-]{6,64}$/.test(p.u || '') ? p.u : '' };
+  } catch (e) {}
+})();
 let carried = -1;   // ホーム画面版の初回起動で引き継いだアラーム件数（-1＝引き継ぎなし）
 let firstStandaloneLaunch = false;
 const defaults = () => ({
@@ -721,6 +760,21 @@ const defaults = () => ({
 });
 let storageOK = true;
 let state = load();
+if (movedIn) {   // 古い住所から運ばれてきたアラームを取り込む（同じものは重ねない）
+  const had = state.alarms.length, st = state.settings, s0 = movedIn.s;
+  const key = a => [a.play, a.channelId, a.fixedVideoId || '', a.mode, a.time, (a.days || []).join(',')].join('|');
+  const have = new Set(state.alarms.map(key));
+  const add = movedIn.alarms.filter(a => !have.has(key(a)));
+  state.alarms.push(...add);
+  if (!st.consentAt && Number(s0.consentAt)) { st.consentAt = Number(s0.consentAt); st.introSeen = true; }
+  if (!had) {
+    ['chime', 'lockMode', 'stats', 'introSeen'].forEach(k => { if (typeof s0[k] === 'boolean') st[k] = s0[k]; });
+    if (typeof s0.defaultVolume === 'number') st.defaultVolume = normVol(s0.defaultVolume);
+    if (['auto', 'embed', 'newtab'].includes(s0.openMode)) st.openMode = s0.openMode;
+  }
+  movedIn.had = had; movedIn.added = add.length;
+  save();
+}
 function load() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
@@ -779,6 +833,8 @@ const UID_KEY = IS_TEST ? 'liveAlarm.test.uid' : 'liveAlarm.uid';
 const CK_UID = IS_TEST ? 'la_tuid' : 'la_uid';
 let firstVisit = false, LINK_UID = '';
 const UID = (() => {
+  // 引っ越してきた時は、古い住所のブラウザIDをそのまま使う（同じブラウザを二重に数えないため）
+  if (movedIn && movedIn.uid && !movedIn.had) { try { localStorage.setItem(UID_KEY, movedIn.uid); movedIn.adopted = true; } catch (e) {} ckSet(CK_UID, movedIn.uid); }
   const ck = /^[\w-]{6,64}$/.test(ckGet(CK_UID)) ? ckGet(CK_UID) : '';
   try {
     let u = localStorage.getItem(UID_KEY);
@@ -2661,12 +2717,43 @@ function snapshotAlarms() {
   });
   state.lastSnap = today; save();
 }
+/* 引っ越しの案内と、新しい住所を開く */
+function openMove(where) {
+  $('#moveCount').textContent = state.alarms.length;
+  $('#moveIosNote').style.display = isIOS ? '' : 'none';
+  openModal('mMove'); track('move_shown', { where, alarms: state.alarms.length, sa: isStandalone ? 1 : 0 });
+}
+function moveUrl() {
+  const st = state.settings;
+  const pack = { v: 1, u: UID, a: state.alarms.map(a => ({ ...a, lastVideo: undefined, savedAt: undefined })),
+    s: { introSeen: !!st.introSeen, consentAt: st.consentAt || 0, stats: st.stats !== false, chime: !!st.chime, lockMode: !!st.lockMode, defaultVolume: normVol(st.defaultVolume), openMode: st.openMode } };
+  return NEW_BASE + '#move=' + b64u(JSON.stringify(pack));
+}
+function doMove(where) {
+  track('move_out', { where, alarms: state.alarms.length, sa: isStandalone ? 1 : 0 }); flushStats(true);
+  const url = moveUrl();
+  const osMajor = +((UA.match(/OS (\d+)_/) || [])[1] || 0);
+  setTimeout(() => {
+    // ホーム画面版の iPhone は、Safari で開き直してから新しい住所をホーム画面に追加してもらう
+    if (isIOS && isStandalone) { if (osMajor >= 17) location.href = 'x-safari-' + url; else window.open(url, '_blank'); }
+    else location.href = url;
+  }, 150);
+}
+$('#moveGo').addEventListener('click', () => doMove('modal'));
+$('#moveBarBtn').addEventListener('click', () => openMove('bar'));
+$('#moveLater').addEventListener('click', () => { track('move_later', {}); closeModal('mMove'); });
 function boot() {
   const qp = new URLSearchParams(location.search);
   let tz = ''; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
   track('app_open', { first: firstVisit, env: ENV || '', alarms: state.alarms.length, ref: document.referrer ? new URL(document.referrer).hostname : '', reset: /[?&]reset=/.test(location.search),
-    lk: LINK_UID, tz, lang: (navigator.language || '').slice(0, 12), src: (qp.get('utm_source') || qp.get('ref') || '').slice(0, 40), med: (qp.get('utm_medium') || '').slice(0, 30), cmp: (qp.get('utm_campaign') || '').slice(0, 40) });
+    lk: LINK_UID, old: ON_OLD_SITE ? 1 : 0, tz, lang: (navigator.language || '').slice(0, 12), src: (qp.get('utm_source') || qp.get('ref') || '').slice(0, 40), med: (qp.get('utm_medium') || '').slice(0, 30), cmp: (qp.get('utm_campaign') || '').slice(0, 40) });
   if (/[?&]reset=/.test(location.search)) { history.replaceState(null, '', location.pathname); setTimeout(() => toast('すべての設定を削除しました'), 300); }
+  // 古い住所：アラームがなければ、そのまま新しい住所へ（引き継ぐものがないため）
+  if (ON_OLD_SITE && !state.alarms.length) {
+    track('move_redirect', {}); flushStats(true);
+    setTimeout(() => location.replace(NEW_BASE + location.search.replace(/([?&])oldsite=1&?/, '$1').replace(/[?&]$/, '')), 120);
+    return;
+  }
   if (isMobile && !isIOSSafari) {
     track('env_blocked', { os: isIOS ? 'ios' : isAndroid ? 'android' : 'other', br: browserName() });
     $('#btnCopyUrl').addEventListener('click', () => { track('safari_copy'); copyText(location.href.replace(/[?&]openExternalBrowser=1/, '')); });
@@ -2700,6 +2787,13 @@ function boot() {
   loadYTApi();
   if (!ENV && isMobile && hasActiveAlarm()) ensurePlayer().then(cueNext).catch(() => {});
   if (!state.settings.introSeen || (PUBLIC && !state.settings.consentAt)) openIntro(0);
+  if (ON_OLD_SITE) { $('#moveBar').style.display = ''; openMove('launch'); }
+  if (movedIn) {
+    track('move_in', { added: movedIn.added, had: movedIn.had, adopted: !!movedIn.adopted });
+    $('#movedMsg').textContent = movedIn.added ? `アラーム（${movedIn.added}件）と設定を引き継ぎました。これからはこの新しい住所でお使いください。` : '引き継ぐ新しいアラームはありませんでした（すでにこの住所にあります）。これからはこの新しい住所でお使いください。';
+    $('#movedIosNote').style.display = isIOSSafari && !isStandalone ? '' : 'none';
+    openModal('mMoved');
+  }
   if (firstStandaloneLaunch) {
     track('a2hs_installed', { carried: Math.max(carried, 0), via: carried >= 0 ? 'cookie' : 'none' });
     if (carried > 0) { save(); setTimeout(() => toast(`Safari で作ったアラーム（${carried}件）を引き継ぎました`, 5000), 600); }
