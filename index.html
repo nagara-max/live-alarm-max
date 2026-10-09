@@ -522,7 +522,7 @@ html:not(.public) .pubonly{display:none!important}
     </details>
   </div>
   <div class="field" style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
-    <span class="flabel">アプリのバージョン：<b id="verNow"></b></span>
+    <span class="flabel" id="verLine" style="-webkit-user-select:none;user-select:none">アプリのバージョン：<b id="verNow"></b><span id="ownerTag" style="display:none;color:var(--accent2)">　運営者の端末（統計から除外中）</span></span>
     <div class="row wrapok">
       <button class="btn sm" id="btnDoUpdate" disabled>最新版です</button>
       <button class="btn ghost sm" id="btnCheckUpdate">更新を確認</button>
@@ -678,7 +678,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.12.0'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.13.0'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -773,6 +773,7 @@ if (movedIn) {   // 古い住所から運ばれてきたアラームを取り込
     if (typeof s0.defaultVolume === 'number') st.defaultVolume = normVol(s0.defaultVolume);
     if (['auto', 'embed', 'newtab'].includes(s0.openMode)) st.openMode = s0.openMode;
   }
+  if (s0.owner === true) st.owner = true;
   movedIn.had = had; movedIn.added = add.length;
   save();
 }
@@ -2694,7 +2695,7 @@ async function checkUpdate(manual) {
 }
 function renderUpdateUI(newer) {
   const bar = $('#updBar');
-  $('#verNow').textContent = APP_VERSION;
+  $('#verNow').textContent = APP_VERSION; $('#ownerTag').style.display = state.settings.owner ? '' : 'none';
   $('#btnDoUpdate').disabled = !newer;
   $('#btnDoUpdate').textContent = newer ? `最新版（${latestVersion}）に更新する` : '最新版です';
   bar.style.display = newer && !updDismissed && !standbyOn ? '' : 'none';
@@ -2727,7 +2728,7 @@ function openMove(where) {
 function moveUrl() {
   const st = state.settings;
   const pack = { v: 1, u: UID, a: state.alarms.map(a => ({ ...a, lastVideo: undefined, savedAt: undefined })),
-    s: { introSeen: !!st.introSeen, consentAt: st.consentAt || 0, stats: st.stats !== false, chime: !!st.chime, lockMode: !!st.lockMode, defaultVolume: normVol(st.defaultVolume), openMode: st.openMode } };
+    s: { introSeen: !!st.introSeen, consentAt: st.consentAt || 0, stats: st.stats !== false, chime: !!st.chime, lockMode: !!st.lockMode, defaultVolume: normVol(st.defaultVolume), openMode: st.openMode, owner: !!st.owner } };
   return NEW_BASE + '#move=' + b64u(JSON.stringify(pack));
 }
 function doMove(where) {
@@ -2743,11 +2744,24 @@ function doMove(where) {
 $('#moveGo').addEventListener('click', () => doMove('modal'));
 $('#moveBarBtn').addEventListener('click', () => openMove('bar'));
 $('#moveLater').addEventListener('click', () => { track('move_later', {}); closeModal('mMove'); });
+/* 運営者の端末の印：設定の「アプリのバージョン」の行を4秒以内に5回タップで切り替え（自分の操作を統計から除くため） */
+(() => {
+  let taps = [];
+  $('#verLine').addEventListener('click', () => {
+    const now = Date.now(); taps = taps.filter(t => now - t < 4000); taps.push(now);
+    if (taps.length < 5) return;
+    taps = [];
+    state.settings.owner = !state.settings.owner; save();
+    track('owner_mark', { on: state.settings.owner }); flushStats(true);
+    $('#ownerTag').style.display = state.settings.owner ? '' : 'none';
+    toast(state.settings.owner ? (IS_TEST ? 'テスト環境では統計を記録しません。本番のサイトで行ってください' : 'この端末を「運営者の端末」にしました。統計から除外されます') : '運営者の端末の印を外しました', 4500);
+  });
+})();
 function boot() {
   const qp = new URLSearchParams(location.search);
   let tz = ''; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
   track('app_open', { first: firstVisit, env: ENV || '', alarms: state.alarms.length, ref: document.referrer ? new URL(document.referrer).hostname : '', reset: /[?&]reset=/.test(location.search),
-    lk: LINK_UID, old: ON_OLD_SITE ? 1 : 0, tz, lang: (navigator.language || '').slice(0, 12), src: (qp.get('utm_source') || qp.get('ref') || '').slice(0, 40), med: (qp.get('utm_medium') || '').slice(0, 30), cmp: (qp.get('utm_campaign') || '').slice(0, 40) });
+    lk: LINK_UID, old: ON_OLD_SITE ? 1 : 0, own: state.settings.owner ? 1 : undefined, tz, lang: (navigator.language || '').slice(0, 12), src: (qp.get('utm_source') || qp.get('ref') || '').slice(0, 40), med: (qp.get('utm_medium') || '').slice(0, 30), cmp: (qp.get('utm_campaign') || '').slice(0, 40) });
   if (/[?&]reset=/.test(location.search)) { history.replaceState(null, '', location.pathname); setTimeout(() => toast('すべての設定を削除しました'), 300); }
   // 古い住所：アラームがなければ、そのまま新しい住所へ（引き継ぐものがないため）
   if (ON_OLD_SITE && !state.alarms.length) {
