@@ -678,7 +678,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.13.0'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.13.1'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -841,7 +841,10 @@ const UID = (() => {
   try {
     let u = localStorage.getItem(UID_KEY);
     if (!u) { u = ck || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12)); localStorage.setItem(UID_KEY, u); if (!ck) firstVisit = true; }
-    if (!ck) ckSet(CK_UID, u); else if (ck !== u) LINK_UID = ck;   // 別々のIDだった場合は「同じ端末」として結び付ける
+    if (!ck) ckSet(CK_UID, u); else if (ck !== u) LINK_UID = ck;
+    // HP（このアプリについて）を先に開いてIDが作られていた場合も、アプリとしては初めての起動として数える
+    const HK = IS_TEST ? 'liveAlarm.test.uidByHp' : 'liveAlarm.uidByHp';
+    if (localStorage.getItem(HK)) { firstVisit = true; localStorage.removeItem(HK); }   // 別々のIDだった場合は「同じ端末」として結び付ける
     return u;
   } catch (e) { firstVisit = !ck; return ck || 'nostore-' + Math.random().toString(36).slice(2, 12); }
 })();
