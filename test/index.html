@@ -345,9 +345,9 @@ html:not(.public) .pubonly{display:none!important}
 /* block */
 #block{position:fixed;inset:0;background:var(--bg);z-index:100;display:none;align-items:center;justify-content:center;padding:24px;text-align:center}
 #block.open{display:flex}
-#blockSteps{text-align:left;background:var(--panel2);border:1px solid var(--accent);border-radius:14px;padding:14px 16px;margin:4px 0 14px}
-#blockSteps .st{display:flex;gap:10px;align-items:flex-start;font-size:16px;font-weight:700;margin:6px 0}
-#blockSteps .st .n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#1b0f05;display:flex;align-items:center;justify-content:center;font-size:14px}
+.isteps,#blockSteps{text-align:left;background:var(--panel2);border:1px solid var(--accent);border-radius:14px;padding:14px 16px;margin:4px 0 14px}
+.isteps .st,#blockSteps .st{display:flex;gap:10px;align-items:flex-start;font-size:16px;font-weight:700;margin:6px 0}
+.isteps .st .n,#blockSteps .st .n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#1b0f05;display:flex;align-items:center;justify-content:center;font-size:14px}
 #menuArrow{display:none;position:fixed;z-index:210;font-size:44px;line-height:1;pointer-events:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))}
 #menuArrow.on{display:block;animation:arrowbob 1s ease-in-out infinite}
 #menuArrow.bottom{bottom:6px;left:50%;margin-left:-22px}
@@ -365,6 +365,8 @@ html:not(.public) .pubonly{display:none!important}
 <body>
 
 <div class="wrap" id="app">
+  <!-- X・LINE などのアプリの中のブラウザで開いた時だけ表示（お試しはそのまま使える） -->
+  <div class="movebar" id="inappBar" style="display:none"><div style="flex:1;min-width:0"><b id="inappBarTitle">📱 アプリの中で開いています</b><span class="sm2">このまま試せます。毎朝鳴らすには Safari で開き直します（アラームは引き継げます）</span></div><button class="btn sm" id="inappBarBtn">開き方</button></div>
   <!-- 古い住所（GitHub Pages）で開いた時だけ表示 -->
   <div class="movebar" id="moveBar" style="display:none"><div style="flex:1;min-width:0"><b>🚚 新しい住所に引っ越しました</b><span class="sm2">アラームはボタン1つで引き継げます</span></div><button class="btn primary sm" id="moveBarBtn">引っ越す</button></div>
   <header class="top">
@@ -572,7 +574,15 @@ html:not(.public) .pubonly{display:none!important}
   <div class="row" style="margin-top:14px"><span class="spacer"></span><button class="btn" data-close>やめる</button><button class="btn dangerfill" id="btnResetGo">削除する</button></div>
 </div></div>
 
-<!-- ホーム画面に追加のやり方 -->
+<!-- アプリの中のブラウザ → Safari へ（作ったアラームを引き継ぐ） -->
+<div class="modal" id="mInApp"><div class="sheet hasfoot">
+  <h2 style="margin:4px 0 10px" id="inappTitle">あと1歩：Safari で開き直そう</h2>
+  <p style="margin:0 0 10px" id="inappMsg"></p>
+  <div class="isteps" id="inappSteps"></div>
+  <div class="row wrapok" style="gap:8px;margin-top:4px"><a class="btn sm" id="inappTry">🧭 自動で開いてみる</a><button class="btn sm" id="inappCopy">URL をコピー</button></div>
+  <p class="hint" id="inappHint"></p>
+  <div class="footbar"><button class="btn" id="inappLater">あとで</button><span class="spacer"></span><button class="btn primary" id="inappKeep" style="display:none">このまま使う</button><button class="btn primary" data-close id="inappClose">わかった</button></div>
+</div></div>
 <!-- 引っ越しの案内（古い住所） -->
 <div class="modal" id="mMove"><div class="sheet hasfoot">
   <h2 style="margin:4px 0 10px">🚚 新しい住所に引っ越しました</h2>
@@ -583,11 +593,12 @@ html:not(.public) .pubonly{display:none!important}
 </div></div>
 <!-- 引っ越し完了（新しい住所） -->
 <div class="modal" id="mMoved"><div class="sheet hasfoot">
-  <h2 style="margin:4px 0 10px">✅ 引っ越しが完了しました</h2>
+  <h2 style="margin:4px 0 10px" id="movedTitle">✅ 引っ越しが完了しました</h2>
   <p style="margin:0 0 10px" id="movedMsg"></p>
   <div class="note" id="movedIosNote" style="display:none">📲 <b>ホーム画面に追加し直してください。</b>アプリのように全画面で使えて、設定も消えにくくなります。古いホーム画面のアイコンは、長押しして削除してかまいません。<br><button type="button" class="btn sm" data-a2hs="moved" style="margin-top:8px">ホーム画面に追加するやり方（画像つき）</button></div>
   <div class="footbar"><span class="spacer"></span><button class="btn primary" data-close>閉じる</button></div>
 </div></div>
+<!-- ホーム画面に追加のやり方 -->
 <div class="modal" id="mA2hs"><div class="sheet hasfoot">
   <div class="sheethead"><h2>📲 ホーム画面に追加しよう</h2></div>
   <ul class="a2why">
@@ -691,7 +702,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.13.2'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.14.0'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -705,6 +716,7 @@ const isMobile = isIOS || isAndroid || /Mobile|Silk|Kindle/i.test(UA);
 const isStandalone = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
 const NON_SAFARI = /CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|GSA\/|YaBrowser|DuckDuckGo|Brave|Line\/|FBAN|FBAV|FBIOS|Instagram|Twitter|MicroMessenger|KAKAOTALK|Snapchat|Pinterest|YJApp|Yahoo/i;
 const isIOSSafari = isIOS && (isStandalone || (/Safari\//.test(UA) && /Version\//.test(UA) && !NON_SAFARI.test(UA)));
+const IN_APP = isIOS && !isIOSSafari;   // iPhone の Safari 以外（X・LINE・Instagram などのアプリの中のブラウザ、Chrome など）＝お試しモード
 const inFrame = (() => { try { return window.top !== window.self; } catch (e) { return true; } })();
 // 実行環境の問題（ファイル直開き・プレビュー枠内・http）
 const ENV = location.protocol === 'file:' ? 'file' : inFrame ? 'frame' : (!window.isSecureContext ? 'insecure' : null);
@@ -744,6 +756,13 @@ function readCarry() {
     return { alarms, settings: { introSeen: !!s[0], consentAt: Number(s[1]) || 0, stats: s[2] !== 0, chime: s[3] !== 0, lockMode: !!s[4], defaultVolume: normVol(s[5]) } };
   } catch (e) { return null; }
 }
+/* アラーム・設定・ブラウザIDをまとめる（新しい住所への引っ越し／アプリの中のブラウザ → Safari の引き継ぎで使う） */
+function carryPack() {
+  const st = state.settings;
+  let u = ''; try { u = UID; } catch (e) {}
+  return { v: 1, u, f: IN_APP ? inAppName() : '', a: state.alarms.map(a => ({ ...a, lastVideo: undefined, savedAt: undefined })),
+    s: { introSeen: !!st.introSeen, consentAt: st.consentAt || 0, stats: st.stats !== false, chime: !!st.chime, lockMode: !!st.lockMode, defaultVolume: normVol(st.defaultVolume), openMode: st.openMode, owner: !!st.owner } };
+}
 /* ---------- 新しい住所への引っ越し（GitHub Pages → Cloudflare Pages） ----------
  *  古い住所で開くと案内を出し、アラーム・設定・ブラウザIDを URL の # の後ろに入れて新しい住所へ運ぶ
  *  （# の後ろはサーバーに送られない）。新しい住所では、受け取ったら保存して # を消す */
@@ -754,13 +773,13 @@ const ON_OLD_SITE = location.hostname === OLD_HOST || (LOCAL_DEV && /[?&]oldsite
 const NEW_BASE = LOCAL_DEV ? location.origin + location.pathname : NEW_ORIGIN + (/\/test\//.test(location.pathname) ? '/test/' : '/');
 let movedIn = null;
 (function readMove() {
-  const m = location.hash.match(/^#move=([\w-]{10,200000})$/);
+  const m = location.hash.match(/^#(move|carry)=([\w-]{10,200000})$/);
   if (!m) return;
   try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
   try {
-    const p = JSON.parse(unb64u(m[1]));
+    const p = JSON.parse(unb64u(m[2]));
     if (!p || p.v !== 1 || !Array.isArray(p.a)) return;
-    movedIn = { alarms: sanitizeAlarms(p.a), s: p.s || {}, uid: /^[\w-]{6,64}$/.test(p.u || '') ? p.u : '' };
+    movedIn = { kind: m[1], from: String(p.f || '').slice(0, 20), alarms: sanitizeAlarms(p.a), s: p.s || {}, uid: /^[\w-]{6,64}$/.test(p.u || '') ? p.u : '' };
   } catch (e) {}
 })();
 let carried = -1;   // ホーム画面版の初回起動で引き継いだアラーム件数（-1＝引き継ぎなし）
@@ -806,6 +825,7 @@ function load() {
 }
 function save() {
   writeCarry();
+  try { if (IN_APP && state.alarms.length) history.replaceState(null, '', location.pathname + location.search + '#carry=' + b64u(JSON.stringify(carryPack()))); } catch (e) {}
   try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
   catch (e) { storageOK = false; toast('保存できませんでした（プライベートブラウズでは保存されません）'); }
 }
@@ -1916,6 +1936,7 @@ function closeModal(id) {
       if (!state.alarms.length) setTimeout(() => toast('使い方は右上の「使いかた」からいつでも見られます', 3500), 300);
     }
   }
+  if (id === 'mInApp') $('#menuArrow').className = '';
   if (id === 'mA2hs') track('a2hs_close', { where: a2Where, sec: Math.round((Date.now() - a2OpenedAt) / 1000) });
 }
 $$('.modal').forEach(m => m.addEventListener('click', e => {
@@ -2345,6 +2366,7 @@ $('#btnSave').addEventListener('click', async () => {
   toast(nx ? `保存しました。次は ${fmtDate(nx)} に鳴ります` : '保存しました');
   if (!a.lastVideo) resolveVideo(a).then(render).catch(() => {});
   if (A2_ON && !state.settings.a2AutoShown) { state.settings.a2AutoShown = true; save(); setTimeout(() => openA2hs('after_save'), 1200); }
+  if (IN_APP && !state.settings.inAppAsked) { state.settings.inAppAsked = true; save(); setTimeout(() => openInAppSheet('after_save'), 1400); }
 });
 $('#btnDelete').addEventListener('click', () => {
   if (!editing || !confirm('このアラームを削除しますか？')) return;
@@ -2484,6 +2506,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 $('#btnStandby').addEventListener('click', () => {
   if (!nextOverall()) { toast('先にアラームを作ってください'); openEditor(null); return; }
   track('sleep_tap', { hour: new Date().getHours() });
+  if (IN_APP && !inAppOk) { openInAppSheet('standby'); return; }   // アプリの中では、寝る前にもう一度だけ Safari をすすめる
   startStandby();                        // タップ中に開始（音声・画面点灯維持の許可のため）
 });
 
@@ -2741,12 +2764,7 @@ function openMove(where) {
   $('#moveIosNote').style.display = isIOS ? '' : 'none';
   openModal('mMove'); track('move_shown', { where, alarms: state.alarms.length, sa: isStandalone ? 1 : 0 });
 }
-function moveUrl() {
-  const st = state.settings;
-  const pack = { v: 1, u: UID, a: state.alarms.map(a => ({ ...a, lastVideo: undefined, savedAt: undefined })),
-    s: { introSeen: !!st.introSeen, consentAt: st.consentAt || 0, stats: st.stats !== false, chime: !!st.chime, lockMode: !!st.lockMode, defaultVolume: normVol(st.defaultVolume), openMode: st.openMode, owner: !!st.owner } };
-  return NEW_BASE + '#move=' + b64u(JSON.stringify(pack));
-}
+function moveUrl() { return NEW_BASE + '#move=' + b64u(JSON.stringify(carryPack())); }
 function doMove(where) {
   track('move_out', { where, alarms: state.alarms.length, sa: isStandalone ? 1 : 0 }); flushStats(true);
   const url = moveUrl();
@@ -2793,6 +2811,29 @@ const INAPP_GUIDE = {
   browser: { name: '', where: '', steps: ['下の「<b>URL をコピー</b>」を押す', '<b>Safari</b> を開き、アドレス欄に貼り付けて開く'] },
   '': { name: '', where: '', steps: ['画面の「<b>⋮</b>」や「<b>…</b>」のメニューを開く', '「<b>ブラウザで開く</b>」や「<b>Safari で開く</b>」を押す'] },
 };
+let inAppOk = false;   // 「このまま使う」を選んだ（この画面を開いている間だけ）
+function openInAppSheet(where) {
+  const app = inAppName(), G = INAPP_GUIDE[app] || INAPP_GUIDE[''];
+  const n = state.alarms.length, standby = where === 'standby';
+  track('inapp_prompt', { where, app, alarms: n });
+  $('#inappTitle').textContent = standby ? '寝る前に：Safari で開き直そう' : where === 'after_save' ? 'あと1歩：Safari で開き直そう' : 'Safari で開き直す方法';
+  $('#inappMsg').innerHTML = (G.name ? `<b>${G.name}</b> の中のブラウザ` : app === 'browser' ? 'Safari 以外のブラウザ' : 'アプリの中のブラウザ') + 'では、朝にアラームが<b>鳴らないことがあります</b>。'
+    + (n ? `Safari で開き直すと、作ったアラーム（${n}件）は<b>そのまま引き継がれます</b>。` : 'Safari で開き直すと、確実に鳴らせます。');
+  $('#inappSteps').innerHTML = G.steps.map((t, i) => `<div class="st"><span class="n">${i + 1}</span><span>${t}</span></div>`).join('');
+  $('#inappTry').href = 'x-safari-' + location.href.replace(/[?&]openExternalBrowser=1/, '');
+  $('#inappHint').textContent = app === 'browser' ? '' : 'メニューが見つからない時は「URL をコピー」→ Safari を開いて、アドレス欄に貼り付けてください（アラームも一緒に運べます）。';
+  $('#inappKeep').style.display = standby ? '' : 'none';
+  $('#inappClose').style.display = standby ? 'none' : '';
+  $('#inappLater').textContent = standby ? 'やめる' : 'あとで';
+  const ar = $('#menuArrow');
+  if (G.where) { ar.className = 'on ' + G.where; ar.textContent = G.where === 'top-right' ? '⬆️' : '⬇️'; }
+  openModal('mInApp');
+}
+function closeInAppSheet() { closeModal('mInApp'); }
+$('#inappLater').addEventListener('click', () => { track('inapp_later', { app: inAppName() }); closeInAppSheet(); });
+$('#inappKeep').addEventListener('click', () => { track('inapp_keep', { app: inAppName() }); inAppOk = true; closeInAppSheet(); startStandby(); });
+$('#inappTry').addEventListener('click', () => track('inapp_try', { app: inAppName() }));
+$('#inappCopy').addEventListener('click', async () => { track('inapp_copy', { app: inAppName() }); await copyText(location.href.replace(/[?&]openExternalBrowser=1/, '')); setTimeout(() => toast('コピーしました。Safari を開いて、アドレス欄に貼り付けてください', 5000), 50); });
 function boot() {
   const qp = new URLSearchParams(location.search);
   let tz = ''; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
@@ -2805,42 +2846,20 @@ function boot() {
     setTimeout(() => location.replace(NEW_BASE + location.search.replace(/([?&])oldsite=1&?/, '$1').replace(/[?&]$/, '')), 120);
     return;
   }
-  if (isMobile && !isIOSSafari) {
+  if (IN_APP) {
+    /* iPhone の Safari 以外（X・LINE・Instagram・TikTok・Chrome など）で開かれた時
+     *  - 自動で Safari への切り替えはページ先頭のスクリプトで試し済み（LINE は openExternalBrowser=1、他は x-safari-）
+     *  - 切り替わらなくても止めずに、このまま試せる「お試しモード」で開く
+     *  - 作ったアラームは URL の #carry= に入れておき、Safari で開き直した時にそのまま引き継ぐ */
+    const app = inAppName(), G = INAPP_GUIDE[app] || INAPP_GUIDE[''];
+    track('safari_redirect', { via: window.__toSafari || 'none', br: browserName(), app });
+    track('inapp_mode', { app, br: browserName() });
+    $('#inappBarTitle').textContent = '📱 ' + (G.name ? G.name + ' の中で開いています' : app === 'browser' ? 'Safari 以外のブラウザで開いています' : 'アプリの中で開いています') + '（お試し中）';
+    $('#inappBar').style.display = '';
+    $('#inappBarBtn').addEventListener('click', () => openInAppSheet('bar'));
+  } else if (isMobile && !isIOSSafari) {
     track('env_blocked', { os: isIOS ? 'ios' : isAndroid ? 'android' : 'other', br: browserName() });
     $('#btnCopyUrl').addEventListener('click', async () => { track('safari_copy'); await copyText(location.href.replace(/[?&]openExternalBrowser=1/, '')); setTimeout(() => toast('コピーしました。Safari を開いて、アドレス欄に貼り付けてください', 5000), 50); });
-    if (isIOS) {
-      /* iPhone の Safari 以外（Chrome・LINE・Instagram など）で開かれた時は、自動で Safari に切り替える
-       *  - LINE：URL に openExternalBrowser=1 を付けると外部ブラウザ（通常は Safari）で開き直す
-       *  - それ以外：x-safari-https:// で Safari を呼び出す（iOS 17 以降）
-       *  ※ iPhone の仕組み上「必ず」はできないため、開けなかった時のボタンと手順も出す */
-      const clean = location.href.replace(/[?&]openExternalBrowser=1/, '');
-      const safariUrl = 'x-safari-' + clean;
-      const app = inAppName(), G = INAPP_GUIDE[app] || INAPP_GUIDE[''];
-      $('#blockTitle').textContent = 'Safari で開いています…';
-      $('#blockMsg').innerHTML = 'このアプリは目覚ましを鳴らすため、iPhone の <b>Safari</b> で使います。';
-      const btn = $('#btnOpenSafari'); btn.href = safariUrl;
-      btn.addEventListener('click', () => { track('safari_open_tap', { br: browserName(), app }); setTimeout(showGuide, 1500); });
-      $('#btnCopyUrl').textContent = 'このページの URL をコピー';
-      $('#block').classList.add('open');
-      // 切り替え自体はページ先頭のスクリプトで実行済み。ここでは記録と、開けなかった時の手順の表示だけ
-      track('safari_redirect', { via: window.__toSafari || 'none', br: browserName(), app }); flushStats(true);
-      let shown = false;
-      function showGuide() {
-        if (document.visibilityState !== 'visible') return;   // Safari に切り替わった
-        if (!shown) { shown = true; track('safari_fail', { app, br: browserName() }); flushStats(true); }
-        $('#blockTitle').textContent = 'Safari で開き直してください';
-        $('#blockMsg').innerHTML = (G.name ? `<b>${G.name}</b> の中のブラウザでは、自動で Safari に切り替えられませんでした。` : '自動で Safari に切り替えられませんでした。') + '<br>次の手順で開き直してください（10秒ほどで終わります）。';
-        $('#blockSteps').innerHTML = G.steps.map((t, i) => `<div class="st"><span class="n">${i + 1}</span><span>${t}</span></div>`).join('');
-        $('#blockSteps').style.display = '';
-        btn.textContent = '🧭 もう一度 自動で開いてみる'; btn.classList.remove('primary'); btn.style.display = G.retry === false ? 'none' : '';
-        $('#blockHint').innerHTML = G.where ? '' : 'うまくいかない時は「URL をコピー」→ Safari を開いて、アドレス欄に貼り付けてください。';
-        const ar = $('#menuArrow');
-        if (G.where) { ar.className = 'on ' + G.where; ar.textContent = G.where === 'top-right' ? '⬆️' : '⬇️'; }
-      }
-      setTimeout(showGuide, 1800);
-      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && shown) showGuide(); });
-      return;
-    }
     $('#blockMsg').innerHTML = 'スマホ版は <b>iPhone の Safari 専用</b>です。PC のブラウザでご利用ください。';
     $('#block').classList.add('open');
     return;
@@ -2855,8 +2874,15 @@ function boot() {
   if (!state.settings.introSeen || (PUBLIC && !state.settings.consentAt)) openIntro(0);
   if (ON_OLD_SITE) { $('#moveBar').style.display = ''; openMove('launch'); }
   if (movedIn) {
+    if (movedIn.kind === 'carry') {
+      const nm = (INAPP_GUIDE[movedIn.from] || {}).name;
+      track('carry_in', { from: movedIn.from, added: movedIn.added, had: movedIn.had });
+      $('#movedTitle').textContent = '✅ Safari で開き直しました';
+      $('#movedMsg').textContent = movedIn.added ? `${nm ? nm + ' の中' : 'さっきの画面'}で作ったアラーム（${movedIn.added}件）を引き継ぎました。これからは Safari（またはホーム画面）でお使いください。` : '作ったアラームは、すでにこちらにあります。これからは Safari（またはホーム画面）でお使いください。';
+    } else {
     track('move_in', { added: movedIn.added, had: movedIn.had, adopted: !!movedIn.adopted });
     $('#movedMsg').textContent = movedIn.added ? `アラーム（${movedIn.added}件）と設定を引き継ぎました。これからはこの新しい住所でお使いください。` : '引き継ぐ新しいアラームはありませんでした（すでにこの住所にあります）。これからはこの新しい住所でお使いください。';
+    }
     $('#movedIosNote').style.display = isIOSSafari && !isStandalone ? '' : 'none';
     openModal('mMoved');
   }

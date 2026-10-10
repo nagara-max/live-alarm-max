@@ -209,7 +209,7 @@ footer p{margin:4px 0}
         <a class="btn primary" href="./?utm_source=hp&amp;utm_medium=hero" data-cta="hero">今すぐ無料で使ってみる</a>
         <a class="btn ghost" href="#how">使い方を見る</a>
       </div>
-      <p class="note inapp" id="inappNote" style="display:none">📱 いまアプリの中のブラウザで開いています。ボタンを押すと <b>Safari に切り替わります</b>（確認が出たら「開く」を選んでください）。</p>
+      <p class="note inapp" id="inappNote" style="display:none">📱 このままアプリの中でも試せます。毎朝しっかり鳴らす時は Safari で開き直します（作ったアラームはそのまま引き継げます）。</p>
       <p class="note">iPhone は Safari で開いてください（LINE などから開いた時は自動で Safari に切り替わります）。パソコンはブラウザでそのまま使えます。</p>
     </div>
     <div class="phone" aria-hidden="true"><div class="screen"><img src="lp/hero.webp" alt="" width="600" height="1280"></div></div>
@@ -371,7 +371,7 @@ footer p{margin:4px 0}
     var how = /Line\//.test(ua) ? '右下の「︙」→「ブラウザで開く」' : /Instagram|FBAN|FBAV|FBIOS/.test(ua) ? '右上の「…」→「外部ブラウザで開く」' : /BytedanceWebview|musical_ly|TikTok/i.test(ua) ? '右上の「…」→「ブラウザで開く」'
       : (/Twitter/i.test(ua) || /(^|\.)(t\.co|x\.com|twitter\.com)$/.test(ref0)) ? '画面の一番下の「⋮」→「ブラウザで開く」' : '画面の「⋮」や「…」のメニュー →「ブラウザで開く」';
     var n = document.getElementById('inappNote');
-    if (n) { n.innerHTML = '📱 目覚ましは iPhone の <b>Safari</b> で使います。アプリの中のブラウザでは自動で切り替わらないことがあるので、先に <b>' + how + '</b> で開き直しておくとスムーズです。'; n.style.display = ''; }
+    if (n) { n.innerHTML = '📱 このまま<b>アプリの中でも試せます</b>。毎朝しっかり鳴らす時は Safari で開き直します（<b>' + how + '</b>）。作ったアラームはそのまま引き継げます。'; n.style.display = ''; }
   }
   var url = isTest ? c.testBackendUrl : c.backendUrl;
   if (!url || location.hostname === 'nagara-max.github.io') return;
