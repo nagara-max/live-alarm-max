@@ -345,6 +345,17 @@ html:not(.public) .pubonly{display:none!important}
 /* block */
 #block{position:fixed;inset:0;background:var(--bg);z-index:100;display:none;align-items:center;justify-content:center;padding:24px;text-align:center}
 #block.open{display:flex}
+#blockSteps{text-align:left;background:var(--panel2);border:1px solid var(--accent);border-radius:14px;padding:14px 16px;margin:4px 0 14px}
+#blockSteps .st{display:flex;gap:10px;align-items:flex-start;font-size:16px;font-weight:700;margin:6px 0}
+#blockSteps .st .n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#1b0f05;display:flex;align-items:center;justify-content:center;font-size:14px}
+#menuArrow{display:none;position:fixed;z-index:210;font-size:44px;line-height:1;pointer-events:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))}
+#menuArrow.on{display:block;animation:arrowbob 1s ease-in-out infinite}
+#menuArrow.bottom{bottom:6px;left:50%;margin-left:-22px}
+#menuArrow.bottom-right{bottom:6px;right:14px}
+#menuArrow.top-right{top:6px;right:14px}
+@keyframes arrowbob{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+#menuArrow.top-right.on{animation-name:arrowbobup}
+@keyframes arrowbobup{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 #block .box{max-width:420px}
 #toast{position:fixed;left:0;right:0;margin:0 auto;width:fit-content;text-align:center;bottom:calc(24px + env(safe-area-inset-bottom));background:#000;border:1px solid var(--line);padding:10px 16px;border-radius:12px;z-index:200;display:none;font-size:14px;max-width:calc(100vw - 32px)}
 .empty{text-align:center;color:var(--muted);padding:28px 8px}
@@ -642,10 +653,12 @@ html:not(.public) .pubonly{display:none!important}
 <div id="block"><div class="box">
   <h2 id="blockTitle">このブラウザでは使えません</h2>
   <p id="blockMsg"></p>
+  <div id="blockSteps" style="display:none"></div>
   <a class="btn primary block" id="btnOpenSafari" style="display:none;margin-bottom:10px">🧭 Safari で開く</a>
   <button class="btn block" id="btnCopyUrl">このページのURLをコピー</button>
   <p class="hint" id="blockHint" style="margin-top:12px"></p>
 </div></div>
+<div id="menuArrow" aria-hidden="true"></div>
 
 <div id="toast"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
@@ -678,7 +691,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.13.1'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.13.2'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -2760,6 +2773,26 @@ $('#moveLater').addEventListener('click', () => { track('move_later', {}); close
     toast(state.settings.owner ? (IS_TEST ? 'テスト環境では統計を記録しません。本番のサイトで行ってください' : 'この端末を「運営者の端末」にしました。統計から除外されます') : '運営者の端末の印を外しました', 4500);
   });
 })();
+/* アプリの中のブラウザ（X・Instagram など）の見分けと、Safari で開き直す手順 */
+function inAppName() {
+  let ref = ''; try { ref = document.referrer ? new URL(document.referrer).hostname : ''; } catch (e) {}
+  if (/Line\//.test(UA)) return 'line';
+  if (/Instagram/.test(UA)) return 'instagram';
+  if (/FBAN|FBAV|FBIOS/.test(UA)) return 'facebook';
+  if (/BytedanceWebview|musical_ly|TikTok/i.test(UA)) return 'tiktok';
+  if (/Twitter/i.test(UA) || /(^|\.)(t\.co|x\.com|twitter\.com)$/.test(ref)) return 'x';
+  if (/CriOS|FxiOS|EdgiOS|OPiOS|GSA\/|Brave|DuckDuckGo|YaBrowser/.test(UA)) return 'browser';
+  return '';
+}
+const INAPP_GUIDE = {
+  x: { name: 'X', where: 'bottom', steps: ['画面の一番下にある「<b>⋮</b>」を押す', '「<b>ブラウザで開く</b>」（または「Safari で開く」）を押す'] },
+  instagram: { name: 'Instagram', where: 'top-right', steps: ['右上の「<b>…</b>」を押す', '「<b>外部ブラウザで開く</b>」を押す'] },
+  facebook: { name: 'Facebook', where: 'top-right', steps: ['右上の「<b>…</b>」を押す', '「<b>外部ブラウザで開く</b>」を押す'] },
+  tiktok: { name: 'TikTok', where: 'top-right', steps: ['右上の「<b>…</b>」を押す', '「<b>ブラウザで開く</b>」を押す'] },
+  line: { name: 'LINE', where: 'bottom-right', steps: ['右下の「<b>︙</b>」を押す', '「<b>ブラウザで開く</b>」を押す'] },
+  browser: { name: '', where: '', steps: ['下の「<b>URL をコピー</b>」を押す', '<b>Safari</b> を開き、アドレス欄に貼り付けて開く'] },
+  '': { name: '', where: '', steps: ['画面の「<b>⋮</b>」や「<b>…</b>」のメニューを開く', '「<b>ブラウザで開く</b>」や「<b>Safari で開く</b>」を押す'] },
+};
 function boot() {
   const qp = new URLSearchParams(location.search);
   let tz = ''; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
@@ -2774,7 +2807,7 @@ function boot() {
   }
   if (isMobile && !isIOSSafari) {
     track('env_blocked', { os: isIOS ? 'ios' : isAndroid ? 'android' : 'other', br: browserName() });
-    $('#btnCopyUrl').addEventListener('click', () => { track('safari_copy'); copyText(location.href.replace(/[?&]openExternalBrowser=1/, '')); });
+    $('#btnCopyUrl').addEventListener('click', async () => { track('safari_copy'); await copyText(location.href.replace(/[?&]openExternalBrowser=1/, '')); setTimeout(() => toast('コピーしました。Safari を開いて、アドレス欄に貼り付けてください', 5000), 50); });
     if (isIOS) {
       /* iPhone の Safari 以外（Chrome・LINE・Instagram など）で開かれた時は、自動で Safari に切り替える
        *  - LINE：URL に openExternalBrowser=1 を付けると外部ブラウザ（通常は Safari）で開き直す
@@ -2782,15 +2815,30 @@ function boot() {
        *  ※ iPhone の仕組み上「必ず」はできないため、開けなかった時のボタンと手順も出す */
       const clean = location.href.replace(/[?&]openExternalBrowser=1/, '');
       const safariUrl = 'x-safari-' + clean;
+      const app = inAppName(), G = INAPP_GUIDE[app] || INAPP_GUIDE[''];
       $('#blockTitle').textContent = 'Safari で開いています…';
-      $('#blockMsg').innerHTML = 'このアプリは iPhone の <b>Safari 専用</b>です。<br>自動で Safari に切り替わらない時は、下のボタンを押してください。';
-      const btn = $('#btnOpenSafari'); btn.href = safariUrl; btn.style.display = '';
-      btn.addEventListener('click', () => track('safari_open_tap', { br: browserName() }));
-      $('#blockHint').innerHTML = 'それでも開かない時：「URLをコピー」→ Safari を開いて、アドレス欄に貼り付けてください。<br>LINE の場合は、右下の「︙」→「ブラウザで開く」でも開けます。';
+      $('#blockMsg').innerHTML = 'このアプリは目覚ましを鳴らすため、iPhone の <b>Safari</b> で使います。';
+      const btn = $('#btnOpenSafari'); btn.href = safariUrl;
+      btn.addEventListener('click', () => { track('safari_open_tap', { br: browserName(), app }); setTimeout(showGuide, 1500); });
+      $('#btnCopyUrl').textContent = 'このページの URL をコピー';
       $('#block').classList.add('open');
-      // 切り替え自体はページ先頭のスクリプトで実行済み。ここでは記録と、開けなかった時の表示だけ
-      track('safari_redirect', { via: window.__toSafari || 'none', br: browserName() }); flushStats(true);
-      setTimeout(() => { $('#blockTitle').textContent = 'Safari で開いてください'; }, 2500);
+      // 切り替え自体はページ先頭のスクリプトで実行済み。ここでは記録と、開けなかった時の手順の表示だけ
+      track('safari_redirect', { via: window.__toSafari || 'none', br: browserName(), app }); flushStats(true);
+      let shown = false;
+      function showGuide() {
+        if (document.visibilityState !== 'visible') return;   // Safari に切り替わった
+        if (!shown) { shown = true; track('safari_fail', { app, br: browserName() }); flushStats(true); }
+        $('#blockTitle').textContent = 'Safari で開き直してください';
+        $('#blockMsg').innerHTML = (G.name ? `<b>${G.name}</b> の中のブラウザでは、自動で Safari に切り替えられませんでした。` : '自動で Safari に切り替えられませんでした。') + '<br>次の手順で開き直してください（10秒ほどで終わります）。';
+        $('#blockSteps').innerHTML = G.steps.map((t, i) => `<div class="st"><span class="n">${i + 1}</span><span>${t}</span></div>`).join('');
+        $('#blockSteps').style.display = '';
+        btn.textContent = '🧭 もう一度 自動で開いてみる'; btn.classList.remove('primary'); btn.style.display = G.retry === false ? 'none' : '';
+        $('#blockHint').innerHTML = G.where ? '' : 'うまくいかない時は「URL をコピー」→ Safari を開いて、アドレス欄に貼り付けてください。';
+        const ar = $('#menuArrow');
+        if (G.where) { ar.className = 'on ' + G.where; ar.textContent = G.where === 'top-right' ? '⬆️' : '⬇️'; }
+      }
+      setTimeout(showGuide, 1800);
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && shown) showGuide(); });
       return;
     }
     $('#blockMsg').innerHTML = 'スマホ版は <b>iPhone の Safari 専用</b>です。PC のブラウザでご利用ください。';

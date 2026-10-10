@@ -363,8 +363,16 @@ footer p{margin:4px 0}
 (function () {
   var c = window.LIVE_ALARM_CONFIG || {}, isTest = /\/test\//.test(location.pathname) || /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
   var ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua);
-  var inapp = /Line\/|Instagram|FBAN|FBAV|TikTok|BytedanceWebview|musical_ly/.test(ua);
-  if (ios && inapp) { var n = document.getElementById('inappNote'); if (n) n.style.display = ''; }
+  // iPhone の Safari 以外（X・LINE・Instagram などの中のブラウザ）で開かれた時は、先に Safari で開き直す手順を案内する
+  var nonSafari = /CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|GSA\/|YaBrowser|DuckDuckGo|Brave|Line\/|FBAN|FBAV|FBIOS|Instagram|Twitter|MicroMessenger|KAKAOTALK|Snapchat|Pinterest|YJApp|Yahoo|BytedanceWebview|musical_ly|TikTok/i;
+  var inapp = ios && navigator.standalone !== true && !(/Safari\//.test(ua) && /Version\//.test(ua) && !nonSafari.test(ua));
+  if (inapp) {
+    var ref0 = ''; try { ref0 = document.referrer ? new URL(document.referrer).hostname : ''; } catch (e) {}
+    var how = /Line\//.test(ua) ? '右下の「︙」→「ブラウザで開く」' : /Instagram|FBAN|FBAV|FBIOS/.test(ua) ? '右上の「…」→「外部ブラウザで開く」' : /BytedanceWebview|musical_ly|TikTok/i.test(ua) ? '右上の「…」→「ブラウザで開く」'
+      : (/Twitter/i.test(ua) || /(^|\.)(t\.co|x\.com|twitter\.com)$/.test(ref0)) ? '画面の一番下の「⋮」→「ブラウザで開く」' : '画面の「⋮」や「…」のメニュー →「ブラウザで開く」';
+    var n = document.getElementById('inappNote');
+    if (n) { n.innerHTML = '📱 目覚ましは iPhone の <b>Safari</b> で使います。アプリの中のブラウザでは自動で切り替わらないことがあるので、先に <b>' + how + '</b> で開き直しておくとスムーズです。'; n.style.display = ''; }
+  }
   var url = isTest ? c.testBackendUrl : c.backendUrl;
   if (!url || location.hostname === 'nagara-max.github.io') return;
   var SK = isTest ? 'liveAlarm.test.v1' : 'liveAlarm.v1', UK = isTest ? 'liveAlarm.test.uid' : 'liveAlarm.uid', HK = isTest ? 'liveAlarm.test.uidByHp' : 'liveAlarm.uidByHp';
