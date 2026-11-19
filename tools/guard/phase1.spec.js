@@ -113,11 +113,69 @@ async function testIndexTip(browser, base) {
   }
 }
 
+async function testGoods(browser, base) {
+  console.log('[Task2] goods.html（寝る前セットアップガイド）');
+  const fs = require('fs');
+  const { ctx, page, errors } = await newPage(browser, base, { viewport: { width: 390, height: 844 }, config: Object.assign({}, BASE_CFG, { operator: 'テスト運営' }) });
+  const res = await page.goto(base + '/goods.html', { waitUntil: 'load' });
+  ok(res && res.status() === 200, 'goods.html が開ける', res && res.status());
+  if (!res || res.status() !== 200) { await ctx.close(); return; }
+  ok(await page.$('#backBar') !== null, '帯 #backBar がある');
+  ok(await page.$('#backBar a[href="./"]') !== null, '帯に「アプリに戻る」リンク（href="./"）がある');
+  const pos = await page.evaluate(() => { const b = document.querySelector('#backBar'); return b ? getComputedStyle(b).position : ''; });
+  ok(pos === 'fixed' || pos === 'sticky', '帯の position が fixed か sticky', pos);
+  const barTxt = await page.evaluate(() => { const b = document.querySelector('#backBar'); return b ? b.textContent.replace(/\s+/g, ' ') : ''; });
+  ok(/アラームはアプリの画面を開いている時だけ鳴ります/.test(barTxt), '帯の文言', barTxt);
+  // 下までスクロールしても帯が画面内にある
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await page.waitForTimeout(100);
+  const barBox = await page.evaluate(() => { const r = document.querySelector('#backBar').getBoundingClientRect(); return { top: r.top, bottom: r.bottom }; });
+  ok(barBox.top >= 0 && barBox.bottom <= 844 && barBox.bottom > 0, '一番下までスクロールしても帯が見えている', barBox);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(100);
+  const prY = await page.evaluate(() => {
+    const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    let n; while ((n = w.nextNode())) { if (n.nodeValue.includes('本ページはプロモーション（広告）を含みます')) { const r = n.parentElement.getBoundingClientRect(); return r.bottom; } }
+    return null;
+  });
+  ok(prY !== null && prY < 844, '「本ページはプロモーション（広告）を含みます」が最初の画面内（390×844）', prY);
+  const body = await page.evaluate(() => document.body.innerText);
+  ok(/Amazonのアソシエイトとして、テスト運営は適格販売により収入を得ています。/.test(body), 'Amazon アソシエイトの文言（運営者名入り）');
+  ok(!/[¥￥円]/.test(body), '価格表記（¥・円）がない');
+  const imgs = await page.evaluate(() => [...document.images].map(i => i.getAttribute('src') || ''));
+  ok(!imgs.some(s => /amazon|rakuten|moshimo|media-amazon|ssl-images/i.test(s)), '商品画像（amazon/rakuten 等の img）がない', imgs);
+  const scripts = await page.evaluate(() => [...document.querySelectorAll('script[src]')].map(s => s.getAttribute('src')));
+  ok(scripts.every(s => /^config\.js(\?v=[\d.]+)?$/.test(s)), '外部 <script src> は config.js だけ', scripts);
+  const links = await page.evaluate(() => [...document.querySelectorAll('a[href*="amazon.co.jp"], a[href*="rakuten.co.jp"]')].map(a => ({ rel: a.getAttribute('rel') || '', t: a.getAttribute('target') })));
+  ok(links.length > 0, '商品のテキストリンクがある', links.length);
+  ok(links.every(l => /\bsponsored\b/.test(l.rel) && /\bnoopener\b/.test(l.rel)), '商品リンクは rel="sponsored noopener"');
+  const html = fs.readFileSync(path.join(ROOT, 'goods.html'), 'utf8');
+  const nLinks = (html.match(/<a [^>]*href="https:\/\/(www\.amazon\.co\.jp|search\.rakuten\.co\.jp)[^"]*"/g) || []).length;
+  const nTodo = (html.match(/<!-- TODO\(owner\): もしもアフィリエイトのリンクに差し替え -->/g) || []).length;
+  ok(nTodo >= nLinks && nLinks > 0, '各商品リンクに TODO(owner) コメント', { nLinks, nTodo });
+  ok(/<link rel="canonical" href="https:\/\/nagara-alarm\.pages\.dev\/goods">/.test(html), 'canonical が /goods');
+  ok(errors.length === 0, 'goods.html で pageerror 0 件', errors);
+  await ctx.close();
+  // config.js が読めなくても壊れない
+  {
+    const { ctx, page, errors } = await newPage(browser, base, { config: 404 });
+    await page.goto(base + '/goods.html', { waitUntil: 'load' });
+    ok(errors.length === 0, 'config.js が 404 でも goods.html で pageerror 0 件', errors);
+    await ctx.close();
+  }
+  const sm = fs.readFileSync(path.join(ROOT, 'sitemap.xml'), 'utf8');
+  ok(/<loc>https:\/\/nagara-alarm\.pages\.dev\/goods<\/loc><lastmod>2026-11-19<\/lastmod>/.test(sm), 'sitemap.xml に /goods（lastmod 2026-11-19）');
+  const about = fs.readFileSync(path.join(ROOT, 'about.html'), 'utf8');
+  const faqLock = (about.match(/<summary>画面をロックしても鳴りますか？<\/summary>[\s\S]*?<\/details>/) || [''])[0];
+  ok(/<a href="goods\.html">寝る前のおすすめグッズ<\/a>/.test(faqLock), 'about.html の FAQ「画面をロックしても鳴りますか？」から goods.html へリンク');
+}
+
 (async () => {
   const { proc, base } = await startServer();
   const browser = await chromium.launch();
   try {
     await testIndexTip(browser, base);
+    await testGoods(browser, base);
   } catch (e) {
     failed++; console.log('  FAIL 例外: ' + (e && e.stack || e));
   } finally {
