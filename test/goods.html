@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>寝る前のセットアップガイド・おすすめグッズ｜推しと共に目覚ましアラーム(仮)</title>
+<meta name="description" content="推しの YouTube で毎朝しっかり起きるための、寝る前の準備のコツ。iPhone の自動ロックの設定、充電しながら置けるスタンドや長めのケーブル、併用したい普通の目覚まし時計などを紹介します。">
+<link rel="canonical" href="https://nagara-alarm.pages.dev/goods">
+<meta name="theme-color" content="#0e1116">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="推しと共に目覚ましアラーム(仮)">
+<meta property="og:title" content="寝る前のセットアップガイド・おすすめグッズ｜推しと共に目覚ましアラーム(仮)">
+<meta property="og:description" content="推しの YouTube で毎朝しっかり起きるための、寝る前の準備のコツとおすすめグッズ。">
+<meta property="og:url" content="https://nagara-alarm.pages.dev/goods">
+<meta property="og:image" content="https://nagara-alarm.pages.dev/ogp.png">
+<meta property="og:locale" content="ja_JP">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&display=swap">
+<style>
+:root{
+  --bg:#0e1116; --bg2:#12161d; --panel:#171b22; --panel2:#1f242d; --line:#2b313c;
+  --text:#e9edf3; --muted:#9aa4b2; --accent:#ff8a3d; --accent2:#ffb37a; --pink:#ff5fa2; --yellow:#ffd166;
+  --grad:linear-gradient(90deg,#ffd166 0%,#ff8a3d 48%,#ff5fa2 100%);
+  --pop:"Mochiy Pop One","Hiragino Maru Gothic ProN","M PLUS Rounded 1c","Arial Rounded MT Bold",sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Yu Gothic UI",sans-serif;line-height:1.8;-webkit-text-size-adjust:100%;overflow-wrap:anywhere}
+a{color:var(--accent2)}
+.wrap{max-width:760px;margin:0 auto;padding:0 18px}
+.pop{font-family:var(--pop);font-weight:400}
+.nw{display:inline-block}
+.grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* 上に固定の「アプリに戻る」帯（スクロールしても常に見える） */
+.backbar{position:sticky;top:0;z-index:30;background:linear-gradient(90deg,#ff8a3d,#ff5fa2);color:#1b0f05;font-weight:700;font-size:14px;line-height:1.5;padding:calc(9px + env(safe-area-inset-top)) 14px 9px;box-shadow:0 4px 16px rgba(0,0,0,.35)}
+.backbar .in{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;text-align:center}
+.backbar a{display:inline-flex;align-items:center;background:#1b0f05;color:#ffd9b8;border-radius:999px;padding:5px 14px;text-decoration:none;white-space:nowrap;font-weight:800}
+
+.pr{display:inline-block;margin:18px 0 0;font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:8px;padding:3px 10px}
+header.head{padding:6px 0 8px}
+header.head h1{margin:14px 0 10px;font-size:clamp(23px,5.4vw,32px);line-height:1.4}
+.lead{color:#cfd6e0;font-size:16px;margin:0 0 6px}
+
+h2{scroll-margin-top:96px;font-size:clamp(19px,4.4vw,23px);line-height:1.45;margin:44px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+h2 .n{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#1b0f05;font-size:15px;font-weight:900;margin-right:8px;vertical-align:2px;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+h3{font-size:16.5px;margin:22px 0 6px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:1.3em}
+li{margin:4px 0}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin:14px 0}
+.box.warn{background:rgba(255,138,61,.08);border-color:rgba(255,138,61,.35)}
+.box b{color:var(--accent2)}
+.path{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:1px 8px;font-size:14px;white-space:nowrap}
+.shop{display:flex;flex-wrap:wrap;gap:8px 14px;margin:8px 0 4px;font-size:14.5px}
+.shop a{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.03);text-decoration:none}
+.shop a:hover{border-color:#46506a}
+.muted{color:var(--muted);font-size:13.5px}
+.toc{font-size:15px}
+.toc a{color:var(--text)}
+.final{text-align:center;margin:46px 0 10px;padding:26px 18px;border-radius:20px;background:radial-gradient(80% 140% at 50% 0%,rgba(255,138,61,.16),transparent 70%);border:1px solid var(--line)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:999px;padding:13px 26px;font-weight:800;font-size:16px;text-decoration:none;white-space:nowrap;background:var(--accent);color:#1b0f05;box-shadow:0 8px 24px rgba(255,138,61,.35)}
+
+footer{border-top:1px solid var(--line);margin-top:40px;padding:26px 0 calc(40px + env(safe-area-inset-bottom));color:var(--muted);font-size:13px}
+footer .links{display:flex;flex-wrap:wrap;gap:6px 18px;margin-bottom:12px}
+footer .links a{color:var(--muted)}
+footer p{margin:4px 0}
+</style>
+</head>
+<body>
+
+<div class="backbar" id="backBar"><div class="in"><span>⏰ アラームはアプリの画面を開いている時だけ鳴ります</span><a href="./">→ アプリに戻る</a></div></div>
+
+<main class="wrap">
+<header class="head">
+  <span class="pr">本ページはプロモーション（広告）を含みます</span>
+  <h1 class="pop"><span class="nw">寝る前の</span><span class="nw"><span class="grad">セットアップガイド</span></span></h1>
+  <p class="lead">推しの YouTube で毎朝ちゃんと起きるための、寝る前の準備のコツと、あると便利なグッズをまとめました。</p>
+  <p class="muted">このアプリは、画面を開いたまま朝まで待機して、時刻になると YouTube を流す仕組みです。「画面が消えない」「電池が切れない」「音がちゃんと出る」の3つがそろえば、朝の失敗はぐっと減ります。</p>
+</header>
+
+<div class="box toc">
+  <b>このページの内容</b>
+  <ol>
+    <li><a href="#settings">まずは設定を見直す（お金はかかりません）</a></li>
+    <li><a href="#stand">充電しながら立てて置けるスタンド</a></li>
+    <li><a href="#cable">長めの充電ケーブル・MagSafe スタンド</a></li>
+    <li><a href="#speaker">音を大きくしたい時の Bluetooth スピーカー</a></li>
+    <li><a href="#clock">念のため、普通の目覚まし時計もいっしょに</a></li>
+  </ol>
+</div>
+
+<h2 id="settings"><span class="n">1</span>まずは設定を見直す（お金はかかりません）</h2>
+<p>グッズの前に、iPhone の設定を確認しておきましょう。ここが合っていないと、どんなグッズを使っても鳴らないことがあります。</p>
+<h3>自動ロックを「なし」にする</h3>
+<p>画面が自動で消える（ロックされる）と、YouTube を流せなくなります。寝る前だけでも、自動ロックを「なし」にしておくのがおすすめです。</p>
+<p><span class="path">設定</span> → <span class="path">画面表示と明るさ</span> → <span class="path">自動ロック</span> → <span class="path">なし</span></p>
+<h3>低電力モードはオフにする</h3>
+<p>低電力モードがオンの間は、自動ロックの設定にかかわらず、画面が短い時間で消えてしまいます。寝る前は低電力モードをオフにして、そのぶん充電しながら置いてください。</p>
+<h3>画面の明るさは、アプリの「画面を暗くする」で</h3>
+<p>画面を開いたままだとまぶしい時は、アプリのトップにある「画面を暗くする」を押してください。暗い時計の表示で朝まで待機します。押しておくと、朝に YouTube の音が自動で出やすくなる効果もあります。</p>
+<h3>本体の音量を確かめる</h3>
+<p>マナーモード（消音スイッチ）がオンでも鳴りますが、本体の音量が0だと鳴りません。寝る前にアプリの「テスト再生」で、音の大きさを一度確かめておくと安心です。</p>
+<div class="box warn">💡 どうしても画面をロックして寝たい時は、アプリの ⚙設定にある「画面ロック中も、アラーム音で起こす（実験的）」を試してみてください。ロック中は YouTube の代わりにアラーム音が鳴り、ロックを解除すると YouTube が始まります（電池を多く使います）。</div>
+
+<h2 id="stand"><span class="n">2</span>充電しながら立てて置けるスタンド</h2>
+<p>画面をつけたまま一晩置くので、<b>充電しながら置けること</b>がいちばん大事です。枕元に立てて置けるスタンドがあると、画面の時計も見やすく、朝にスマホを探す手間もなくなります。</p>
+<ul>
+  <li>ケーブルを挿したまま置ける形（下が空いている・横向きにも置ける）</li>
+  <li>角度を変えられると、寝ながらでも画面が見やすい</li>
+  <li>倒れにくい、重さのある台座のもの</li>
+</ul>
+<div class="shop">
+  <!-- TODO(owner): もしもアフィリエイトのリンクに差し替え -->
+  <a href="https://www.amazon.co.jp/s?k=%E3%82%B9%E3%83%9E%E3%83%9B%E3%82%B9%E3%82%BF%E3%83%B3%E3%83%89+%E5%85%85%E9%9B%BB%E3%81%97%E3%81%AA%E3%81%8C%E3%82%89+%E8%A7%92%E5%BA%A6%E8%AA%BF%E6%95%B4" target="_blank" rel="sponsored noopener">Amazon でスマホスタンドを探す</a>
+  <!-- TODO(owner): もしもアフィリエイトのリンクに差し替え -->
+  <a href="https://search.rakuten.co.jp/search/mall/%E3%82%B9%E3%83%9E%E3%83%9B%E3%82%B9%E3%82%BF%E3%83%B3%E3%83%89+%E5%85%85%E9%9B%BB%E3%81%97%E3%81%AA%E3%81%8C%E3%82%89/" target="_blank" rel="sponsored noopener">楽天市場でスマホスタンドを探す</a>
+</div>
+
+<h2 id="cable"><span class="n">3</span>長めの充電ケーブル・MagSafe スタンド</h2>
+<p>コンセントが枕元から遠いと、スマホを置ける場所が限られてしまいます。<b>2m〜3m の長めのケーブル</b>があると、手の届く場所に置けて便利です。</p>
+<ul>
+  <li>お使いの iPhone の差し込み口（Lightning か USB-C か）に合ったものを選んでください</li>
+  <li>寝返りで引っかけないよう、ケーブルはベッドの外側を通すと安心です</li>
+</ul>
+<div class="shop">
+  <!-- TODO(owner): もしもアフィリエイトのリンクに差し替え -->
+  <a href="https://www.amazon.co.jp/s?k=iPhone+%E5%85%85%E9%9B%BB%E3%82%B1%E3%83%BC%E3%83%96%E3%83%AB+3m" target="_blank" rel="sponsored noopener">Amazon で長めのケーブルを探す</a>
+  <!-- TODO(owner): もしもアフィリエイトのリンクに差し替え -->
+  <a href="https://search.rakuten.co.jp/search/mall/iPhone+%E5%85%85%E9%9B%BB%E3%82%B1%E3%83%BC%E3%83%96%E3%83%AB+3m/" target="_blank" rel="sponsored noopener">楽天市場で長めのケーブルを探す</a>
+</div>
+<h3>MagSafe 対応の iPhone なら</h3>
+<p>MagSafe（磁石でくっつくワイヤレス充電）のスタンドなら、置くだけで充電が始まり、挿し忘れの心配がありません。寝る前にのせるだけなので、毎晩の準備がかんたんになります。</p>
+<div class="shop">
+  <!-- TODO(owner): もしもアフィリエイトのリンクに差し替え -->
+  <a href="https://www.amazon.co.jp/s?k=MagSafe+%E5%85%85%E9%9B%BB%E3%82%B9%E3%82%BF%E3%83%B3%E3%83%89" target="_blank" rel="sponsored noopener">Amazon で MagSafe スタンドを探す</a>
+</div>
+<p class="muted">※ ワイヤレス充電は、ケーブルでの充電より本体が温かくなりやすいです。布団や枕の下には置かないでください。</p>
+
+<h2 id="speaker"><span class="n">4</span>音を大きくしたい時の Bluetooth スピーカー</h2>
+<p>本体のスピーカーだけでは物足りない、もっと大きな音で起きたい、という方は Bluetooth スピーカーをつなぐ方法もあります。</p>
+<div class="box warn">
+  <b>使う前に知っておいてほしいこと</b>
+  <ul>
+    <li>Bluetooth スピーカーにつなぐと、<b>iPhone の音はスピーカーから出ます</b>。夜のうちに接続が切れた時は、iPhone 本体から鳴ります。</li>
+    <li>スピーカーの多くは、しばらく音が出ないと<b>自動で電源が切れます</b>。朝まで待機できるか、説明書で確かめてください。</li>
+    <li>スピーカーを使う日も、iPhone 本体の音量は上げておくと安心です。</li>
+  </ul>
+</div>
+<p>寝る前に「テスト再生」で、スピーカーから音が出ることを確かめてからお休みください。</p>
+<div class="shop">
+  <!-- TODO(owner): もしもアフィリエイトのリンクに差し替え -->
+  <a href="https://www.amazon.co.jp/s?k=Bluetooth+%E3%82%B9%E3%83%94%E3%83%BC%E3%82%AB%E3%83%BC+%E5%B0%8F%E5%9E%8B" target="_blank" rel="sponsored noopener">Amazon で Bluetooth スピーカーを探す</a>
+  <!-- TODO(owner): もしもアフィリエイトのリンクに差し替え -->
+  <a href="https://search.rakuten.co.jp/search/mall/Bluetooth+%E3%82%B9%E3%83%94%E3%83%BC%E3%82%AB%E3%83%BC/" target="_blank" rel="sponsored noopener">楽天市場で Bluetooth スピーカーを探す</a>
+</div>
+
+<h2 id="clock"><span class="n">5</span>念のため、普通の目覚まし時計もいっしょに</h2>
+<p>このアプリは、通信や YouTube の状態によっては鳴らないことがあります。<b>寝坊できない日（仕事・試験・旅行など）は、普通の目覚まし時計や iPhone の標準の「時計」アプリのアラームも、少し遅めの時刻にセットしておいてください。</b></p>
+<p>「推しの配信で起きる」がメイン、「普通の目覚まし」は保険、という使い方がおすすめです。電池で動く目覚まし時計なら、停電やスマホの電池切れの時にも鳴ります。</p>
+<div class="shop">
+  <!-- TODO(owner): もしもアフィリエイトのリンクに差し替え -->
+  <a href="https://www.amazon.co.jp/s?k=%E7%9B%AE%E8%A6%9A%E3%81%BE%E3%81%97%E6%99%82%E8%A8%88+%E5%A4%A7%E9%9F%B3%E9%87%8F" target="_blank" rel="sponsored noopener">Amazon で目覚まし時計を探す</a>
+  <!-- TODO(owner): もしもアフィリエイトのリンクに差し替え -->
+  <a href="https://search.rakuten.co.jp/search/mall/%E7%9B%AE%E8%A6%9A%E3%81%BE%E3%81%97%E6%99%82%E8%A8%88/" target="_blank" rel="sponsored noopener">楽天市場で目覚まし時計を探す</a>
+</div>
+
+<div class="final">
+  <p class="pop" style="font-size:19px;margin-bottom:8px">準備ができたら、<span class="grad">アプリに戻って</span>おやすみなさい。</p>
+  <p class="muted">アラームは、アプリの画面を開いている時だけ鳴ります。</p>
+  <a class="btn" href="./">⏰ アプリに戻る</a>
+</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="links">
+      <a href="./">アプリを開く</a>
+      <a href="about.html">このアプリについて</a>
+      <a href="privacy.html">プライバシーポリシー・利用規約</a>
+    </div>
+    <p>このページの商品リンクは、紹介料を受け取ることがあるリンク（PR）です。価格や在庫は、リンク先のページでご確認ください。</p>
+    <p>Amazonのアソシエイトとして、<span id="operator">Live目覚まし運営</span>は適格販売により収入を得ています。</p>
+    <p>運営：<span id="operator2">Live目覚まし運営</span></p>
+  </div>
+</footer>
+
+<script src="config.js?v=1.9.7"></script>
+<script>
+'use strict';
+/* 運営者名は config.js から（アプリと同じ設定を使う） */
+(function () {
+  try {
+    var c = window.LIVE_ALARM_CONFIG || {};
+    if (c.operator) { document.getElementById('operator').textContent = c.operator; document.getElementById('operator2').textContent = c.operator; }
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>

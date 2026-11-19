@@ -236,6 +236,23 @@ async function testPolicyAbout(browser, base) {
   }
 }
 
+async function testAppBoot(browser, base) {
+  console.log('[Task4] アプリの起動（ルートと test/）');
+  for (const u of ['/', '/test/']) {
+    const { ctx, page, errors } = await newPage(browser, base);
+    await page.goto(base + u, { waitUntil: 'load' });
+    await page.waitForTimeout(500);
+    ok(errors.length === 0, u + ' で pageerror 0 件', errors);
+    ok(await page.isVisible('#btnStandby'), u + ' で #btnStandby が見える');
+    const mixed = await page.evaluate(() => ['#ring', '#standby'].map(s => document.querySelector(s)).filter(Boolean)
+      .some(el => el.querySelector('#lnkTip, #lnkGoods, #boxSupport, a[href*="goods.html"]')));
+    ok(mixed === false, u + ' の #ring・#standby の中に応援・グッズの要素がない');
+    const ver = await page.evaluate(() => { const m = document.documentElement.innerHTML.match(/const APP_VERSION = '([\d.]+)'/); return m && m[1]; });
+    ok(ver === '1.14.1', u + ' の APP_VERSION が 1.14.1', ver);
+    await ctx.close();
+  }
+}
+
 (async () => {
   const { proc, base } = await startServer();
   const browser = await chromium.launch();
@@ -243,6 +260,7 @@ async function testPolicyAbout(browser, base) {
     await testIndexTip(browser, base);
     await testGoods(browser, base);
     await testPolicyAbout(browser, base);
+    await testAppBoot(browser, base);
   } catch (e) {
     failed++; console.log('  FAIL 例外: ' + (e && e.stack || e));
   } finally {
