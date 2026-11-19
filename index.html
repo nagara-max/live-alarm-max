@@ -534,6 +534,24 @@ html:not(.public) .pubonly{display:none!important}
       <div class="hint">アラーム・<span class="keyonly">APIキー・</span>設定をこの端末から消して、最初の状態に戻します。</div>
     </details>
   </div>
+  <div class="field" id="boxSupport" style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+    <style>#boxSupport [hidden]{display:none!important}</style>
+    <span class="flabel">このアプリについて</span>
+    <div class="row wrapok">
+      <a class="btn ghost sm" id="lnkGoods" href="goods.html">🛏 寝る前のおすすめグッズ</a>
+      <a class="btn ghost sm" id="lnkTip" hidden>☕ 開発を応援する（任意。機能は変わりません）</a>
+    </div>
+  </div>
+  <script>
+  /* 応援リンク：config.js の tipUrl が https の時だけ表示（アプリ本体のスクリプトとは独立。失敗してもアプリには影響しない）
+   *  config.js はこの後で読み込まれるので、ページの読み込みが終わってから判定する */
+  document.addEventListener('DOMContentLoaded', function () {
+    try {
+      var c = window.LIVE_ALARM_CONFIG || {}, u = c.tipUrl, a = document.getElementById('lnkTip');
+      if (a && typeof u === 'string' && /^https:\/\//.test(u)) { a.href = u; a.hidden = false; }
+    } catch (e) {}
+  });
+  </script>
   <div class="field" style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
     <span class="flabel" id="verLine" style="-webkit-user-select:none;user-select:none">アプリのバージョン：<b id="verNow"></b><span id="ownerTag" style="display:none;color:var(--accent2)">　運営者の端末（統計から除外中）</span></span>
     <div class="row wrapok">
@@ -674,7 +692,7 @@ html:not(.public) .pubonly{display:none!important}
 <div id="toast"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 
-<script src="config.js?v=1.9.6"></script>
+<script src="config.js?v=1.9.7"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -702,7 +720,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.14.0'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.14.1'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
