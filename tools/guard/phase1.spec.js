@@ -170,12 +170,79 @@ async function testGoods(browser, base) {
   ok(/<a href="goods\.html">寝る前のおすすめグッズ<\/a>/.test(faqLock), 'about.html の FAQ「画面をロックしても鳴りますか？」から goods.html へリンク');
 }
 
+async function testPolicyAbout(browser, base) {
+  console.log('[Task3] privacy.html・about.html の文言');
+  const fs = require('fs');
+  {
+    const { ctx, page, errors } = await newPage(browser, base);
+    await page.goto(base + '/privacy.html', { waitUntil: 'load' });
+    const t4 = await page.evaluate(() => {
+      const h = [...document.querySelectorAll('h2')].find(x => /^4\./.test(x.textContent.trim()));
+      let el = h && h.nextElementSibling; while (el && el.tagName !== 'TABLE' && el.tagName !== 'H2') el = el.nextElementSibling;
+      if (!el || el.tagName !== 'TABLE') return null;
+      return { head: [...el.rows[0].cells].map(c => c.textContent.trim()), text: el.textContent, rows: [...el.rows].slice(1).map(r => r.cells.length) };
+    });
+    ok(!!t4, 'privacy 4章に表がある');
+    if (t4) {
+      ok(JSON.stringify(t4.head) === JSON.stringify(['送信先', '送信される情報', '目的']), '4章の表のヘッダが3列（送信先／送信される情報／目的）', t4.head);
+      ok(t4.rows.every(n => n === 3), '4章の表の各行が3列', t4.rows);
+      for (const w of ['fonts.googleapis.com', 'fonts.gstatic.com', 'www.googleapis.com', 'もしもアフィリエイト', 'Amazon', '楽天', '応援']) ok(t4.text.includes(w), '4章の表に「' + w + '」');
+    }
+    const body = await page.evaluate(() => document.body.innerText);
+    ok(body.includes('現在、本サービスに広告はありません。'), '「現在、本サービスに広告はありません。」を残している');
+    ok(body.includes('最終更新：2026年11月19日'), '最終更新が 2026年11月19日');
+    ok(/IP ?アドレス/.test(body) && body.includes('各社には、通信の仕組み上、IP アドレス'), '表の下に「各社には通信の仕組み上 IP アドレス…」');
+    ok(body.includes('紹介リンクについて') && body.includes('アソシエイト'), '「紹介リンクについて」段落（アソシエイト参加）');
+    ok(body.includes('応援は任意で、機能は変わりません'), '5章に「応援は任意で、機能は変わりません」');
+    ok(errors.length === 0, 'privacy.html で pageerror 0 件', errors);
+    await ctx.close();
+  }
+  const ph = fs.readFileSync(path.join(ROOT, 'privacy.html'), 'utf8');
+  ok(/<script src="config\.js\?v=1\.9\.7"><\/script>/.test(ph), 'privacy.html が config.js?v=1.9.7 を読む');
+  const ah = fs.readFileSync(path.join(ROOT, 'about.html'), 'utf8');
+  ok(/<script src="config\.js\?v=1\.9\.7"><\/script>/.test(ah), 'about.html が config.js?v=1.9.7 を読む');
+  {
+    const { ctx, page, errors } = await newPage(browser, base);
+    await page.goto(base + '/about.html', { waitUntil: 'load' });
+    const faq = await page.evaluate(() => [...document.querySelectorAll('.faq summary')].map(s => s.textContent.trim()));
+    ok(faq.includes('広告はありますか？'), 'about の FAQ に「広告はありますか？」', faq);
+    const biz = await page.evaluate(() => { const b = document.querySelector('#biz .box.company ul'); return b ? b.textContent : ''; });
+    ok(biz.includes('起床時の再生画面・おやすみ画面には広告を表示しません'), '#biz 企業ボックスに「起床時の再生画面・おやすみ画面には広告を表示しません」');
+    ok(/紹介ページ（HP）内での掲載/.test(biz), '#biz 企業ボックスに「紹介ページ（HP）内での掲載」');
+    ok(await page.$('footer #lnkTip') !== null, 'about の footer に #lnkTip がある');
+    ok(await shown(page, 'footer #lnkTip') === false, 'tipUrl が空なら about の #lnkTip は非表示');
+    ok(errors.length === 0, 'about.html で pageerror 0 件', errors);
+    await ctx.close();
+  }
+  {
+    const url = 'https://ofuse.me/example';
+    const { ctx, page } = await newPage(browser, base, { config: Object.assign({}, BASE_CFG, { tipUrl: url }) });
+    await page.goto(base + '/about.html', { waitUntil: 'load' });
+    ok(await shown(page, 'footer #lnkTip') === true, 'tipUrl が https なら about の #lnkTip を表示');
+    ok(await attr(page, 'footer #lnkTip', 'href') === url, 'about の #lnkTip の href が tipUrl と一致');
+    await ctx.close();
+  }
+  for (const bad of ['javascript:alert(1)', 'http://x']) {
+    const { ctx, page } = await newPage(browser, base, { config: Object.assign({}, BASE_CFG, { tipUrl: bad }) });
+    await page.goto(base + '/about.html', { waitUntil: 'load' });
+    ok(await shown(page, 'footer #lnkTip') === false, 'tipUrl=' + JSON.stringify(bad) + ' なら about の #lnkTip は非表示');
+    await ctx.close();
+  }
+  {
+    const { ctx, page, errors } = await newPage(browser, base, { config: 404 });
+    await page.goto(base + '/about.html', { waitUntil: 'load' });
+    ok(errors.length === 0, 'config.js が 404 でも about.html で pageerror 0 件', errors);
+    await ctx.close();
+  }
+}
+
 (async () => {
   const { proc, base } = await startServer();
   const browser = await chromium.launch();
   try {
     await testIndexTip(browser, base);
     await testGoods(browser, base);
+    await testPolicyAbout(browser, base);
   } catch (e) {
     failed++; console.log('  FAIL 例外: ' + (e && e.stack || e));
   } finally {
