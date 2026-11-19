@@ -189,7 +189,7 @@ async function testPolicyAbout(browser, base) {
       for (const w of ['fonts.googleapis.com', 'fonts.gstatic.com', 'www.googleapis.com', 'もしもアフィリエイト', 'Amazon', '楽天', '応援']) ok(t4.text.includes(w), '4章の表に「' + w + '」');
     }
     const body = await page.evaluate(() => document.body.innerText);
-    ok(body.includes('現在、本サービスに広告はありません。'), '「現在、本サービスに広告はありません。」を残している');
+    ok(body.includes('現在、アプリの画面に広告はありません'), 'アプリの画面に広告がないことを明記している');
     ok(body.includes('最終更新：2026年11月19日'), '最終更新が 2026年11月19日');
     ok(/IP ?アドレス/.test(body) && body.includes('各社には、通信の仕組み上、IP アドレス'), '表の下に「各社には通信の仕組み上 IP アドレス…」');
     ok(body.includes('紹介リンクについて') && body.includes('アソシエイト'), '「紹介リンクについて」段落（アソシエイト参加）');
