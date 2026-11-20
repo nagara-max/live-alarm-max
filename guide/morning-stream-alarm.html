@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>推しの朝配信を見逃さないコツ｜配信予定の確認とアラームの使い分け｜推しと共に目覚ましアラーム(仮)</title>
+<meta name="description" content="朝配信で起きたい人向けに、配信予定の確かめ方と、「最新のライブ配信」「最新の動画」「決まった動画」の使い分け、時刻の決め方をまとめました。">
+<link rel="canonical" href="https://nagara-alarm.pages.dev/guide/morning-stream-alarm">
+<meta name="theme-color" content="#0e1116">
+<link rel="icon" type="image/png" href="../icons/icon-192.png">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="推しと共に目覚ましアラーム(仮)">
+<meta property="og:title" content="推しの朝配信を見逃さないコツ｜配信予定の確認とアラームの使い分け｜推しと共に目覚ましアラーム(仮)">
+<meta property="og:description" content="朝配信で起きたい人向けに、配信予定の確かめ方と、「最新のライブ配信」「最新の動画」「決まった動画」の使い分け、時刻の決め方をまとめました。">
+<meta property="og:url" content="https://nagara-alarm.pages.dev/guide/morning-stream-alarm">
+<meta property="og:image" content="https://nagara-alarm.pages.dev/ogp.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="推しの朝配信を見逃さないコツ｜配信予定の確認とアラームの使い分け｜推しと共に目覚ましアラーム(仮)">
+<meta name="twitter:description" content="朝配信で起きたい人向けに、配信予定の確かめ方と、「最新のライブ配信」「最新の動画」「決まった動画」の使い分け、時刻の決め方をまとめました。">
+<meta name="twitter:image" content="https://nagara-alarm.pages.dev/ogp.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&display=swap">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "推しの朝配信を見逃さないコツ｜配信予定の確認とアラームの使い分け",
+  "description": "朝配信で起きたい人向けに、配信予定の確かめ方と、「最新のライブ配信」「最新の動画」「決まった動画」の使い分け、時刻の決め方をまとめました。",
+  "inLanguage": "ja",
+  "datePublished": "2026-11-19",
+  "dateModified": "2026-11-19",
+  "image": "https://nagara-alarm.pages.dev/ogp.png",
+  "mainEntityOfPage": "https://nagara-alarm.pages.dev/guide/morning-stream-alarm",
+  "author": {
+    "@type": "Organization",
+    "name": "Live目覚まし運営"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "推しと共に目覚ましアラーム(仮)",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://nagara-alarm.pages.dev/icons/icon-512.png"
+    }
+  }
+}
+</script>
+<style>
+:root{
+  --bg:#0e1116; --bg2:#12161d; --panel:#171b22; --panel2:#1f242d; --line:#2b313c;
+  --text:#e9edf3; --muted:#9aa4b2; --accent:#ff8a3d; --accent2:#ffb37a; --pink:#ff5fa2; --yellow:#ffd166;
+  --grad:linear-gradient(90deg,#ffd166 0%,#ff8a3d 48%,#ff5fa2 100%);
+  --pop:"Mochiy Pop One","Hiragino Maru Gothic ProN","M PLUS Rounded 1c","Arial Rounded MT Bold",sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Yu Gothic UI",sans-serif;line-height:1.8;-webkit-text-size-adjust:100%;overflow-wrap:anywhere}
+a{color:var(--accent2)}
+.wrap{max-width:760px;margin:0 auto;padding:0 18px}
+.pop{font-family:var(--pop);font-weight:400}
+.nw{display:inline-block}
+.grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* 上に固定の「アプリに戻る」帯（スクロールしても常に見える） */
+.backbar{position:sticky;top:0;z-index:30;background:linear-gradient(90deg,#ff8a3d,#ff5fa2);color:#1b0f05;font-weight:700;font-size:14px;line-height:1.5;padding:calc(9px + env(safe-area-inset-top)) 14px 9px;box-shadow:0 4px 16px rgba(0,0,0,.35)}
+.backbar .in{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;text-align:center}
+.backbar a{display:inline-flex;align-items:center;background:#1b0f05;color:#ffd9b8;border-radius:999px;padding:5px 14px;text-decoration:none;white-space:nowrap;font-weight:800}
+
+.crumb{margin:18px 0 0;font-size:13px;color:var(--muted)}
+.crumb a{color:var(--muted)}
+header.head{padding:6px 0 8px}
+header.head h1{margin:12px 0 10px;font-size:clamp(23px,5.4vw,32px);line-height:1.4}
+.date{font-size:12.5px;color:var(--muted);margin:0 0 10px}
+.lead{color:#cfd6e0;font-size:16px;margin:0 0 6px}
+
+h2{scroll-margin-top:96px;font-size:clamp(19px,4.4vw,23px);line-height:1.45;margin:44px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+h2 .n{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#1b0f05;font-size:15px;font-weight:900;margin-right:8px;vertical-align:2px;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+h3{font-size:16.5px;margin:22px 0 6px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:1.3em}
+li{margin:4px 0}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin:14px 0}
+.box.warn{background:rgba(255,138,61,.08);border-color:rgba(255,138,61,.35)}
+.box b{color:var(--accent2)}
+.box > :last-child{margin-bottom:0}
+.path{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:1px 8px;font-size:14px;white-space:nowrap}
+.ui{display:inline-block;background:rgba(255,138,61,.12);border:1px solid rgba(255,138,61,.35);border-radius:8px;padding:0 7px;font-size:14px;color:#ffd9b8}
+.muted{color:var(--muted);font-size:13.5px}
+.toc{font-size:15px}
+.toc a{color:var(--text)}
+table{width:100%;border-collapse:collapse;margin:10px 0 16px;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--panel2);font-weight:700}
+.tbl{overflow-x:auto}
+.related{list-style:none;padding:0;margin:10px 0 0}
+.related li{margin:0 0 8px}
+.related a{display:block;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);text-decoration:none;color:var(--text)}
+.related a:hover{border-color:#46506a}
+.related small{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.final{text-align:center;margin:46px 0 10px;padding:26px 18px;border-radius:20px;background:radial-gradient(80% 140% at 50% 0%,rgba(255,138,61,.16),transparent 70%);border:1px solid var(--line)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:999px;padding:13px 26px;font-weight:800;font-size:16px;text-decoration:none;white-space:nowrap;background:var(--accent);color:#1b0f05;box-shadow:0 8px 24px rgba(255,138,61,.35)}
+
+footer{border-top:1px solid var(--line);margin-top:40px;padding:26px 0 calc(40px + env(safe-area-inset-bottom));color:var(--muted);font-size:13px}
+footer .links{display:flex;flex-wrap:wrap;gap:6px 18px;margin-bottom:12px}
+footer .links a{color:var(--muted)}
+footer p{margin:4px 0}
+</style>
+</head>
+<body>
+
+<div class="backbar" id="backBar"><div class="in"><span>⏰ アラームはアプリの画面を開いている時だけ鳴ります</span><a href="../">→ アプリに戻る</a></div></div>
+
+<main class="wrap">
+<p class="crumb"><a href="../about.html">トップ</a> › <a href="./">使い方ガイド</a></p>
+<header class="head">
+  <h1 class="pop"><span class="nw">推しの<span class="grad">朝配信</span>を</span><span class="nw">見逃さないコツ</span></h1>
+  <p class="date">公開日：<time datetime="2026-11-19">2026年11月19日</time></p>
+  <p class="lead">「朝配信で起きたいのに、気づいたら終わっていた」を減らすための、配信予定の確かめ方とアラームの設定のコツです。</p>
+</header>
+<div class="box toc">
+  <b>この記事の内容</b>
+  <ol>
+    <li><a href="#types">流す動画は3種類。それぞれの動き方</a></li>
+    <li><a href="#schedule">配信予定を確かめる</a></li>
+    <li><a href="#time">アラームの時刻は「開始予定の少しあと」に</a></li>
+    <li><a href="#choose">どれを選ぶ？目的別の使い分け</a></li>
+    <li><a href="#multi">曜日ごと・複数のアラームで組み合わせる</a></li>
+  </ol>
+</div>
+
+<h2 id="types"><span class="n">1</span>流す動画は3種類。それぞれの動き方</h2>
+<p><a href="../">推しと共に目覚ましアラーム(仮)</a>では、アラームを作る時に「流す動画」を3つから選びます。まずは、それぞれが時刻になった時に何を流すのかを押さえておきましょう。</p>
+<div class="tbl"><table>
+  <tr><th>流す動画</th><th>時刻になると流れるもの</th></tr>
+  <tr><td><b>最新の<br>ライブ配信</b></td><td>いま配信中のライブがあればそれを、なければ<b>直近のライブ配信のアーカイブ</b>を流します。ライブ配信をしていないチャンネルでは、最新の動画を流します。<b>配信予定の枠（まだ始まっていない枠）は流しません。</b></td></tr>
+  <tr><td><b>最新の<br>動画</b></td><td>ライブ配信・ショートを除いた、いちばん新しい動画を流します。</td></tr>
+  <tr><td><b>決まった<br>動画</b></td><td>リンクを貼った同じ動画を、毎回流します。</td></tr>
+</table></div>
+<p>どれを選んでも、流せる動画が見つからなかった時は、アプリのアラーム音で起こします（⚙設定の「YouTube の音が出せない時は、アラーム音で起こす」がオンの場合）。</p>
+<p>チャンネルを入れると、編集画面にいま流れる予定の動画が表示されます。<span class="ui">🔴 いま配信中</span>、<span class="ui">直近のライブ配信（…開始）</span>、<span class="ui">最新の動画（…公開）</span>のどれになっているかで、設定が思いどおりか確かめられます。</p>
+
+<h2 id="schedule"><span class="n">2</span>配信予定を確かめる</h2>
+<p>朝配信は、毎日同じ時刻とは限りません。前日の夜のうちに、次のような方法で予定を確認しておくと安心です。</p>
+<ul>
+  <li><b>YouTube のチャンネルページ</b>：配信予定の枠（いわゆる待機所）が立っていれば、ライブ配信の一覧などに開始予定の日時つきで表示されます。</li>
+  <li><b>チャンネルの通知</b>：チャンネル登録のベルのマークで通知を「すべて」にしておくと、配信の開始や予定を知らせてくれることがあります。</li>
+  <li><b>配信者の告知</b>：X（旧Twitter）やコミュニティ投稿、週間スケジュールの画像などで、予定を告知している配信者も多くいます。</li>
+</ul>
+<p class="muted">※ YouTube の画面の表示は、アプリのバージョンや端末によって異なる場合があります。</p>
+
+<h2 id="time"><span class="n">3</span>アラームの時刻は「開始予定の少しあと」に</h2>
+<p>ここがいちばんのコツです。上の表のとおり、「最新のライブ配信」は<b>まだ始まっていない配信予定の枠を流しません</b>。たとえば 7:00 開始予定の配信に 7:00 ちょうどのアラームを合わせると、配信がまだ始まっていない場合は、前回の配信のアーカイブが流れてしまいます。</p>
+<p>また、アプリは鳴る数分前に、流す動画を前もって確認しています。配信が始まる前に確認が済んでしまうと、やはり前回のアーカイブが選ばれることがあります。</p>
+<div class="box">
+  <b>おすすめの時刻の決め方</b>
+  <ul>
+    <li>開始予定の<b>5〜10分後</b>にアラームをセットする</li>
+    <li>開始がよく遅れる配信者なら、少し余裕を多めに</li>
+    <li>配信の冒頭（オープニングや待機画面）から見たい時は、開始予定ちょうどではなく、アラームのあとに「YouTubeで開く」で最初から見るのもひとつの方法です</li>
+  </ul>
+</div>
+<p>配信中のライブを優先するかどうかは、編集画面の「その他の設定」にある<span class="ui">いま配信中のライブがあればそれを優先する（なければ直近のライブ配信のアーカイブ）</span>で決められます。ふだんはオンのままで大丈夫です。</p>
+
+<h2 id="choose"><span class="n">4</span>どれを選ぶ？目的別の使い分け</h2>
+<h3>朝配信をリアルタイムで見たい →「最新のライブ配信」</h3>
+<p>配信がある日は配信中のライブ、ない日は直近のアーカイブが流れるので、「毎朝なにかしら推しの声で起きられる」のが良いところです。配信がない日でもアーカイブで起きられるので、毎日同じアラームのままで使えます。</p>
+<h3>動画の投稿が中心のチャンネル →「最新の動画」</h3>
+<p>ライブ配信をあまりしないチャンネルや、新しい動画を朝いちばんに見たい時に向いています。ショートは流れないので、短すぎてすぐ終わってしまう心配もありません。</p>
+<h3>毎朝の起きやすさを優先 →「決まった動画」</h3>
+<p>お気に入りの歌や、目覚ましボイス、応援メッセージなど、「この動画なら起きられる」という1本がある時に。配信予定や投稿のタイミングに左右されないので、<b>いちばん予想どおりに動く</b>設定です。なお、配信予定の枠や、削除・非公開になった動画は設定できません。</p>
+
+<h2 id="multi"><span class="n">5</span>曜日ごと・複数のアラームで組み合わせる</h2>
+<p>アラームはいくつでも作れます。曜日の設定は「平日（土日祝を除く）」「月〜金（祝日も鳴る）」「毎日」「曜日ごと（時刻も個別）」から選べるので、たとえば次のような組み合わせができます。</p>
+<ul>
+  <li>平日はニュースのライブ配信、土日は推しの朝配信</li>
+  <li>朝配信がある曜日だけ「最新のライブ配信」、ほかの日は「決まった動画」</li>
+  <li>本命のアラームの数分後に、別のチャンネルを2本目として</li>
+</ul>
+<p>似たアラームは、一覧の<span class="ui">複製</span>ボタンから作ると早いです。「その他の設定」の<b>メモ</b>に「朝配信用」などと書いておくと、一覧で見分けやすくなります。</p>
+<div class="box warn">💡 新しく作ったアラームは、一覧から開いて<span class="ui">▶ テスト再生</span>で一度流してみましょう。思っていた動画が流れるか、音が出るかを、寝る前に確かめられます。</div>
+<p>朝の音が出ない・画面が消えていた、といった失敗は、配信の選び方よりも端末の設定が原因のことが多いです。「<a href="iphone-bedtime-settings.html">iPhone で寝る前にやっておく設定</a>」もあわせてご覧ください。枕元をととのえるグッズは「<a href="../goods.html">寝る前のセットアップガイド</a>」で紹介しています。</p>
+
+<h2>あわせて読みたい</h2>
+<ul class="related">
+  <li><a href="iphone-bedtime-settings.html">iPhoneで寝る前にやっておく設定5つ｜自動ロック・低電力モード・音量・集中モード<small>Webのアラームを朝まで確実に動かすための、iPhone の寝る前チェック。自動ロック・低電力モード・音量・集中モード・画面の明るさを順番に確認します。</small></a></li>
+  <li><a href="youtube-no-sound.html">YouTubeの音が出ない時に確認すること｜iPhone・パソコン別チェックリスト<small>朝のアラームで YouTube の音が出なかった時の確認ポイント。自動再生の制限、本体の音量、消音スイッチ、Bluetooth の出力先、アプリ内の対処を順番に見ていきます。</small></a></li>
+  <li><a href="screen-lock-alarm.html">画面ロック中にWebのアラームは鳴る？ブラウザの仕組みと対策<small>iPhone の画面をロックするとブラウザのアラームはどうなるのか。仕組みと、実験的な「画面ロック中も、アラーム音で起こす」設定の使い方・注意点を解説します。</small></a></li>
+  <li><a href="./">使い方ガイドの一覧を見る<small>寝る前の準備から、困った時の対処まで</small></a></li>
+</ul>
+
+<div class="final">
+  <p class="pop" style="font-size:19px;margin-bottom:8px">明日の朝は、<span class="grad">推しの配信</span>で起きてみよう。</p>
+  <p class="muted">無料・会員登録なし。ブラウザで開いて、時刻とチャンネルを選ぶだけです。</p>
+  <a class="btn" href="../?utm_source=guide&amp;utm_medium=morning-stream-alarm">⏰ アプリでアラームを作る</a>
+</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="links">
+      <a href="../">アプリを開く</a>
+      <a href="../about.html">このアプリについて</a>
+      <a href="./">使い方ガイド一覧</a>
+      <a href="../goods.html">寝る前のおすすめグッズ</a>
+      <a href="../privacy.html">プライバシーポリシー・利用規約</a>
+    </div>
+    <p>YouTube は Google LLC の商標です。本サービスは YouTube および Google が提供・承認するものではありません。</p>
+    <p>運営：<span id="operator">Live目覚まし運営</span></p>
+  </div>
+</footer>
+
+<script src="../config.js?v=1.9.7"></script>
+<script>
+'use strict';
+/* 運営者名は config.js から（アプリと同じ設定を使う） */
+(function () {
+  try {
+    var c = window.LIVE_ALARM_CONFIG || {};
+    if (c.operator) { var el = document.getElementById('operator'); if (el) el.textContent = c.operator; }
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>
