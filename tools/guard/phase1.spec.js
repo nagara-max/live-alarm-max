@@ -140,7 +140,7 @@ async function testGoods(browser, base) {
   });
   ok(prY !== null && prY < 844, '「本ページはプロモーション（広告）を含みます」が最初の画面内（390×844）', prY);
   const body = await page.evaluate(() => document.body.innerText);
-  ok(/Amazonのアソシエイトとして、テスト運営は適格販売により収入を得ています。/.test(body), 'Amazon アソシエイトの文言（運営者名入り）');
+  ok(await page.$eval('#amazonNote', e => e.hidden && /Amazonのアソシエイトとして、テスト運営は適格販売により収入を得ています。/.test(e.textContent)), 'Amazon アソシエイトの文言（運営者名入り・承認まで非表示）');
   ok(!/[¥￥円]/.test(body), '価格表記（¥・円）がない');
   const imgs = await page.evaluate(() => [...document.images].map(i => i.getAttribute('src') || ''));
   ok(!imgs.some(s => /amazon|rakuten|moshimo|media-amazon|ssl-images/i.test(s)), '商品画像（amazon/rakuten 等の img）がない', imgs);
@@ -192,7 +192,7 @@ async function testPolicyAbout(browser, base) {
     ok(body.includes('現在、アプリの画面に広告はありません'), 'アプリの画面に広告がないことを明記している');
     ok(body.includes('最終更新：2026年11月19日'), '最終更新が 2026年11月19日');
     ok(/IP ?アドレス/.test(body) && body.includes('各社には、通信の仕組み上、IP アドレス'), '表の下に「各社には通信の仕組み上 IP アドレス…」');
-    ok(body.includes('紹介リンクについて') && body.includes('アソシエイト'), '「紹介リンクについて」段落（アソシエイト参加）');
+    ok(body.includes('紹介リンクについて') && body.includes('アフィリエイトプログラム'), '「紹介リンクについて」段落');
     ok(body.includes('応援は任意で、機能は変わりません'), '5章に「応援は任意で、機能は変わりません」');
     ok(errors.length === 0, 'privacy.html で pageerror 0 件', errors);
     await ctx.close();
