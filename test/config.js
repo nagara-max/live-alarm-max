@@ -15,4 +15,9 @@ window.LIVE_ALARM_CONFIG = {
   // プライバシーポリシーに表示する運営者名・問い合わせ先（公開する場合は必ず入力）
   operator: 'Live目覚まし運営',
   contact: 'https://forms.gle/mi1T9Pcsp4tonDyY9',
+
+  // 応援（投げ銭）ページの URL（OFUSE・Ko-fi など）。https:// で始まる時だけ、⚙設定と紹介ページの下に
+  // 「☕ 開発を応援する」リンクを出す。空なら出さない（応援してもアプリの機能は変わりません）
+  //   例: 'https://ofuse.me/xxxxxxxx'
+  tipUrl: '',
 };

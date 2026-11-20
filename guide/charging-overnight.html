@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>スマホを充電しながら寝ても大丈夫？発熱とバッテリーの注意点｜推しと共に目覚ましアラーム(仮)</title>
+<meta name="description" content="画面をつけたまま充電して朝まで置く時に気をつけたい、発熱・置き場所・充電器の選び方・バッテリー充電の最適化など、一般的な注意点をまとめました。">
+<link rel="canonical" href="https://nagara-alarm.pages.dev/guide/charging-overnight">
+<meta name="theme-color" content="#0e1116">
+<link rel="icon" type="image/png" href="../icons/icon-192.png">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="推しと共に目覚ましアラーム(仮)">
+<meta property="og:title" content="スマホを充電しながら寝ても大丈夫？発熱とバッテリーの注意点｜推しと共に目覚ましアラーム(仮)">
+<meta property="og:description" content="画面をつけたまま充電して朝まで置く時に気をつけたい、発熱・置き場所・充電器の選び方・バッテリー充電の最適化など、一般的な注意点をまとめました。">
+<meta property="og:url" content="https://nagara-alarm.pages.dev/guide/charging-overnight">
+<meta property="og:image" content="https://nagara-alarm.pages.dev/ogp.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="スマホを充電しながら寝ても大丈夫？発熱とバッテリーの注意点｜推しと共に目覚ましアラーム(仮)">
+<meta name="twitter:description" content="画面をつけたまま充電して朝まで置く時に気をつけたい、発熱・置き場所・充電器の選び方・バッテリー充電の最適化など、一般的な注意点をまとめました。">
+<meta name="twitter:image" content="https://nagara-alarm.pages.dev/ogp.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&display=swap">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "スマホを充電しながら寝ても大丈夫？発熱とバッテリーの注意点",
+  "description": "画面をつけたまま充電して朝まで置く時に気をつけたい、発熱・置き場所・充電器の選び方・バッテリー充電の最適化など、一般的な注意点をまとめました。",
+  "inLanguage": "ja",
+  "datePublished": "2026-11-19",
+  "dateModified": "2026-11-19",
+  "image": "https://nagara-alarm.pages.dev/ogp.png",
+  "mainEntityOfPage": "https://nagara-alarm.pages.dev/guide/charging-overnight",
+  "author": {
+    "@type": "Organization",
+    "name": "Live目覚まし運営"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "推しと共に目覚ましアラーム(仮)",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://nagara-alarm.pages.dev/icons/icon-512.png"
+    }
+  }
+}
+</script>
+<style>
+:root{
+  --bg:#0e1116; --bg2:#12161d; --panel:#171b22; --panel2:#1f242d; --line:#2b313c;
+  --text:#e9edf3; --muted:#9aa4b2; --accent:#ff8a3d; --accent2:#ffb37a; --pink:#ff5fa2; --yellow:#ffd166;
+  --grad:linear-gradient(90deg,#ffd166 0%,#ff8a3d 48%,#ff5fa2 100%);
+  --pop:"Mochiy Pop One","Hiragino Maru Gothic ProN","M PLUS Rounded 1c","Arial Rounded MT Bold",sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Yu Gothic UI",sans-serif;line-height:1.8;-webkit-text-size-adjust:100%;overflow-wrap:anywhere}
+a{color:var(--accent2)}
+.wrap{max-width:760px;margin:0 auto;padding:0 18px}
+.pop{font-family:var(--pop);font-weight:400}
+.nw{display:inline-block}
+.grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* 上に固定の「アプリに戻る」帯（スクロールしても常に見える） */
+.backbar{position:sticky;top:0;z-index:30;background:linear-gradient(90deg,#ff8a3d,#ff5fa2);color:#1b0f05;font-weight:700;font-size:14px;line-height:1.5;padding:calc(9px + env(safe-area-inset-top)) 14px 9px;box-shadow:0 4px 16px rgba(0,0,0,.35)}
+.backbar .in{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;text-align:center}
+.backbar a{display:inline-flex;align-items:center;background:#1b0f05;color:#ffd9b8;border-radius:999px;padding:5px 14px;text-decoration:none;white-space:nowrap;font-weight:800}
+
+.crumb{margin:18px 0 0;font-size:13px;color:var(--muted)}
+.crumb a{color:var(--muted)}
+header.head{padding:6px 0 8px}
+header.head h1{margin:12px 0 10px;font-size:clamp(23px,5.4vw,32px);line-height:1.4}
+.date{font-size:12.5px;color:var(--muted);margin:0 0 10px}
+.lead{color:#cfd6e0;font-size:16px;margin:0 0 6px}
+
+h2{scroll-margin-top:96px;font-size:clamp(19px,4.4vw,23px);line-height:1.45;margin:44px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+h2 .n{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#1b0f05;font-size:15px;font-weight:900;margin-right:8px;vertical-align:2px;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+h3{font-size:16.5px;margin:22px 0 6px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:1.3em}
+li{margin:4px 0}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin:14px 0}
+.box.warn{background:rgba(255,138,61,.08);border-color:rgba(255,138,61,.35)}
+.box b{color:var(--accent2)}
+.box > :last-child{margin-bottom:0}
+.path{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:1px 8px;font-size:14px;white-space:nowrap}
+.ui{display:inline-block;background:rgba(255,138,61,.12);border:1px solid rgba(255,138,61,.35);border-radius:8px;padding:0 7px;font-size:14px;color:#ffd9b8}
+.muted{color:var(--muted);font-size:13.5px}
+.toc{font-size:15px}
+.toc a{color:var(--text)}
+table{width:100%;border-collapse:collapse;margin:10px 0 16px;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--panel2);font-weight:700}
+.tbl{overflow-x:auto}
+.related{list-style:none;padding:0;margin:10px 0 0}
+.related li{margin:0 0 8px}
+.related a{display:block;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);text-decoration:none;color:var(--text)}
+.related a:hover{border-color:#46506a}
+.related small{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.final{text-align:center;margin:46px 0 10px;padding:26px 18px;border-radius:20px;background:radial-gradient(80% 140% at 50% 0%,rgba(255,138,61,.16),transparent 70%);border:1px solid var(--line)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:999px;padding:13px 26px;font-weight:800;font-size:16px;text-decoration:none;white-space:nowrap;background:var(--accent);color:#1b0f05;box-shadow:0 8px 24px rgba(255,138,61,.35)}
+
+footer{border-top:1px solid var(--line);margin-top:40px;padding:26px 0 calc(40px + env(safe-area-inset-bottom));color:var(--muted);font-size:13px}
+footer .links{display:flex;flex-wrap:wrap;gap:6px 18px;margin-bottom:12px}
+footer .links a{color:var(--muted)}
+footer p{margin:4px 0}
+</style>
+</head>
+<body>
+
+<div class="backbar" id="backBar"><div class="in"><span>⏰ アラームはアプリの画面を開いている時だけ鳴ります</span><a href="../">→ アプリに戻る</a></div></div>
+
+<main class="wrap">
+<p class="crumb"><a href="../about.html">トップ</a> › <a href="./">使い方ガイド</a></p>
+<header class="head">
+  <h1 class="pop"><span class="nw">スマホを<span class="grad">充電しながら</span></span><span class="nw">寝ても大丈夫？</span></h1>
+  <p class="date">公開日：<time datetime="2026-11-19">2026年11月19日</time></p>
+  <p class="lead">画面をつけたままのアラームは、充電しながら朝まで置くのが基本です。毎晩のことだからこそ気になる、発熱とバッテリーについての一般的な注意点をまとめました。</p>
+</header>
+<div class="box warn">
+  <b>この記事について</b>
+  <p>この記事は、スマートフォンの充電について一般的に言われている注意点をまとめたものです。お使いの機種の正しい使い方は、<b>メーカーの取扱説明書やサポートページ</b>を必ず確認してください。本体や充電器が異常に熱い、膨らんでいる、焦げたようなにおいがするといった時は、すぐに使用をやめ、メーカーや販売店に相談してください。</p>
+</div>
+
+<h2 id="answer"><span class="n">1</span>充電しながら寝ること自体は、ふつうの使い方</h2>
+<p>いまのスマートフォンは、満充電に近づくと充電の勢いを自動で弱めるなど、充電を管理するしくみを備えています。iPhone にも、寝ている間の充電を想定した機能（後で紹介する「バッテリー充電の最適化」）があります。夜に充電すること自体は、多くの人がしているごく一般的な使い方です。</p>
+<p>ただし、気をつけたいのは<b>熱</b>です。リチウムイオン電池は熱に弱く、高い温度のまま長い時間置くことは、バッテリーの劣化を早める原因のひとつとされています。また、熱がこもる置き方は、まれに事故につながるおそれもあります。</p>
+<p>画面をつけたまま YouTube のアラームを待つ使い方では、「充電」に加えて「画面の表示」でも本体が少し温かくなります。だからこそ、置き方と道具に気を配ることが大切です。</p>
+
+<h2 id="place"><span class="n">2</span>置き場所で気をつけること</h2>
+<ul>
+  <li><b>布団・枕の下や、毛布の中に入れない</b>：熱が逃げなくなります。メーカーも、充電中の本体や電源アダプタを布団や枕、体の下に置かないよう注意をよびかけています。</li>
+  <li><b>平らで硬い場所に置く</b>：ベッドの上より、サイドテーブルや棚の上がおすすめです。スタンドに立てて置くと、本体の裏側にも空気が通ります。</li>
+  <li><b>熱がこもる場所を避ける</b>：暖房器具の近くや、窓ぎわで朝日が当たる場所は避けましょう。</li>
+  <li><b>ケーブルを踏んだり、引っぱったりしない</b>：寝返りで引っかけないよう、ケーブルはベッドの外側を通すと安心です。</li>
+  <li><b>充電中に本体が熱いと感じたら</b>：ケースを外すと熱が逃げやすくなることがあります。それでも熱い時は、充電をやめて冷ましてください。</li>
+</ul>
+
+<h2 id="gear"><span class="n">3</span>充電器とケーブルの選び方</h2>
+<ul>
+  <li><b>電源アダプタ（コンセントに挿す部分）は PSE マークのあるもの</b>を選びましょう。日本で販売される電源アダプタなどは、電気用品安全法にもとづく表示が必要です。</li>
+  <li><b>iPhone 用のケーブルは、純正品か認証を受けた製品</b>（Lightning の場合は「MFi 認証」など）を選ぶと安心です。</li>
+  <li><b>傷んだケーブルは使わない</b>：根元が折れ曲がっている、被覆が破れて中の線が見えている、といったケーブルは交換しましょう。</li>
+  <li><b>ワイヤレス充電は温かくなりやすい</b>：MagSafe などの置くだけ充電は便利ですが、ケーブルでの充電より本体が温かくなりやすい傾向があります。位置がずれると充電の効率が下がることもあるので、まっすぐ置けるスタンド型が向いています。</li>
+</ul>
+<p>枕元に置きやすいスタンドや長めのケーブルは、「<a href="../goods.html">寝る前のセットアップガイド</a>」で選び方とあわせて紹介しています。</p>
+
+<h2 id="optimize"><span class="n">4</span>iPhone の「バッテリー充電の最適化」</h2>
+<p>iPhone には、毎日の充電の習慣を学んで、<b>起きる時刻の少し前まで 80% 前後で充電を待つ</b>機能があります。満充電のまま長い時間置かないことで、バッテリーの劣化を抑えるためのものです。</p>
+<p><span class="path">設定</span> → <span class="path">バッテリー</span> → <span class="path">充電</span>（または<span class="path">バッテリーの状態と充電</span>）</p>
+<p class="muted">※ iOS のバージョンや機種により、表示の名前や場所が異なる場合があります。機種によっては、充電の上限を 80% などに設定できるものもあります。</p>
+<p>この機能は、ふだんどおりオンのままでかまいません。朝の時点で 100% になっていないことがありますが、故障ではありません。起きる時刻が日によって大きく違う場合は、学習がうまく働かず、最適化が行われないこともあります。</p>
+<h3>本体が熱くなりすぎた時</h3>
+<p>iPhone は、本体の温度が高くなりすぎると、充電を遅くしたり一時的に止めたり、画面に温度についての表示を出したりして、自分を守ろうとします。そうした表示が出た時は、充電器から外して、直射日光の当たらない涼しい場所でしばらく置いてください（冷蔵庫に入れるなど、急に冷やすのは避けましょう）。何度もくり返す時は、メーカーのサポートに相談してください。</p>
+
+<h2 id="app"><span class="n">5</span>アプリ側でできる、発熱と電池の対策</h2>
+<ul>
+  <li><b>寝る前に「画面を暗くする」を押す</b>：<a href="../">推しと共に目覚ましアラーム(仮)</a>は、暗い時計だけの画面で朝まで待機します。画面が暗いほど、発熱も電池の消費も抑えられます。</li>
+  <li><b>画面の明るさを下げる</b>：コントロールセンターのスライダーで、まぶしくない程度まで下げておきましょう。</li>
+  <li><b>「画面ロック中も、アラーム音で起こす（実験的）」は電池を多く使う</b>：この設定を使う夜は、とくに充電を忘れないでください（詳しくは「<a href="screen-lock-alarm.html">画面ロック中にWebのアラームは鳴る？</a>」）。</li>
+  <li><b>低電力モードはオフに</b>：オンだと画面が短い時間で消えてしまいます。そのぶん、充電しながら置くことが前提になります。</li>
+</ul>
+
+<h2 id="summary"><span class="n">✓</span>まとめ</h2>
+<div class="box">
+  <ul>
+    <li>充電しながら寝ること自体は一般的な使い方。気をつけたいのは「熱」</li>
+    <li>布団や枕の下に入れず、平らで風通しのよい場所に置く</li>
+    <li>PSE マークのある電源アダプタ、純正または認証品のケーブルを使う</li>
+    <li>iPhone の「バッテリー充電の最適化」はオンのままでOK</li>
+    <li>異常な熱さ・膨らみ・においがあれば、すぐに使用をやめて相談する</li>
+  </ul>
+</div>
+<p>寝る前の iPhone の設定（自動ロック・音量など）は「<a href="iphone-bedtime-settings.html">iPhone で寝る前にやっておく設定</a>」で確認できます。</p>
+
+<h2>あわせて読みたい</h2>
+<ul class="related">
+  <li><a href="iphone-bedtime-settings.html">iPhoneで寝る前にやっておく設定5つ｜自動ロック・低電力モード・音量・集中モード<small>Webのアラームを朝まで確実に動かすための、iPhone の寝る前チェック。自動ロック・低電力モード・音量・集中モード・画面の明るさを順番に確認します。</small></a></li>
+  <li><a href="screen-lock-alarm.html">画面ロック中にWebのアラームは鳴る？ブラウザの仕組みと対策<small>iPhone の画面をロックするとブラウザのアラームはどうなるのか。仕組みと、実験的な「画面ロック中も、アラーム音で起こす」設定の使い方・注意点を解説します。</small></a></li>
+  <li><a href="pc-alarm.html">パソコンを目覚ましにする方法｜ブラウザを開いたまま・ポップアップ許可・スリープ設定<small>パソコンのブラウザで推しの YouTube を目覚ましにする方法。ページを開いたままにするコツ、ポップアップの許可、スリープやタブの省電力機能の設定を解説します。</small></a></li>
+  <li><a href="./">使い方ガイドの一覧を見る<small>寝る前の準備から、困った時の対処まで</small></a></li>
+</ul>
+
+<div class="final">
+  <p class="pop" style="font-size:19px;margin-bottom:8px">明日の朝は、<span class="grad">推しの配信</span>で起きてみよう。</p>
+  <p class="muted">無料・会員登録なし。ブラウザで開いて、時刻とチャンネルを選ぶだけです。</p>
+  <a class="btn" href="../?utm_source=guide&amp;utm_medium=charging-overnight">⏰ アプリでアラームを作る</a>
+</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="links">
+      <a href="../">アプリを開く</a>
+      <a href="../about.html">このアプリについて</a>
+      <a href="./">使い方ガイド一覧</a>
+      <a href="../goods.html">寝る前のおすすめグッズ</a>
+      <a href="../privacy.html">プライバシーポリシー・利用規約</a>
+    </div>
+    <p>YouTube は Google LLC の商標です。本サービスは YouTube および Google が提供・承認するものではありません。</p>
+    <p>運営：<span id="operator">Live目覚まし運営</span></p>
+  </div>
+</footer>
+
+<script src="../config.js?v=1.9.7"></script>
+<script>
+'use strict';
+/* 運営者名は config.js から（アプリと同じ設定を使う） */
+(function () {
+  try {
+    var c = window.LIVE_ALARM_CONFIG || {};
+    if (c.operator) { var el = document.getElementById('operator'); if (el) el.textContent = c.operator; }
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>
