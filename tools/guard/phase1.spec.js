@@ -74,9 +74,12 @@ async function testIndexTip(browser, base) {
     ok(await page.$('#mSettings #boxSupport') !== null, '#boxSupport が ⚙設定（#mSettings）の中にある');
     ok(await page.$('#lnkTip') !== null, '#lnkTip がある');
     ok(await shown(page, '#lnkTip') === false, 'tipUrl が空なら #lnkTip は非表示');
-    ok(await attr(page, '#lnkGoods', 'href') === 'goods.html', '#lnkGoods の href が goods.html');
+    ok(await attr(page, '#lnkGoods', 'href') === 'goods.html?utm_source=app&utm_medium=settings', '#lnkGoods の href が goods.html（utm 付き）');
     ok(await attr(page, '#lnkGoods', 'target') === null, '#lnkGoods に target がない（同じタブ）');
     ok(await shown(page, '#lnkGoods') === true, '#lnkGoods は常に表示');
+    ok(await page.$('#mSettings #boxSupport #lnkShare') !== null, '「Xで共有」#lnkShare が ⚙設定の #boxSupport の中にある');
+    const sh = await page.evaluate(() => { const a = document.querySelector('#lnkShare'); return a ? { href: a.getAttribute('href'), t: a.getAttribute('target'), rel: a.getAttribute('rel') } : null; });
+    ok(!!sh && /^https:\/\/twitter\.com\/intent\/tweet\?text=[^&]+&url=https%3A%2F%2Fnagara-alarm\.pages\.dev%2Fabout%3Futm_source%3Dshare%26utm_medium%3Dx$/.test(sh.href) && sh.t === '_blank' && /\bnoopener\b/.test(sh.rel), '#lnkShare は X の共有 URL（about・utm_source=share）・target=_blank・rel=noopener', sh);
     ok(errors.length === 0, '実物の config.js で pageerror 0 件', errors);
     await ctx.close();
   }
@@ -147,7 +150,7 @@ async function testGoods(browser, base) {
   ok(imgs.length >= 5 && imgs.every(i => /^\/img\/goods\/[\w-]+\.webp$/.test(i.src)), '画像は /img/goods/*.webp だけ（ヒーロー＋各シーン）', imgs.map(i => i.src));
   ok(imgs.every(i => i.alt.trim() !== '' && i.w && i.h), '画像はすべて alt・width・height 付き', imgs);
   const scripts = await page.evaluate(() => [...document.querySelectorAll('script[src]')].map(s => s.getAttribute('src')));
-  ok(scripts.every(s => /^config\.js(\?v=[\d.]+)?$/.test(s)), '外部 <script src> は config.js だけ', scripts);
+  ok(scripts.length > 0 && scripts.every(s => /^(config|hp-stats)\.js(\?v=[\d.]+)?$/.test(s)), '<script src> は config.js と hp-stats.js（同じサイト内）だけ', scripts);
   const links = await page.evaluate(() => [...document.querySelectorAll('a[href*="amazon.co.jp"], a[href*="rakuten.co.jp"], a[href*="moshimo.com"]')].map(a => ({ rel: a.getAttribute('rel') || '', t: a.getAttribute('target') })));
   ok(links.length > 0, '商品のテキストリンクがある', links.length);
   ok(links.every(l => /\bsponsored\b/.test(l.rel) && /\bnoopener\b/.test(l.rel) && l.t === '_blank'), '商品リンクは rel="sponsored noopener" target="_blank"');
@@ -201,7 +204,9 @@ async function testPolicyAbout(browser, base) {
     }
     const body = await page.evaluate(() => document.body.innerText);
     ok(body.includes('現在、アプリの画面に広告はありません'), 'アプリの画面に広告がないことを明記している');
-    ok(body.includes('最終更新：2026年11月19日'), '最終更新が 2026年11月19日');
+    ok(body.includes('最終更新：2026年11月21日'), '最終更新が 2026年11月21日');
+    ok(!body.includes('紹介ページの一部（「朝を気持ちよく始めるアイテム」のページ）には'), '「紹介リンクは goods.html だけ」の古い文言がない');
+    ok(body.includes('ガイド記事の一部'), '紹介リンクがガイド記事の一部にもあることを明記');
     ok(/IP ?アドレス/.test(body) && body.includes('各社には、通信の仕組み上、IP アドレス'), '表の下に「各社には通信の仕組み上 IP アドレス…」');
     ok(body.includes('紹介リンクについて') && body.includes('アフィリエイトプログラム'), '「紹介リンクについて」段落');
     ok(body.includes('応援は任意で、機能は変わりません'), '5章に「応援は任意で、機能は変わりません」');
@@ -217,6 +222,11 @@ async function testPolicyAbout(browser, base) {
     await page.goto(base + '/about.html', { waitUntil: 'load' });
     const faq = await page.evaluate(() => [...document.querySelectorAll('.faq summary')].map(s => s.textContent.trim()));
     ok(faq.includes('広告はありますか？'), 'about の FAQ に「広告はありますか？」', faq);
+    const adA = await page.evaluate(() => { const s = [...document.querySelectorAll('.faq summary')].find(x => x.textContent.trim() === '広告はありますか？'); return s ? s.parentElement.querySelector('.a').textContent : ''; });
+    ok(adA.includes('アプリの画面（アラームの設定・再生画面・おやすみ画面）には、広告はありません') && adA.includes('使い方ガイド・コラムの一部の記事'), 'FAQ「広告はありますか？」がアプリ画面には無い・記事の一部にある、と書いている', adA);
+    const faqLinks = await page.evaluate(() => [...document.querySelectorAll('.faq .a a')].map(a => a.getAttribute('href')));
+    for (const g of ['guide/screen-lock-alarm.html', 'guide/iphone-bedtime-settings.html', 'guide/youtube-no-sound.html', 'guide/morning-stream-alarm.html']) ok(faqLinks.includes(g), 'about の FAQ から ' + g + ' へリンク', faqLinks);
+    ok(await page.$('#guides .guides a[href="guide/iphone-bedtime-settings.html"]') !== null && await page.$('.final .share a[href^="https://twitter.com/intent/tweet?"][data-cta="share_x"][target="_blank"]') !== null, 'about に使い方ガイドの入口と「Xで共有」リンク');
     const biz = await page.evaluate(() => { const b = document.querySelector('#biz .box.company ul'); return b ? b.textContent : ''; });
     ok(biz.includes('起床時の再生画面・おやすみ画面には広告を表示しません'), '#biz 企業ボックスに「起床時の再生画面・おやすみ画面には広告を表示しません」');
     ok(/紹介ページ（HP）内での掲載/.test(biz), '#biz 企業ボックスに「紹介ページ（HP）内での掲載」');
@@ -259,7 +269,104 @@ async function testAppBoot(browser, base) {
       .some(el => el.querySelector('#lnkTip, #lnkGoods, #boxSupport, a[href*="goods.html"]')));
     ok(mixed === false, u + ' の #ring・#standby の中に応援・グッズの要素がない');
     const ver = await page.evaluate(() => { const m = document.documentElement.innerHTML.match(/const APP_VERSION = '([\d.]+)'/); return m && m[1]; });
-    ok(ver === '1.14.1', u + ' の APP_VERSION が 1.14.1', ver);
+    ok(ver === '1.14.2', u + ' の APP_VERSION が 1.14.2', ver);
+    await ctx.close();
+  }
+}
+
+/* HP の統計（hp-stats.js）：about.html と同じ形で送る・統計オフなら送らない・移動を止めない */
+async function testHpStats(browser, base) {
+  console.log('[Task6] hp-stats.js（グッズ・ガイド記事の匿名統計）');
+  const STATS = 'https://stats.invalid/hp';
+  const cfg = Object.assign({}, BASE_CFG, { backendUrl: 'https://prod.invalid/hp', testBackendUrl: STATS });
+  async function open(u, pre) {
+    const r = await newPage(browser, base, { config: cfg });
+    const got = [];
+    await r.page.route('https://stats.invalid/**', route => { try { got.push(JSON.parse(route.request().postData() || 'null')); } catch (e) {} return route.fulfill({ status: 200, body: '' }); });
+    await r.page.route('https://prod.invalid/**', route => { got.push({ prod: true }); return route.fulfill({ status: 200, body: '' }); });
+    if (pre) await r.page.addInitScript(pre);
+    await r.page.goto(base + u, { waitUntil: 'load' });
+    await r.page.waitForTimeout(300);
+    return Object.assign(r, { got });
+  }
+  const evs = got => got.filter(b => b && b.e).map(b => Object.assign({ c: b.c }, b.e[0]));
+  {
+    const { ctx, page, errors, got } = await open('/goods.html?utm_source=app&utm_medium=settings');
+    let e = evs(got);
+    const v = e.find(x => x.n === 'hp_view');
+    ok(!!v && v.c.v === 'hp' && v.c.env === 'test' && v.p.pg === 'goods' && v.p.src === 'app' && v.p.med === 'settings' && 'inapp' in v.p && 'w' in v.p, 'goods.html で hp_view（c.v=hp・env=test・pg=goods・utm）を送る', v);
+    ok(!got.some(b => b && b.prod), 'テスト環境では本番の backendUrl に送らない');
+    // 商品リンクのクリック（テストでは移動だけ止める。hp-stats.js 自体は preventDefault しない）
+    const prevented = await page.evaluate(() => {
+      const a = document.querySelector('a[href^="https://af.moshimo.com/"]');
+      let dp = null;
+      document.addEventListener('click', ev => { dp = ev.defaultPrevented; ev.preventDefault(); }, { once: true });
+      a.click(); return dp;
+    });
+    await page.waitForTimeout(200);
+    e = evs(got);
+    const c = e.find(x => x.n === 'hp_cta' && /^aff:/.test(x.p.where));
+    ok(!!c && c.p.pg === 'goods' && c.p.where === 'aff:光で起こすライト', '商品リンクのクリックで hp_cta { where:"aff:<商品名>", pg }', c);
+    ok(prevented === false, 'hp-stats.js はクリックの移動を止めない（defaultPrevented=false）', prevented);
+    ok(errors.length === 0, 'goods.html（統計あり）で pageerror 0 件', errors);
+    await ctx.close();
+  }
+  {
+    const { ctx, errors, got } = await open('/goods.html', () => { localStorage.setItem('liveAlarm.test.v1', JSON.stringify({ settings: { stats: false } })); });
+    ok(got.length === 0, '⚙設定で統計オフなら何も送らない', got.length);
+    ok(errors.length === 0, '統計オフで pageerror 0 件', errors);
+    await ctx.close();
+  }
+  {
+    const { ctx, page, errors, got } = await open('/guide/morning-coffee.html');
+    const v = evs(got).find(x => x.n === 'hp_view');
+    ok(!!v && v.p.pg === 'guide/morning-coffee', 'ガイド記事で hp_view（pg=guide/morning-coffee）', v);
+    await page.evaluate(() => { document.addEventListener('click', ev => ev.preventDefault(), { once: true }); document.querySelector('.share a').click(); });
+    await page.waitForTimeout(200);
+    const s = evs(got).find(x => x.n === 'hp_cta' && x.p.where === 'share_x');
+    ok(!!s && s.p.pg === 'guide/morning-coffee', '「Xで共有」のクリックで hp_cta { where:"share_x" }', s);
+    ok(errors.length === 0, 'ガイド記事（統計あり）で pageerror 0 件', errors);
+    await ctx.close();
+  }
+}
+
+/* ガイド記事：統計・共有リンク・紹介リンク */
+async function testGuides(browser, base) {
+  console.log('[Task7] ガイド記事の統計・共有リンク・紹介リンク');
+  const fs = require('fs');
+  const ARTS = ['charging-overnight', 'iphone-bedtime-settings', 'morning-coffee', 'morning-routine', 'morning-stream-alarm', 'morning-stretch', 'pc-alarm', 'screen-lock-alarm', 'wake-up-refreshed', 'youtube-no-sound', 'cold-morning', 'new-year-stream'];
+  const AFF = ['morning-coffee', 'morning-routine', 'morning-stretch', 'charging-overnight', 'iphone-bedtime-settings'];
+  const WINTER = ['cold-morning', 'new-year-stream'];   // 冬の季節記事（紹介リンクは記事チームが入れたもの。数は問わない）
+  for (const a of ARTS) {
+    const html = fs.readFileSync(path.join(ROOT, 'guide', a + '.html'), 'utf8');
+    const scripts = [...html.matchAll(/<script [^>]*src="([^"]+)"/g)].map(m => m[1]);
+    ok(scripts.length === 2 && scripts[0].startsWith('../config.js') && scripts[1].startsWith('../hp-stats.js'), a + '：<script src> は config.js → hp-stats.js だけ', scripts);
+    const share = html.match(/<p class="share"><a href="([^"]+)" target="_blank" rel="noopener" data-cta="share_x">Xで共有する<\/a><\/p>\n<\/main>/);
+    ok(!!share && share[1].startsWith('https://twitter.com/intent/tweet?text=') && share[1].includes('&amp;url=' + encodeURIComponent('https://nagara-alarm.pages.dev/guide/' + a + '?utm_source=share&utm_medium=x')), a + '：末尾（フッターの上）に「Xで共有する」リンク（その記事の URL）');
+    const aff = (html.match(/<a [^>]*href="https:\/\/af\.moshimo\.com[^"]*"[^>]*>/g) || []);
+    if (AFF.includes(a) || WINTER.includes(a)) {
+      ok(aff.length >= 1 && (WINTER.includes(a) || aff.length <= 3), a + '：紹介リンクがある（既存記事は 1〜3 個）', aff.length);
+      ok(aff.every(t => /href="https:\/\/af\.moshimo\.com\/af\/c\/click\?a_id=5914685&amp;p_id=54&amp;pc_id=54&amp;pl_id=27059&amp;url=https%3A%2F%2Fsearch\.rakuten\.co\.jp/.test(t) && / target="_blank"/.test(t) && / rel="sponsored noopener"/.test(t)), a + '：紹介リンクは goods.html と同じ形（もしも a_id=5914685・sponsored noopener・_blank）');
+    } else {
+      ok(aff.length === 0 && !html.includes('本ページはプロモーション'), a + '：紹介リンクなし（困りごと・使い方の記事）', aff.length);
+    }
+  }
+  for (const a of AFF.concat(WINTER)) {
+    const { ctx, page, errors } = await newPage(browser, base, { viewport: { width: 390, height: 844 }, config: BASE_CFG });
+    await page.goto(base + '/guide/' + a + '.html', { waitUntil: 'load' });
+    const prY = await page.evaluate(() => { const e = document.querySelector('.pr'); return e && e.textContent.trim() === '本ページはプロモーション（広告）を含みます' ? e.getBoundingClientRect().bottom : null; });
+    ok(prY !== null && prY < 844, a + '：「本ページはプロモーション（広告）を含みます」が最初の画面内', prY);
+    const body = await page.evaluate(() => document.body.innerText);
+    ok(!/[¥￥]|\d+\s*円/.test(body), a + '：価格表記がない');
+    ok(!/目覚まし時計/.test(body), a + '：目覚まし時計を商品として紹介していない');
+    ok(await page.evaluate(() => [...document.images].every(i => !/amazon|rakuten|moshimo/i.test(i.src))), a + '：商品画像がない');
+    ok(errors.length === 0, a + '：pageerror 0 件', errors);
+    await ctx.close();
+  }
+  {
+    const { ctx, page, errors } = await newPage(browser, base, { config: 404 });
+    await page.goto(base + '/guide/morning-coffee.html', { waitUntil: 'load' });
+    ok(errors.length === 0, 'config.js が 404 でもガイド記事で pageerror 0 件', errors);
     await ctx.close();
   }
 }
@@ -285,6 +392,8 @@ function testGoodsImages() {
     await testGoods(browser, base);
     await testPolicyAbout(browser, base);
     await testAppBoot(browser, base);
+    await testHpStats(browser, base);
+    await testGuides(browser, base);
     testGoodsImages();
   } catch (e) {
     failed++; console.log('  FAIL 例外: ' + (e && e.stack || e));

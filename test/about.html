@@ -168,6 +168,16 @@ section.alt{background:var(--bg2);border-top:1px solid rgba(255,255,255,.04);bor
 @media (max-width:760px){.biz{grid-template-columns:1fr}}
 
 /* 最後の呼びかけ */
+/* 使い方ガイドへの入口 */
+.guides{max-width:820px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:760px){.guides{grid-template-columns:repeat(3,1fr)}}
+.guides a{display:block;padding:16px 18px;border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--text);text-decoration:none}
+.guides a:hover{border-color:#46506a}
+.guides a b{display:block;font-size:15.5px;line-height:1.5}
+.guides a small{display:block;color:var(--muted);font-size:13px;margin-top:4px;line-height:1.6}
+.guides-more{text-align:center;margin:18px 0 0}
+.final .share{margin:18px 0 0}
+.final .share a{color:var(--muted);font-size:14px}
 .final{text-align:center;padding:80px 0;background:radial-gradient(60% 120% at 50% 0%,rgba(255,138,61,.16),transparent 70%)}
 .final h2{margin:0 0 12px;font-size:clamp(24px,3.8vw,36px);line-height:1.4}
 .final p{color:#c9d0da;margin:0 0 26px}
@@ -283,12 +293,12 @@ footer p{margin:4px 0}
     </div>
     <div class="faq">
       <details><summary>本当に無料ですか？</summary><div class="a"><p>はい。すべての機能を無料で使えます。会員登録やアプリのインストールもいりません。</p></div></details>
-      <details><summary>どの端末で使えますか？</summary><div class="a"><p>iPhone（Safari）と、パソコンのブラウザ（Chrome・Edge・Safari など）で動作を確認しています。</p><p>iPhone では Safari 専用です。LINE や Chrome の中で開いた時は、自動で Safari に切り替わります。</p></div></details>
-      <details><summary>画面をロックしても鳴りますか？</summary><div class="a"><p>画面ロック中は YouTube を流せないため、アプリの画面を開いたまま（充電しながら）お休みください。寝る前に「画面を暗くする」を押すと、まぶしくない時計表示で待機します。</p><p>iPhone では ⚙設定の「画面ロック中も、アラーム音で起こす（実験的）」をオンにすると、ロック中でも時刻にアラーム音が鳴り、ロックを解除すると YouTube が始まります（電池を多く使います）。</p><p>充電しながら枕元に置くスタンドや、自動ロックの設定のコツは「<a href="goods.html">朝を気持ちよく始めるアイテム</a>」にまとめています。</p></div></details>
-      <details><summary>マナーモードでも鳴りますか？</summary><div class="a"><p>鳴ります。ただし、本体の音量が0の時は鳴りません。</p></div></details>
-      <details><summary>YouTube の音が出ないことはありますか？</summary><div class="a"><p>iPhone では、操作なしで音つきの再生ができない場合があります。その時はアラーム音で起こし、ボタンを1回押すと YouTube の音に切り替わります。</p><p>寝る前に「画面を暗くする」を押しておくと、朝に YouTube の音が自動で出やすくなります。</p></div></details>
-      <details><summary>推しが配信していない日はどうなりますか？</summary><div class="a"><p>「最新のライブ配信」では、配信中のライブがなければ直近のライブ配信のアーカイブを流します。ライブ配信をしていないチャンネルでは、最新の動画を流します。</p><p>流せる動画が見つからない時は、アラーム音で起こします。</p></div></details>
-      <details><summary>広告はありますか？</summary><div class="a"><p>アプリの画面（アラームの設定・再生画面・おやすみ画面）には、広告はありません。</p><p>紹介ページの一部（「<a href="goods.html">朝を気持ちよく始めるアイテム</a>」）には、商品の紹介リンク（PR）があります。リンクから購入されると、運営者に紹介料が入ることがあります。</p></div></details>
+      <details><summary>どの端末で使えますか？</summary><div class="a"><p>iPhone（Safari）と、パソコンのブラウザ（Chrome・Edge・Safari など）で動作を確認しています。</p><p>iPhone では Safari 専用です。LINE や Chrome の中で開いた時は、自動で Safari に切り替わります。</p><p>パソコンで使う時のコツは「<a href="guide/pc-alarm.html">パソコンを目覚ましにする方法</a>」をご覧ください。</p></div></details>
+      <details><summary>画面をロックしても鳴りますか？</summary><div class="a"><p>画面ロック中は YouTube を流せないため、アプリの画面を開いたまま（充電しながら）お休みください。寝る前に「画面を暗くする」を押すと、まぶしくない時計表示で待機します。</p><p>iPhone では ⚙設定の「画面ロック中も、アラーム音で起こす（実験的）」をオンにすると、ロック中でも時刻にアラーム音が鳴り、ロックを解除すると YouTube が始まります（電池を多く使います）。</p><p>詳しい仕組みと設定は「<a href="guide/screen-lock-alarm.html">画面ロック中にWebのアラームは鳴る？</a>」「<a href="guide/iphone-bedtime-settings.html">iPhone で寝る前にやっておく設定</a>」で解説しています。</p><p>充電しながら枕元に置くスタンドや、自動ロックの設定のコツは「<a href="goods.html">朝を気持ちよく始めるアイテム</a>」にまとめています。</p></div></details>
+      <details><summary>マナーモードでも鳴りますか？</summary><div class="a"><p>鳴ります。ただし、本体の音量が0の時は鳴りません。</p><p>音量の合わせ方は「<a href="guide/iphone-bedtime-settings.html#volume">iPhone で寝る前にやっておく設定</a>」をご覧ください。</p></div></details>
+      <details><summary>YouTube の音が出ないことはありますか？</summary><div class="a"><p>iPhone では、操作なしで音つきの再生ができない場合があります。その時はアラーム音で起こし、ボタンを1回押すと YouTube の音に切り替わります。</p><p>寝る前に「画面を暗くする」を押しておくと、朝に YouTube の音が自動で出やすくなります。</p><p>音が出なかった時の確認ポイントは「<a href="guide/youtube-no-sound.html">YouTube の音が出ない時に確認すること</a>」にまとめています。</p></div></details>
+      <details><summary>推しが配信していない日はどうなりますか？</summary><div class="a"><p>「最新のライブ配信」では、配信中のライブがなければ直近のライブ配信のアーカイブを流します。ライブ配信をしていないチャンネルでは、最新の動画を流します。</p><p>流せる動画が見つからない時は、アラーム音で起こします。</p><p>配信予定の確かめ方や、流す動画の選び方は「<a href="guide/morning-stream-alarm.html">推しの朝配信を見逃さないコツ</a>」をご覧ください。</p></div></details>
+      <details><summary>広告はありますか？</summary><div class="a"><p>アプリの画面（アラームの設定・再生画面・おやすみ画面）には、広告はありません。</p><p>紹介ページの一部（「<a href="goods.html">朝を気持ちよく始めるアイテム</a>」や、<a href="guide/index.html">使い方ガイド・コラム</a>の一部の記事）には、商品の紹介リンク（PR）があります。紹介リンクがあるページには、ページの最初に「本ページはプロモーション（広告）を含みます」と表示しています。リンクから購入されると、運営者に紹介料が入ることがあります。</p></div></details>
       <details><summary>個人情報は必要ですか？</summary><div class="a"><p>名前やメールアドレスは必要ありません。アラームの設定は、お使いの端末のブラウザの中に保存されます。</p><p>改善のために匿名の利用統計を集めています（⚙設定でオフにできます）。詳しくは<a href="privacy.html">プライバシーポリシー</a>をご覧ください。</p></div></details>
     </div>
   </div>
@@ -327,11 +337,27 @@ footer p{margin:4px 0}
   </div>
 </section>
 
+<section id="guides" class="alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="kicker">使い方ガイド</span>
+      <h2 class="pop">はじめての夜に読んでおきたい</h2>
+    </div>
+    <div class="guides">
+      <a href="guide/iphone-bedtime-settings.html"><b>iPhone で寝る前にやっておく設定</b><small>自動ロック・低電力モード・音量など、寝る前の1分でできる確認</small></a>
+      <a href="guide/screen-lock-alarm.html"><b>画面ロック中にWebのアラームは鳴る？</b><small>ブラウザの仕組みと、開いたまま暗くして寝る対策</small></a>
+      <a href="guide/morning-stream-alarm.html"><b>推しの朝配信を見逃さないコツ</b><small>配信予定の確かめ方と、流す動画の使い分け</small></a>
+    </div>
+    <p class="guides-more"><a href="guide/index.html">使い方ガイド・コラムの一覧を見る ›</a></p>
+  </div>
+</section>
+
 <section class="final">
   <div class="wrap">
     <h2 class="pop">今夜セットして、<br><span class="grad">明日の朝</span>ためしてみよう。</h2>
     <p>ブラウザで開くだけ。1分で準備できます。</p>
     <a class="btn primary" href="./?utm_source=hp&amp;utm_medium=bottom" data-cta="bottom">さっそく使ってみる</a>
+    <p class="share"><a href="https://twitter.com/intent/tweet?text=%E6%8E%A8%E3%81%97%E3%81%AE%20YouTube%20%E9%85%8D%E4%BF%A1%E3%81%A7%E8%B5%B7%E3%81%8D%E3%82%89%E3%82%8C%E3%82%8B%E7%84%A1%E6%96%99%E3%81%AE%E7%9B%AE%E8%A6%9A%E3%81%BE%E3%81%97%E3%80%8C%E6%8E%A8%E3%81%97%E3%81%A8%E5%85%B1%E3%81%AB%E7%9B%AE%E8%A6%9A%E3%81%BE%E3%81%97%E3%82%A2%E3%83%A9%E3%83%BC%E3%83%A0%28%E4%BB%AE%29%E3%80%8D&amp;url=https%3A%2F%2Fnagara-alarm.pages.dev%2Fabout%3Futm_source%3Dshare%26utm_medium%3Dx" target="_blank" rel="noopener" data-cta="share_x">Xで共有して、友だちに教える</a></p>
   </div>
 </section>
 </main>
