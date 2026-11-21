@@ -150,9 +150,12 @@ async function testGoods(browser, base) {
   ok(links.length > 0, '商品のテキストリンクがある', links.length);
   ok(links.every(l => /\bsponsored\b/.test(l.rel) && /\bnoopener\b/.test(l.rel)), '商品リンクは rel="sponsored noopener"');
   const html = fs.readFileSync(path.join(ROOT, 'goods.html'), 'utf8');
-  const nLinks = (html.match(/<a [^>]*href="https:\/\/(www\.amazon\.co\.jp|search\.rakuten\.co\.jp)[^"]*"/g) || []).length;
-  const nTodo = (html.match(/<!-- TODO\(owner\): もしもアフィリエイトのリンクに差し替え -->/g) || []).length;
-  ok(nTodo >= nLinks && nLinks > 0, '各商品リンクに TODO(owner) コメント', { nLinks, nTodo });
+  const nAmazon = (html.match(/<a [^>]*href="https:\/\/www\.amazon\.co\.jp[^"]*"/g) || []).length;
+  const nTodo = (html.match(/<!-- TODO\(owner\): Amazon の提携承認後、もしも（Amazon）のリンクに差し替え -->/g) || []).length;
+  ok(nTodo >= nAmazon, 'Amazon の未提携リンクに TODO(owner) コメント', { nAmazon, nTodo });
+  const nRakutenPlain = (html.match(/<a [^>]*href="https:\/\/search\.rakuten\.co\.jp[^"]*"/g) || []).length;
+  const nRakutenAff = (html.match(/<a [^>]*href="https:\/\/af\.moshimo\.com\/af\/c\/click\?a_id=5914685&amp;p_id=54&amp;[^"]*url=https%3A%2F%2Fsearch\.rakuten\.co\.jp[^"]*"/g) || []).length;
+  ok(nRakutenPlain === 0 && nRakutenAff >= 5, '楽天リンクはすべて もしも経由（a_id 付き）', { nRakutenPlain, nRakutenAff });
   ok(/<link rel="canonical" href="https:\/\/nagara-alarm\.pages\.dev\/goods">/.test(html), 'canonical が /goods');
   ok(errors.length === 0, 'goods.html で pageerror 0 件', errors);
   await ctx.close();
