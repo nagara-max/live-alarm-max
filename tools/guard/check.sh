@@ -67,7 +67,7 @@ PY
 then echo "  ok"; else ng "#ring・#standby の中に応援・グッズのリンクがあります"; fi
 
 echo "[3] test/ とルートの同一性"
-for f in index.html about.html privacy.html config.js goods.html; do
+for f in index.html about.html privacy.html config.js goods.html hp-stats.js; do
   if ! diff -q "$f" "test/$f" >/dev/null 2>&1; then ng "test/$f がルートの $f と違います（またはありません）"; fi
 done
 [ $fail -eq 0 ] && echo "  ok"
