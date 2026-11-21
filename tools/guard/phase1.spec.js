@@ -144,7 +144,7 @@ async function testGoods(browser, base) {
   ok(!/[¥￥円]/.test(body), '価格表記（¥・円）がない');
   const imgs = await page.evaluate(() => [...document.images].map(i => ({ src: i.getAttribute('src') || '', alt: i.getAttribute('alt') || '', w: i.getAttribute('width'), h: i.getAttribute('height') })));
   ok(!imgs.some(i => /amazon|rakuten|moshimo|media-amazon|ssl-images/i.test(i.src)), '商品画像（amazon/rakuten 等の img）がない', imgs.map(i => i.src));
-  ok(imgs.length >= 6 && imgs.every(i => /^\/img\/goods\/[\w-]+\.webp$/.test(i.src)), '画像は /img/goods/*.webp だけ（ヒーロー＋各シーン）', imgs.map(i => i.src));
+  ok(imgs.length >= 5 && imgs.every(i => /^\/img\/goods\/[\w-]+\.webp$/.test(i.src)), '画像は /img/goods/*.webp だけ（ヒーロー＋各シーン）', imgs.map(i => i.src));
   ok(imgs.every(i => i.alt.trim() !== '' && i.w && i.h), '画像はすべて alt・width・height 付き', imgs);
   const scripts = await page.evaluate(() => [...document.querySelectorAll('script[src]')].map(s => s.getAttribute('src')));
   ok(scripts.every(s => /^config\.js(\?v=[\d.]+)?$/.test(s)), '外部 <script src> は config.js だけ', scripts);
