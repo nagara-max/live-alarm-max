@@ -178,7 +178,7 @@ async function testGoods(browser, base) {
   ok(/<loc>https:\/\/nagara-alarm\.pages\.dev\/goods<\/loc><lastmod>2026-11-19<\/lastmod>/.test(sm), 'sitemap.xml に /goods（lastmod 2026-11-19）');
   const about = fs.readFileSync(path.join(ROOT, 'about.html'), 'utf8');
   const faqLock = (about.match(/<summary>画面をロックしても鳴りますか？<\/summary>[\s\S]*?<\/details>/) || [''])[0];
-  ok(/<a href="goods\.html">寝る前のおすすめグッズ<\/a>/.test(faqLock), 'about.html の FAQ「画面をロックしても鳴りますか？」から goods.html へリンク');
+  ok(/<a href="goods\.html">朝を気持ちよく始めるアイテム<\/a>/.test(faqLock), 'about.html の FAQ「画面をロックしても鳴りますか？」から goods.html へリンク');
 }
 
 async function testPolicyAbout(browser, base) {
