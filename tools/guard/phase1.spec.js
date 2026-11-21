@@ -142,20 +142,28 @@ async function testGoods(browser, base) {
   const body = await page.evaluate(() => document.body.innerText);
   ok(await page.$eval('#amazonNote', e => e.hidden && /Amazonのアソシエイトとして、テスト運営は適格販売により収入を得ています。/.test(e.textContent)), 'Amazon アソシエイトの文言（運営者名入り・承認まで非表示）');
   ok(!/[¥￥円]/.test(body), '価格表記（¥・円）がない');
-  const imgs = await page.evaluate(() => [...document.images].map(i => i.getAttribute('src') || ''));
-  ok(!imgs.some(s => /amazon|rakuten|moshimo|media-amazon|ssl-images/i.test(s)), '商品画像（amazon/rakuten 等の img）がない', imgs);
+  const imgs = await page.evaluate(() => [...document.images].map(i => ({ src: i.getAttribute('src') || '', alt: i.getAttribute('alt') || '', w: i.getAttribute('width'), h: i.getAttribute('height') })));
+  ok(!imgs.some(i => /amazon|rakuten|moshimo|media-amazon|ssl-images/i.test(i.src)), '商品画像（amazon/rakuten 等の img）がない', imgs.map(i => i.src));
+  ok(imgs.length >= 6 && imgs.every(i => /^\/img\/goods\/[\w-]+\.webp$/.test(i.src)), '画像は /img/goods/*.webp だけ（ヒーロー＋各シーン）', imgs.map(i => i.src));
+  ok(imgs.every(i => i.alt.trim() !== '' && i.w && i.h), '画像はすべて alt・width・height 付き', imgs);
   const scripts = await page.evaluate(() => [...document.querySelectorAll('script[src]')].map(s => s.getAttribute('src')));
   ok(scripts.every(s => /^config\.js(\?v=[\d.]+)?$/.test(s)), '外部 <script src> は config.js だけ', scripts);
-  const links = await page.evaluate(() => [...document.querySelectorAll('a[href*="amazon.co.jp"], a[href*="rakuten.co.jp"]')].map(a => ({ rel: a.getAttribute('rel') || '', t: a.getAttribute('target') })));
+  const links = await page.evaluate(() => [...document.querySelectorAll('a[href*="amazon.co.jp"], a[href*="rakuten.co.jp"], a[href*="moshimo.com"]')].map(a => ({ rel: a.getAttribute('rel') || '', t: a.getAttribute('target') })));
   ok(links.length > 0, '商品のテキストリンクがある', links.length);
-  ok(links.every(l => /\bsponsored\b/.test(l.rel) && /\bnoopener\b/.test(l.rel)), '商品リンクは rel="sponsored noopener"');
+  ok(links.every(l => /\bsponsored\b/.test(l.rel) && /\bnoopener\b/.test(l.rel) && l.t === '_blank'), '商品リンクは rel="sponsored noopener" target="_blank"');
+  ok(!/目覚まし時計/.test(body), '目覚まし時計を商品として紹介していない（このアプリ自体が目覚まし）');
+  const night = await page.evaluate(() => { const n = document.querySelector('#night'); return n ? { t: n.textContent, a: [...n.querySelectorAll('a')].map(a => a.getAttribute('href')) } : null; });
+  ok(!!night && night.a.includes('guide/iphone-bedtime-settings.html') && night.a.includes('guide/charging-overnight.html') && !night.a.some(h => /moshimo|rakuten|amazon/.test(h)), '「寝る前のコツ」からガイド2本へリンク（商品リンクなし）', night && night.a);
+  ok(!!night && night.t.includes('大事な予定の日は、スマホ標準のアラームも一緒にセットしておくと安心です。'), '「寝る前のコツ」に標準アラーム併用の一文');
   const html = fs.readFileSync(path.join(ROOT, 'goods.html'), 'utf8');
   const nAmazon = (html.match(/<a [^>]*href="https:\/\/www\.amazon\.co\.jp[^"]*"/g) || []).length;
-  const nTodo = (html.match(/<!-- TODO\(owner\): Amazon の提携承認後、もしも（Amazon）のリンクに差し替え -->/g) || []).length;
-  ok(nTodo >= nAmazon, 'Amazon の未提携リンクに TODO(owner) コメント', { nAmazon, nTodo });
+  ok(nAmazon === 0, 'Amazon の未提携リンクがない（承認まで楽天のみ）', nAmazon);
+  ok(html.includes('<!-- TODO(owner): Amazon の提携承認後、もしも（Amazon）のリンクを追加 -->'), 'Amazon リンク追加の TODO(owner) コメントがある');
   const nRakutenPlain = (html.match(/<a [^>]*href="https:\/\/search\.rakuten\.co\.jp[^"]*"/g) || []).length;
   const nRakutenAff = (html.match(/<a [^>]*href="https:\/\/af\.moshimo\.com\/af\/c\/click\?a_id=5914685&amp;p_id=54&amp;[^"]*url=https%3A%2F%2Fsearch\.rakuten\.co\.jp[^"]*"/g) || []).length;
-  ok(nRakutenPlain === 0 && nRakutenAff >= 5, '楽天リンクはすべて もしも経由（a_id 付き）', { nRakutenPlain, nRakutenAff });
+  const nMoshimo = (html.match(/<a [^>]*href="https:\/\/af\.moshimo\.com[^"]*"/g) || []).length;
+  ok(nRakutenPlain === 0 && nRakutenAff >= 10 && nMoshimo === nRakutenAff, '楽天リンクはすべて もしも経由（a_id=5914685・10件以上）', { nRakutenPlain, nRakutenAff, nMoshimo });
+  ok(/<meta property="og:image" content="https:\/\/nagara-alarm\.pages\.dev\/img\/goods\/hero\.webp">/.test(html), 'og:image が img/goods/hero.webp');
   ok(/<link rel="canonical" href="https:\/\/nagara-alarm\.pages\.dev\/goods">/.test(html), 'canonical が /goods');
   ok(errors.length === 0, 'goods.html で pageerror 0 件', errors);
   await ctx.close();
@@ -256,6 +264,19 @@ async function testAppBoot(browser, base) {
   }
 }
 
+/* goods.html が参照する img/ 以下の画像が実在するか（別作業で作成中のため最後に確認） */
+function testGoodsImages() {
+  console.log('[Task5] goods.html の画像ファイル');
+  const fs = require('fs');
+  for (const f of ['goods.html', 'test/goods.html']) {
+    const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    const srcs = [...html.matchAll(/<img [^>]*src="([^"]+)"/g)].map(m => m[1]).filter(s => /^\/?img\//.test(s));
+    ok(srcs.length > 0, f + ' が img/ の画像を参照している', srcs.length);
+    const missing = srcs.filter(s => !fs.existsSync(path.join(ROOT, s.replace(/^\//, ''))));
+    ok(missing.length === 0, f + ' が参照する img/ の画像がすべて存在する', missing);
+  }
+}
+
 (async () => {
   const { proc, base } = await startServer();
   const browser = await chromium.launch();
@@ -264,6 +285,7 @@ async function testAppBoot(browser, base) {
     await testGoods(browser, base);
     await testPolicyAbout(browser, base);
     await testAppBoot(browser, base);
+    testGoodsImages();
   } catch (e) {
     failed++; console.log('  FAIL 例外: ' + (e && e.stack || e));
   } finally {
