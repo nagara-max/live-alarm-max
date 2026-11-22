@@ -150,13 +150,13 @@ section.alt{background:var(--bg2);border-top:1px solid rgba(255,255,255,.04);bor
 .snscard .snsbody{min-height:250px}
 .snscard .plat{font-size:13px;font-weight:800;letter-spacing:.08em;padding:4px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--text)}
 .snscard .cap{margin:0;color:#d9dfe7;font-size:15px;line-height:1.6}
-.snscard .play{appearance:none;-webkit-appearance:none;border:0;cursor:pointer;font:inherit;font-weight:800;font-size:15.5px;border-radius:999px;padding:12px 22px;background:var(--accent);color:#1b0f05;box-shadow:0 8px 24px rgba(255,138,61,.3)}
-.snscard .play:hover{transform:translateY(-1px)}
-.snscard .play:focus-visible{outline:3px solid var(--accent2);outline-offset:3px}
+.snscard .play,.snscard .open{appearance:none;-webkit-appearance:none;border:0;cursor:pointer;font:inherit;font-weight:800;font-size:15.5px;border-radius:999px;padding:12px 22px;background:var(--accent);color:#1b0f05;box-shadow:0 8px 24px rgba(255,138,61,.3)}
+.snscard .open{display:inline-block;text-decoration:none}
+.snscard .play:hover,.snscard .open:hover{transform:translateY(-1px)}
+.snscard .play:focus-visible,.snscard .open:focus-visible{outline:3px solid var(--accent2);outline-offset:3px}
 .snscard .small{margin:0;color:var(--muted);font-size:12.5px;line-height:1.6}
 .snscard .ext{align-self:center;color:var(--muted);font-size:14px}
 .snscard.playing .snsbody{padding:0;gap:0;background:#000;aspect-ratio:auto;min-height:0}
-.snscard.playing[data-sns="tiktok"] .snsbody{aspect-ratio:9/16}
 .snscard iframe{display:block;width:100%;height:100%;border:0}
 .snscard[data-sns="x"] iframe{height:560px;background:#000}
 @media (max-width:860px){.snsgrid{grid-template-columns:1fr;max-width:360px}}
@@ -312,26 +312,23 @@ footer p{margin:4px 0}
     <div class="sec-head">
       <span class="kicker">SNS</span>
       <h2 class="pop">SNSで<span class="grad">紹介</span>しています</h2>
-      <p>「▶ ここで再生する」を押した時だけ、TikTok・X のプレーヤーを読み込みます。</p>
+      <p>X の投稿は「▶ ここで再生する」を押した時だけ読み込みます。TikTok は TikTok のサイトで開きます。</p>
     </div>
     <div class="snsgrid">
+      <!-- TikTok の埋め込みプレーヤーで「Video currently unavailable」になったため、リンクで開く形にしている（2026-11-22）。埋め込みを許可したら player/v1 に戻せる -->
       <div class="snscard" data-sns="tiktok" data-id="7696157160216087829">
         <div class="snsbody">
           <span class="plat">TikTok</span>
           <p class="cap">TikTok で使い方を紹介しています</p>
-          <button type="button" class="play" data-cta="sns_play_tiktok1">▶ ここで再生する</button>
-          <p class="small">押すと TikTok のプレーヤーを読み込みます</p>
+          <a class="open" href="https://www.tiktok.com/@nagara_create7/video/7696157160216087829" target="_blank" rel="noopener" data-cta="sns_open_tiktok1">▶ TikTok で見る</a>
         </div>
-        <a class="ext" href="https://www.tiktok.com/@nagara_create7/video/7696157160216087829" target="_blank" rel="noopener" data-cta="sns_open_tiktok1">TikTok で見る</a>
       </div>
       <div class="snscard" data-sns="tiktok" data-id="7694698606955203861">
         <div class="snsbody">
           <span class="plat">TikTok</span>
           <p class="cap">TikTok で紹介しています</p>
-          <button type="button" class="play" data-cta="sns_play_tiktok2">▶ ここで再生する</button>
-          <p class="small">押すと TikTok のプレーヤーを読み込みます</p>
+          <a class="open" href="https://www.tiktok.com/@nagara_create7/video/7694698606955203861" target="_blank" rel="noopener" data-cta="sns_open_tiktok2">▶ TikTok で見る</a>
         </div>
-        <a class="ext" href="https://www.tiktok.com/@nagara_create7/video/7694698606955203861" target="_blank" rel="noopener" data-cta="sns_open_tiktok2">TikTok で見る</a>
       </div>
       <div class="snscard" data-sns="x" data-id="2110012194809430042">
         <div class="snsbody">
@@ -524,10 +521,10 @@ footer p{margin:4px 0}
   bar.innerHTML = '🚚 新しい住所に引っ越しました：<a href="' + NEW + '/about" style="color:#1b0f05">nagara-alarm.pages.dev</a>';
   document.body.insertBefore(bar, document.body.firstChild);
 })();
-/* SNSで紹介：「▶ ここで再生する」を押した時だけ、各社のプレーヤー（iframe）を読み込む（押すまで TikTok・X には接続しない） */
+/* SNSで紹介：X は「▶ ここで再生する」を押した時だけプレーヤー（iframe）を読み込む（押すまで X には接続しない）。
+   TikTok は埋め込みで「Video currently unavailable」になったため iframe は作らず、カードのリンクで TikTok のサイトを開く */
 (function () {
   var SRC = {
-    tiktok: function (id) { return 'https://www.tiktok.com/player/v1/' + id + '?autoplay=0'; },
     x: function (id) { return 'https://platform.twitter.com/embed/Tweet.html?id=' + id + '&lang=ja&theme=dark'; }
   };
   document.querySelectorAll('.snscard').forEach(function (card) {
@@ -536,7 +533,7 @@ footer p{margin:4px 0}
     btn.addEventListener('click', function () {
       var f = document.createElement('iframe');
       f.src = SRC[kind](id);
-      f.title = kind === 'x' ? 'X の投稿' : 'TikTok の動画';
+      f.title = 'X の投稿';
       f.setAttribute('allow', 'encrypted-media; fullscreen; picture-in-picture');
       f.setAttribute('allowfullscreen', '');
       f.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
