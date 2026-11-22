@@ -682,19 +682,91 @@ async function testActivation(browser, base) {
   }
 }
 
-/* 公式SNS（TikTok・X）へのリンク：HP・グッズ・ガイド記事のフッターに、ふつうのリンクとして置く（埋め込み・外部スクリプトなし） */
-function testSnsLinks() {
-  console.log('[Task8] 公式SNSのリンク');
+/* SNS：アカウントへのリンクは置かない。about.html の「SNSで紹介しています」に、紹介した投稿を3件（押すまで読み込まないカード） */
+const SNS_POSTS = [
+  { kind: 'tiktok', id: '7696157160216087829', where: 'sns_play_tiktok1', url: 'https://www.tiktok.com/@nagara_create7/video/7696157160216087829', src: 'https://www.tiktok.com/player/v1/7696157160216087829?autoplay=0' },
+  { kind: 'tiktok', id: '7694698606955203861', where: 'sns_play_tiktok2', url: 'https://www.tiktok.com/@nagara_create7/video/7694698606955203861', src: 'https://www.tiktok.com/player/v1/7694698606955203861?autoplay=0' },
+  { kind: 'x', id: '2110012194809430042', where: 'sns_play_x1', url: 'https://x.com/nagara_protein/status/2110012194809430042', src: 'https://platform.twitter.com/embed/Tweet.html?id=2110012194809430042&lang=ja' }
+];
+const SNS_HOST = /^https?:\/\/([^/]+\.)?(tiktok\.com|tiktokcdn\.com|tiktokv\.com|ttwstatic\.com|twitter\.com|twimg\.com|x\.com)(\/|$)/i;
+function testSnsFiles() {
+  console.log('[Task8] SNS：アカウントへのリンクなし・紹介した投稿のカード');
   const fs = require('fs');
   const files = ['about.html', 'goods.html', 'test/about.html', 'test/goods.html'].concat(fs.readdirSync(path.join(ROOT, 'guide')).filter(f => /\.html$/.test(f)).map(f => 'guide/' + f));
   for (const f of files) {
     const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
     const foot = (html.match(/<footer>[\s\S]*?<\/footer>/) || [''])[0];
-    const sns = (foot.match(/<p class="sns">[\s\S]*?<\/p>/) || [''])[0];
-    ok(/公式SNS/.test(sns)
-      && /<a href="https:\/\/www\.tiktok\.com\/@nagara_create7" target="_blank" rel="noopener"[^>]*>TikTok<\/a>/.test(sns)
-      && /<a href="https:\/\/x\.com\/nagara_protein" target="_blank" rel="noopener"[^>]*>X（Twitter）<\/a>/.test(sns), f + ' のフッターに公式SNS（TikTok・X）のリンク');
-    ok(!/<script[^>]+(tiktok|twitter|x\.com)/i.test(html) && !/<(iframe|blockquote)[^>]+(tiktok|twitter)/i.test(html), f + ' に SNS の埋め込み・外部スクリプトがない');
+    ok(foot.length > 0 && !/公式SNS/.test(foot) && !/tiktok\.com|x\.com\/|twitter\.com/i.test(foot), f + ' のフッターに SNS アカウントへのリンクがない');
+    const rest = html.replace(/https:\/\/www\.tiktok\.com\/@[\w.]+\/video\/\d+/g, '').replace(/https:\/\/x\.com\/\w+\/status\/\d+/g, '');
+    ok(!/tiktok\.com\/@/i.test(rest) && !/(\/\/|\.)(x|twitter)\.com\/(?!intent\/|embed\/Tweet\.html)\w/i.test(rest), f + ' に SNS アカウント（プロフィール）へのリンクがない（投稿へのリンクと「Xで共有」は除く）');
+    ok(!/<script[^>]+(tiktok|twitter|x\.com)/i.test(html) && !/<(iframe|blockquote)[^>]+(tiktok|twitter|x\.com)/i.test(html) && !/embed\.js|widgets\.js/.test(html), f + ' に SNS の外部スクリプト・最初からの埋め込みがない');
+  }
+  const pv = fs.readFileSync(path.join(ROOT, 'privacy.html'), 'utf8');
+  ok(/<tr><td>紹介ページの SNS 投稿（TikTok・X）<\/td><td>[^<]*「▶ ここで再生する」を押した時だけ各社のプレーヤーを読み込み、IP アドレス・閲覧情報・Cookie 等が各社に送られます（押すまでは送信しません）/.test(pv), 'privacy.html の表に「紹介ページの SNS 投稿（TikTok・X）」の行（押した時だけ送信）');
+  ok(!/公式アカウント/.test(pv), 'privacy.html に「公式アカウント」の古い行がない');
+  const about = fs.readFileSync(path.join(ROOT, 'about.html'), 'utf8');
+  const sec = (about.match(/<section id="sns"[\s\S]*?<\/section>/) || [''])[0];
+  ok(/SNSで[\s\S]{0,40}紹介[\s\S]{0,20}しています/.test(sec), 'about.html に「SNSで紹介しています」の章');
+  const order = ['id="how"', 'id="features"', 'id="sns"', 'id="faq"'].map(k => about.indexOf(k));
+  ok(order.every((v, i) => v > 0 && (i === 0 || v > order[i - 1])), '「SNSで紹介しています」は使い方・できることの後、よくある質問の前', order);
+  for (const p of SNS_POSTS) {
+    const card = (sec.match(new RegExp('<div class="snscard" data-sns="' + p.kind + '" data-id="' + p.id + '">[\\s\\S]*?</a>\\s*</div>')) || [''])[0];
+    ok(!!card, '  ' + p.id + ' のカード（data-sns=' + p.kind + '）');
+    ok(/<button type="button" class="play" data-cta="[^"]+">▶ ここで再生する<\/button>/.test(card) && card.includes('data-cta="' + p.where + '"'), '  ' + p.id + '：「▶ ここで再生する」ボタン（data-cta=' + p.where + '）');
+    const label = p.kind === 'x' ? 'X で見る' : 'TikTok で見る';
+    ok(card.includes('<a class="ext" href="' + p.url + '" target="_blank" rel="noopener"') && card.includes('>' + label + '</a>'), '  ' + p.id + '：「' + label + '」の普通のリンク（target=_blank rel=noopener）');
+  }
+}
+async function testSnsFacade(browser, base) {
+  console.log('[Task8] SNS：押すまで TikTok・X に接続しない・押すと正しい iframe');
+  const STATS = 'https://stats.invalid/hp';
+  const cfg = Object.assign({}, BASE_CFG, { backendUrl: 'https://prod.invalid/hp', testBackendUrl: STATS });
+  for (const vw of [{ width: 360, height: 780 }, { width: 390, height: 844 }, { width: 1280, height: 900 }]) {
+    const { ctx, page, errors } = await newPage(browser, base, { config: cfg, viewport: vw });
+    const sns = [], got = [];
+    page.on('request', r => { if (SNS_HOST.test(r.url())) sns.push(r.url()); });
+    await page.route('https://stats.invalid/**', route => { try { got.push(JSON.parse(route.request().postData() || 'null')); } catch (e) {} return route.fulfill({ status: 200, body: '' }); });
+    // 実際の TikTok・X には接続しない（iframe の中身はテスト用の空ページ）
+    await page.route(SNS_HOST, route => route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>stub</title>' }));
+    await page.goto(base + '/about.html', { waitUntil: 'load' });
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(300);
+    await page.locator('#sns').scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    const tag = vw.width + 'px';
+    ok(sns.length === 0, tag + '：読み込み時（最後までスクロールしても）TikTok・X への通信 0 件', sns);
+    ok(await page.$$eval('iframe', fs => fs.length) === 0 && await page.$$eval('.snscard', c => c.length) === 3, tag + '：カード 3 枚・iframe 0 個');
+    const ov = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, wide: [...document.querySelectorAll('#sns *')].filter(e => e.getBoundingClientRect().right > document.documentElement.clientWidth + 0.5).map(e => e.className || e.tagName).slice(0, 5) }));
+    ok(ov.sw <= ov.cw && ov.wide.length === 0, tag + '：横にはみ出さない', ov);
+    if (vw.width < 800) {
+      const xs = await page.$$eval('.snscard', c => c.map(e => Math.round(e.getBoundingClientRect().left)));
+      const ys = await page.$$eval('.snscard', c => c.map(e => Math.round(e.getBoundingClientRect().top)));
+      ok(xs.every(x => x === xs[0]) && ys[0] < ys[1] && ys[1] < ys[2], tag + '：カードは縦に並ぶ', { xs, ys });
+    }
+    for (let i = 0; i < SNS_POSTS.length; i++) {
+      const p = SNS_POSTS[i];
+      const card = page.locator('.snscard').nth(i);
+      await card.locator('.play').click();
+      await page.waitForTimeout(250);
+      const src = await card.locator('iframe').getAttribute('src').catch(() => null);
+      ok(!!src && src.startsWith(p.src) && (p.kind !== 'x' || /[?&]lang=ja(&|$)/.test(src)), tag + '：' + p.where + ' を押すと iframe ' + p.src, src);
+      ok(await card.locator('.play').count() === 0 && await page.$$eval('iframe', fs => fs.length) === i + 1, tag + '：  押したカードだけ iframe に置きかわる');
+      if (p.kind === 'tiktok') {
+        const r = await card.locator('iframe').evaluate(e => { const b = e.getBoundingClientRect(); return { w: Math.round(b.width), h: Math.round(b.height) }; });
+        ok(r.w > 0 && r.w <= 326 && Math.abs(r.h / r.w - 16 / 9) < 0.03, tag + '：  TikTok は縦長（9:16・幅 325px まで）', r);
+      } else {
+        const h = await card.locator('iframe').evaluate(e => Math.round(e.getBoundingClientRect().height));
+        ok(h >= 400, tag + '：  X の iframe に高さがある', h);
+      }
+    }
+    ok(sns.length >= 3 && sns.every(u => SNS_POSTS.some(p => u.startsWith(p.src))), tag + '：押した後の通信は押した投稿のプレーヤーだけ', sns);
+    await page.waitForTimeout(300);
+    const where = got.filter(b => b && b.e).map(b => b.e[0]).filter(e => e.n === 'hp_cta').map(e => e.p.where);
+    ok(SNS_POSTS.every(p => where.includes(p.where)), tag + '：統計 hp_cta { where: sns_play_… } を送る', where);
+    const ov2 = await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+    ok(ov2, tag + '：再生後も横にはみ出さない');
+    ok(errors.length === 0, tag + '：about.html（SNS）で pageerror 0 件', errors);
+    await ctx.close();
   }
 }
 
@@ -723,7 +795,8 @@ function testGoodsImages() {
     await testGuides(browser, base);
     await testChLink(browser, base);
     await testActivation(browser, base);
-    testSnsLinks();
+    await testSnsFacade(browser, base);
+    testSnsFiles();
     testGoodsImages();
   } catch (e) {
     failed++; console.log('  FAIL 例外: ' + (e && e.stack || e));

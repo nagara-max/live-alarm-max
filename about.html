@@ -143,6 +143,24 @@ section.alt{background:var(--bg2);border-top:1px solid rgba(255,255,255,.04);bor
 @media (max-width:860px){.feats{grid-template-columns:1fr 1fr}}
 @media (max-width:540px){.feats{grid-template-columns:1fr}}
 
+/* SNSで紹介（押すまで各社のプレーヤーは読み込まない） */
+.snsgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;max-width:1000px;margin:0 auto;align-items:start}
+.snscard{min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.snscard .snsbody{width:100%;max-width:325px;margin:0 auto;border-radius:16px;overflow:hidden;background:radial-gradient(90% 60% at 50% 30%,rgba(255,95,162,.16),transparent 70%),#0b0d11;border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:22px 16px;text-align:center}
+.snscard .snsbody{min-height:250px}
+.snscard .plat{font-size:13px;font-weight:800;letter-spacing:.08em;padding:4px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--text)}
+.snscard .cap{margin:0;color:#d9dfe7;font-size:15px;line-height:1.6}
+.snscard .play{appearance:none;-webkit-appearance:none;border:0;cursor:pointer;font:inherit;font-weight:800;font-size:15.5px;border-radius:999px;padding:12px 22px;background:var(--accent);color:#1b0f05;box-shadow:0 8px 24px rgba(255,138,61,.3)}
+.snscard .play:hover{transform:translateY(-1px)}
+.snscard .play:focus-visible{outline:3px solid var(--accent2);outline-offset:3px}
+.snscard .small{margin:0;color:var(--muted);font-size:12.5px;line-height:1.6}
+.snscard .ext{align-self:center;color:var(--muted);font-size:14px}
+.snscard.playing .snsbody{padding:0;gap:0;background:#000;aspect-ratio:auto;min-height:0}
+.snscard.playing[data-sns="tiktok"] .snsbody{aspect-ratio:9/16}
+.snscard iframe{display:block;width:100%;height:100%;border:0}
+.snscard[data-sns="x"] iframe{height:560px;background:#000}
+@media (max-width:860px){.snsgrid{grid-template-columns:1fr;max-width:360px}}
+
 /* よくある質問 */
 .faq{max-width:820px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
 .faq details{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:0 20px}
@@ -289,7 +307,46 @@ footer p{margin:4px 0}
   </div>
 </section>
 
-<section id="faq" class="alt">
+<section id="sns" class="alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="kicker">SNS</span>
+      <h2 class="pop">SNSで<span class="grad">紹介</span>しています</h2>
+      <p>「▶ ここで再生する」を押した時だけ、TikTok・X のプレーヤーを読み込みます。</p>
+    </div>
+    <div class="snsgrid">
+      <div class="snscard" data-sns="tiktok" data-id="7696157160216087829">
+        <div class="snsbody">
+          <span class="plat">TikTok</span>
+          <p class="cap">TikTok で使い方を紹介しています</p>
+          <button type="button" class="play" data-cta="sns_play_tiktok1">▶ ここで再生する</button>
+          <p class="small">押すと TikTok のプレーヤーを読み込みます</p>
+        </div>
+        <a class="ext" href="https://www.tiktok.com/@nagara_create7/video/7696157160216087829" target="_blank" rel="noopener" data-cta="sns_open_tiktok1">TikTok で見る</a>
+      </div>
+      <div class="snscard" data-sns="tiktok" data-id="7694698606955203861">
+        <div class="snsbody">
+          <span class="plat">TikTok</span>
+          <p class="cap">TikTok で紹介しています</p>
+          <button type="button" class="play" data-cta="sns_play_tiktok2">▶ ここで再生する</button>
+          <p class="small">押すと TikTok のプレーヤーを読み込みます</p>
+        </div>
+        <a class="ext" href="https://www.tiktok.com/@nagara_create7/video/7694698606955203861" target="_blank" rel="noopener" data-cta="sns_open_tiktok2">TikTok で見る</a>
+      </div>
+      <div class="snscard" data-sns="x" data-id="2110012194809430042">
+        <div class="snsbody">
+          <span class="plat">X</span>
+          <p class="cap">X での紹介</p>
+          <button type="button" class="play" data-cta="sns_play_x1">▶ ここで再生する</button>
+          <p class="small">押すと X の投稿を読み込みます</p>
+        </div>
+        <a class="ext" href="https://x.com/nagara_protein/status/2110012194809430042" target="_blank" rel="noopener" data-cta="sns_open_x1">X で見る</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
   <div class="wrap">
     <div class="sec-head">
       <span class="kicker">よくある質問</span>
@@ -308,7 +365,7 @@ footer p{margin:4px 0}
   </div>
 </section>
 
-<section id="biz">
+<section id="biz" class="alt">
   <div class="wrap">
     <div class="sec-head">
       <span class="kicker">配信者・企業のみなさまへ</span>
@@ -347,7 +404,7 @@ footer p{margin:4px 0}
   </div>
 </section>
 
-<section id="guides" class="alt">
+<section id="guides">
   <div class="wrap">
     <div class="sec-head">
       <span class="kicker">使い方ガイド</span>
@@ -382,7 +439,6 @@ footer p{margin:4px 0}
       <a href="guide/index.html">使い方ガイド・コラム</a>
       <a id="lnkTip" hidden>☕ 開発を応援する（任意。機能は変わりません）</a>
     </div>
-    <p class="sns">公式SNS：<a href="https://www.tiktok.com/@nagara_create7" target="_blank" rel="noopener" data-cta="sns_tiktok">TikTok</a>　<a href="https://x.com/nagara_protein" target="_blank" rel="noopener" data-cta="sns_x">X（Twitter）</a></p>
     <p>映像は YouTube の公式埋め込みプレーヤーで再生します。ご利用には <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">YouTube 利用規約</a>への同意が必要です。</p>
     <p>YouTube は Google LLC の商標です。本サービスは YouTube および Google が提供・承認するものではありません。</p>
     <p>運営：<span id="operator">Live目覚まし運営</span></p>
@@ -467,6 +523,28 @@ footer p{margin:4px 0}
   bar.style.cssText = 'background:linear-gradient(90deg,#ff8a3d,#ff5fa2);color:#1b0f05;font-weight:700;text-align:center;padding:10px 16px;font-size:14px';
   bar.innerHTML = '🚚 新しい住所に引っ越しました：<a href="' + NEW + '/about" style="color:#1b0f05">nagara-alarm.pages.dev</a>';
   document.body.insertBefore(bar, document.body.firstChild);
+})();
+/* SNSで紹介：「▶ ここで再生する」を押した時だけ、各社のプレーヤー（iframe）を読み込む（押すまで TikTok・X には接続しない） */
+(function () {
+  var SRC = {
+    tiktok: function (id) { return 'https://www.tiktok.com/player/v1/' + id + '?autoplay=0'; },
+    x: function (id) { return 'https://platform.twitter.com/embed/Tweet.html?id=' + id + '&lang=ja&theme=dark'; }
+  };
+  document.querySelectorAll('.snscard').forEach(function (card) {
+    var btn = card.querySelector('.play'), body = card.querySelector('.snsbody'), kind = card.getAttribute('data-sns'), id = card.getAttribute('data-id');
+    if (!btn || !body || !SRC[kind] || !/^\d{10,25}$/.test(id || '')) return;
+    btn.addEventListener('click', function () {
+      var f = document.createElement('iframe');
+      f.src = SRC[kind](id);
+      f.title = kind === 'x' ? 'X の投稿' : 'TikTok の動画';
+      f.setAttribute('allow', 'encrypted-media; fullscreen; picture-in-picture');
+      f.setAttribute('allowfullscreen', '');
+      f.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+      body.innerHTML = '';
+      body.appendChild(f);
+      card.classList.add('playing');
+    });
+  });
 })();
 /* スマホ：最初のボタンが見えなくなったら、下に「使ってみる」ボタンを出す */
 (function () {
