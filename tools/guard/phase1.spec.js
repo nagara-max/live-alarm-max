@@ -3,7 +3,7 @@
  *  - リポジトリのルートを python3 -m http.server で配信して確認する
  *  - 1件でも失敗すると exit 1 */
 'use strict';
-const { chromium } = require('playwright');
+const { chromium, devices } = require('playwright');
 const { spawn } = require('child_process');
 const path = require('path');
 const net = require('net');
@@ -31,7 +31,7 @@ async function startServer() {
 
 /* 外部への通信は止める（テストを速く・安定させるため。ローカル配信のファイルだけ通す） */
 async function newPage(browser, base, opts = {}) {
-  const ctx = await browser.newContext(opts.viewport ? { viewport: opts.viewport } : {});
+  const ctx = await browser.newContext(opts.device ? Object.assign({}, devices[opts.device]) : opts.viewport ? { viewport: opts.viewport } : {});
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(String(e && e.message || e)));
@@ -111,7 +111,7 @@ async function testIndexTip(browser, base) {
     await page.waitForTimeout(300);
     ok(errors.length === 0, 'config.js が 404 でも pageerror 0 件', errors);
     ok(await shown(page, '#lnkTip') === false, 'config.js が 404 なら #lnkTip は非表示');
-    ok(await page.isVisible('#btnStandby'), 'config.js が 404 でも #btnStandby が見える（通常起動）');
+    ok(await page.isVisible('#btnFirstRun'), 'config.js が 404 でも #btnFirstRun が見える（通常起動・アラーム0件）');
     await ctx.close();
   }
 }
@@ -264,12 +264,12 @@ async function testAppBoot(browser, base) {
     await page.goto(base + u, { waitUntil: 'load' });
     await page.waitForTimeout(500);
     ok(errors.length === 0, u + ' で pageerror 0 件', errors);
-    ok(await page.isVisible('#btnStandby'), u + ' で #btnStandby が見える');
+    ok(await page.isVisible('#btnFirstRun'), u + ' で #btnFirstRun が見える（アラーム0件）');
     const mixed = await page.evaluate(() => ['#ring', '#standby'].map(s => document.querySelector(s)).filter(Boolean)
       .some(el => el.querySelector('#lnkTip, #lnkGoods, #boxSupport, a[href*="goods.html"]')));
     ok(mixed === false, u + ' の #ring・#standby の中に応援・グッズの要素がない');
     const ver = await page.evaluate(() => { const m = document.documentElement.innerHTML.match(/const APP_VERSION = '([\d.]+)'/); return m && m[1]; });
-    ok(ver === '1.14.3', u + ' の APP_VERSION が 1.14.3', ver);
+    ok(ver === '1.14.4', u + ' の APP_VERSION が 1.14.4', ver);
     await ctx.close();
   }
 }
@@ -473,11 +473,211 @@ async function testChLink(browser, base) {
     await page.waitForTimeout(400);
     ok(await isOpen(page, '#mIntro') && !(await isOpen(page, '#mEdit')), '初めての人は使い方の案内が先（追加画面はまだ開かない）');
     ok(await page.evaluate(() => /[?&]ch=/.test(location.search)), '案内の間は URL の ch を残す');
-    for (let i = 0; i < 6 && await isOpen(page, '#mIntro'); i++) { await page.click('#introNext'); await page.waitForTimeout(80); }
-    ok(!(await isOpen(page, '#mIntro')) && await isOpen(page, '#mEdit') && await page.inputValue('#fChannel') === '@firsthandle', '案内を終えると追加画面が @firsthandle 入りで開く', await page.inputValue('#fChannel'));
+    ok(await page.evaluate(() => document.querySelector('#mIntro').classList.contains('welcome') && document.querySelectorAll('#slides .slide').length === 1), '初めての人の案内は「はじめに」1枚');
+    await page.click('#introNext');   // 「アラームを作る」を1回押すだけ
+    await page.waitForTimeout(150);
+    ok(!(await isOpen(page, '#mIntro')) && await isOpen(page, '#mEdit') && await page.inputValue('#fChannel') === '@firsthandle', '「アラームを作る」で追加画面が @firsthandle 入りで開く（空の追加画面ではない）', await page.inputValue('#fChannel'));
+    ok(await page.evaluate(() => !!state.settings.consentAt && state.settings.introSeen === true), '  同意（consentAt）と introSeen を記録');
     await page.waitForTimeout(800);
     ok(await page.evaluate(() => state.alarms.length === 0 && !/[?&]ch=/.test(location.search)), '自動で保存しない・URL から ch が消える');
     ok(errors.length === 0, '初めての人の ?ch= で pageerror 0 件', errors);
+    await ctx.close();
+  }
+}
+
+/* 使ってもらうための改善（2026-11-22 の提案 1・2・4・5・6）と、鳴る画面がポップアップの下に隠れない修正 */
+async function testActivation(browser, base) {
+  console.log('[Task9] はじめに1枚・アラーム0件の画面・統計の wd・PC の QR・Android の画面・鳴る画面の重なり');
+  const cfg = Object.assign({}, BASE_CFG, { backendUrl: 'https://prod.invalid/x', testBackendUrl: 'https://be.invalid/x' });
+  const VID = 'abcdefghijk', CH = 'UCabcdefghijklmnopqrstuv';
+  const KEY = 'liveAlarm.test.v1';
+  async function open(u, o = {}) {
+    const r = await newPage(browser, base, { config: o.config || cfg, device: o.device, viewport: o.viewport });
+    const ev = [];
+    if (o.clock) await r.page.clock.install({ time: o.clock });
+    await r.page.route('https://prod.invalid/**', route => route.fulfill({ status: 200, body: '' }));
+    await r.page.route('https://be.invalid/**', route => {
+      const req = route.request();
+      if (req.method() === 'POST') { try { (JSON.parse(req.postData() || 'null').e || []).forEach(x => ev.push(x)); } catch (e) {} return route.fulfill({ status: 200, body: '' }); }
+      const q = new URL(req.url()).searchParams, json = b => route.fulfill({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(b) });
+      if (q.get('a') === 'yt') {
+        const p = q.get('p');
+        if (p === 'playlistItems') return json({ ok: true, data: { items: [{ contentDetails: { videoId: VID } }] } });
+        if (p === 'videos') return json({ ok: true, data: { items: [{ id: VID, snippet: { title: 'テストのライブ配信', liveBroadcastContent: 'live', thumbnails: {} }, liveStreamingDetails: { actualStartTime: '2026-11-22T00:00:00Z' } }] } });
+        return json({ ok: true, data: { items: [] } });
+      }
+      if (q.get('a') === 'top') return json({ ok: true, list: [] });
+      return json({ ok: true });
+    });
+    if (o.seed) await r.page.addInitScript(([k, s]) => { if (!localStorage.getItem(k)) localStorage.setItem(k, s); }, [KEY, JSON.stringify(o.seed)]);
+    await r.page.goto(base + u, { waitUntil: 'load' });
+    await r.page.waitForTimeout(o.wait || 400);
+    return Object.assign(r, { ev });
+  }
+  const isOpen = (page, sel) => page.evaluate(s => document.querySelector(s).classList.contains('open'), sel);
+  const flush = async (page) => { await page.evaluate(() => flushStats()); await page.waitForTimeout(300); };
+  const ALARM = { id: 'aseed1', enabled: true, label: '', channelInput: '@seed', channelId: CH, channelTitle: 'テストチャンネル', channelThumb: '',
+    mode: 'weekday', time: '06:30', days: ['', '06:30', '06:30', '06:30', '06:30', '06:30', ''], skipHolidays: false, volume: 60, preferLive: true, play: 'live' };
+  const SEEN = { introSeen: true, consentAt: 1700000000000, stats: true };
+
+  // (1) 初めて開いた時：「はじめに」1枚・同意の文言・大きな「アラームを作る」→ 追加画面
+  {
+    const { ctx, page, errors, ev } = await open('/', { device: 'iPhone 13' });
+    ok(await isOpen(page, '#mIntro'), '初回は案内（#mIntro）が開く');
+    const w = await page.evaluate(() => ({ cls: document.querySelector('#mIntro').classList.contains('welcome'), n: document.querySelectorAll('#slides .slide').length, btn: document.querySelector('#introNext').textContent, txt: document.querySelector('#slides').innerText,
+      links: [...document.querySelectorAll('#slides .gfine a')].map(a => a.getAttribute('href')), more: !!document.querySelector('#introMore'), prev: getComputedStyle(document.querySelector('#introPrev')).display, close: getComputedStyle(document.querySelector('#introClose')).display }));
+    ok(w.cls && w.n === 1, '初回は「はじめに」1枚だけ（3枚のスライドではない）', w);
+    ok(/^アラームを作る/.test(w.btn), '大きなボタンは「アラームを作る」', w.btn);
+    ok(w.txt.includes('YouTube 利用規約') && w.txt.includes('同意したものとみなされます') && w.txt.includes('匿名の利用統計') && w.txt.includes('名前やメールアドレスは送りません') && w.txt.includes('プライバシーポリシー'), '同意の文言（YouTube 利用規約・匿名の統計・プライバシーポリシー）がある', w.txt);
+    ok(w.links.includes('https://www.youtube.com/t/terms') && w.links.includes('privacy.html'), '同意の文言に利用規約・プライバシーポリシーのリンク', w.links);
+    ok(w.txt.includes('この画面を開いたまま'), '大事なこと（画面を開いたままにする）が書いてある');
+    ok(w.more && w.prev === 'none' && w.close !== 'none', '「使い方を見る」リンクがあり、「戻る」は出ない・「閉じる」は残る', w);
+    await page.click('#introNext');
+    await page.waitForTimeout(200);
+    ok(!(await isOpen(page, '#mIntro')) && await isOpen(page, '#mEdit'), '「アラームを作る」で追加画面（#mEdit）が開く');
+    ok(await page.textContent('#editTitle') === 'アラームを追加' && await page.inputValue('#fChannel') === '', '  新しいアラームの空の追加画面');
+    ok(await page.evaluate(() => !!state.settings.consentAt && state.settings.introSeen === true && JSON.parse(localStorage.getItem('liveAlarm.test.v1')).settings.consentAt > 0), '  同意（consentAt）・introSeen を記録して保存');
+    await flush(page);
+    const iv = ev.find(x => x.n === 'intro_view'), done = ev.find(x => x.n === 'intro_done');
+    ok(!!iv && iv.p.total === 1 && iv.p.w === 1 && !!done && done.p.w === 1 && done.p.consent === true, '統計：intro_view { total:1, w:1 }・intro_done { w:1, consent }', { iv, done });
+    const ao = ev.find(x => x.n === 'app_open');
+    ok(!!ao && ao.p.wd === 1 && typeof ao.p.lang === 'string' && ao.p.lang.length > 0, '統計：app_open に wd（自動操作のブラウザは 1）と lang', ao && ao.p);
+    ok(errors.length === 0, '初回の「はじめに」で pageerror 0 件', errors);
+    await ctx.close();
+  }
+  // (1b) 「使い方を見る」→ 今までの3枚。最後の「同意してはじめる」でも追加画面
+  {
+    const { ctx, page, errors } = await open('/', { viewport: { width: 1280, height: 800 } });
+    await page.click('#introMore');
+    await page.waitForTimeout(150);
+    const f = await page.evaluate(() => ({ cls: document.querySelector('#mIntro').classList.contains('welcome'), n: document.querySelectorAll('#slides .slide').length, dots: document.querySelectorAll('#dots i').length, btn: document.querySelector('#introNext').textContent }));
+    ok(!f.cls && f.n === 3 && f.dots === 3 && f.btn === '次へ', '「使い方を見る」で今までの3枚のスライドになる', f);
+    for (let i = 0; i < 2; i++) { await page.click('#introNext'); await page.waitForTimeout(60); }
+    const last = await page.evaluate(() => ({ btn: document.querySelector('#introNext').textContent, txt: document.querySelector('#slides .slide.on').innerText }));
+    ok(last.btn === '同意してはじめる' && last.txt.includes('YouTube 利用規約') && last.txt.includes('匿名の利用統計'), '  3枚目は今までどおり同意の文言と「同意してはじめる」', last.btn);
+    await page.click('#introNext'); await page.waitForTimeout(150);
+    ok(!(await isOpen(page, '#mIntro')) && await isOpen(page, '#mEdit'), '  「同意してはじめる」で追加画面が開く');
+    ok(errors.length === 0, '「使い方を見る」で pageerror 0 件', errors);
+    await ctx.close();
+  }
+  // (1c) 個人モード（サーバーなし）でも「はじめに」。APIキーの案内あり・同意の文言なし
+  {
+    const { ctx, page, errors } = await open('/', { config: BASE_CFG });
+    const t = await page.evaluate(() => ({ cls: document.querySelector('#mIntro').classList.contains('welcome'), txt: document.querySelector('#slides').innerText }));
+    ok(t.cls && t.txt.includes('APIキー') && !t.txt.includes('同意したものとみなされます'), '個人モードの「はじめに」は APIキーの案内つき・同意の文言なし', t.txt);
+    ok(errors.length === 0, '個人モードの「はじめに」で pageerror 0 件', errors);
+    await ctx.close();
+  }
+  // (2) アラーム0件のトップ画面：#firstRun の大きなボタン1つ。「画面を暗くする」「＋ 追加」は隠す
+  {
+    const { ctx, page, errors, ev } = await open('/', { device: 'iPhone 13' });
+    await page.click('#introClose');
+    await page.waitForTimeout(200);
+    ok(await page.evaluate(() => !!state.settings.consentAt), '「✕ 閉じる」でも今までどおり同意を記録');
+    const vis = {}; for (const s of ['#firstRun', '#btnFirstRun', '#btnStandby', '#standbyHint', '#btnAdd', '#alarmList .empty', '.hero']) vis[s] = await page.isVisible(s);
+    ok(vis['#firstRun'] && vis['#btnFirstRun'], '0件の時は #firstRun と大きな「＋ 最初のアラームを作る」が見える', vis);
+    ok(!vis['#btnStandby'] && !vis['#standbyHint'] && !vis['#btnAdd'] && !vis['#alarmList .empty'] && !vis['.hero'], '  「画面を暗くする」・その説明・「＋ 追加」・空のカードは隠れる', vis);
+    const big = await page.evaluate(() => { const b = document.querySelector('#btnFirstRun').getBoundingClientRect(); return { w: b.width, h: b.height, top: b.top }; });
+    ok(big.h >= 50 && big.w >= 250 && big.top < 844, '  ボタンは大きく、最初の画面の中にある', big);
+    await page.click('#btnFirstRun'); await page.waitForTimeout(150);
+    ok(await isOpen(page, '#mEdit') && await page.textContent('#editTitle') === 'アラームを追加', '  押すと追加画面が開く');
+    await flush(page);
+    ok(ev.some(x => x.n === 'first_run_add'), '  統計 first_run_add');
+    ok(errors.length === 0, '0件の画面で pageerror 0 件', errors);
+    await ctx.close();
+  }
+  {
+    const { ctx, page, errors } = await open('/', { seed: { alarms: [ALARM], settings: SEEN }, device: 'iPhone 13' });
+    const vis = {}; for (const s of ['#firstRun', '#btnStandby', '#btnAdd', '.hero']) vis[s] = await page.isVisible(s);
+    ok(!vis['#firstRun'] && vis['#btnStandby'] && vis['#btnAdd'] && vis['.hero'], 'アラームが1件あれば今までの画面（「画面を暗くする」「＋ 追加」あり・#firstRun なし）', vis);
+    ok(!(await isOpen(page, '#mIntro')), '  2回目以降は案内を自動で出さない');
+    ok(errors.length === 0, '1件ある画面で pageerror 0 件', errors);
+    await ctx.close();
+  }
+  // (5) PC だけ「スマホで開く」QR コード（静的な SVG・ライブラリなし）
+  {
+    const { ctx, page, errors } = await open('/', { viewport: { width: 1280, height: 800 }, seed: { alarms: [], settings: SEEN } });
+    const q = await page.evaluate(() => { const b = document.querySelector('#pcQr'), s = b && b.querySelector('svg'); return b && { vis: !b.hidden && getComputedStyle(b).display !== 'none', svg: !!s, vb: s && s.getAttribute('viewBox'), label: s && s.getAttribute('aria-label'), d: s && s.querySelector('path[stroke]') && s.querySelector('path[stroke]').getAttribute('d').length, txt: b.innerText }; });
+    ok(!!q && q.vis && q.svg && q.vb === '0 0 41 41' && q.d > 500, 'PC では #pcQr（インラインの SVG の QR コード）が見える', q);
+    ok(!!q && /https:\/\/nagara-alarm\.pages\.dev\/\?utm_source=qr/.test(q.label) && q.txt.includes('スマホで開く'), '  QR の中身（utm_source=qr）と「スマホで開く」', q && q.label);
+    const scripts = await page.evaluate(() => [...document.querySelectorAll('script[src]')].map(s => s.getAttribute('src')));
+    ok(scripts.every(x => /^config\.js/.test(x) || x === 'https://www.youtube.com/iframe_api'), '  QR 用のスクリプトは読まない（config.js と YouTube 公式プレーヤーだけ）', scripts);
+    ok(errors.length === 0, 'PC の QR で pageerror 0 件', errors);
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open('/', { device: 'iPhone 13', seed: { alarms: [], settings: SEEN } });
+    ok(await page.isVisible('#pcQr') === false, 'スマホでは #pcQr を出さない');
+    await ctx.close();
+  }
+  // (6) 非対応ブラウザ（Android）の画面：「Androidでも使いたい」→ android_wish を送って about.html へ
+  {
+    const { ctx, page, errors, ev } = await open('/', { device: 'Pixel 5' });
+    ok(await isOpen(page, '#block'), 'Android では今までどおり #block（非対応）を出す');
+    ok(await page.isVisible('#btnAndroidWish') && await page.textContent('#btnAndroidWish') === 'Androidでも使いたい' && await attr(page, '#btnAndroidWish', 'href') === 'about.html', '  「Androidでも使いたい」ボタン（about.html へのリンク）');
+    ok(await page.isVisible('#btnCopyUrl') && (await page.textContent('#blockMsg')).includes('iPhone の Safari 専用'), '  URL をコピー・文言は今までどおり');
+    ok(!(await isOpen(page, '#mIntro')), '  #block の時は案内を出さない（今までどおり）');
+    await page.evaluate(() => { document.addEventListener('click', e => e.preventDefault(), { once: true }); document.querySelector('#btnAndroidWish').click(); });
+    await page.waitForTimeout(500);
+    const w = ev.find(x => x.n === 'android_wish');
+    ok(!!w && w.p.os === 'android', '  押すと統計 android_wish { os:"android" } を送る（すぐ送信）', w);
+    await page.click('#btnAndroidWish');
+    await page.waitForURL(/about\.html/, { timeout: 3000 }).catch(() => {});
+    ok(/\/about\.html$/.test(page.url()), '  about.html に移動する', page.url());
+    ok(errors.length === 0, 'Android の画面で pageerror 0 件', errors);
+    await ctx.close();
+  }
+  // (信頼性) 鳴る画面（#ring）はどのポップアップよりも前・#block と通知（toast）より後ろ
+  {
+    const { ctx, page, errors } = await open('/', { seed: { alarms: [ALARM], settings: SEEN }, viewport: { width: 390, height: 844 } });
+    const z = await page.evaluate(() => { const g = s => +getComputedStyle(document.querySelector(s)).zIndex; return { ring: g('#ring'), block: g('#block'), toast: g('#toast'), modals: [...document.querySelectorAll('.modal')].map(m => [m.id, g('#' + m.id)]) }; });
+    ok(z.modals.every(([, v]) => v < z.ring) && z.ring < z.block && z.ring < z.toast, '#ring の z-index は全ポップアップより上・#block と toast より下', z);
+    for (const id of ['mGuide', 'mA2hs', 'mError', 'mReset', 'mEdit', 'mSettings', 'mIntro', 'mInApp']) {
+      const top = await page.evaluate(id => {
+        openModal(id); document.querySelector('#ring').classList.add('open');
+        const b = document.querySelector('#rClose').getBoundingClientRect();
+        const el = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+        const r = el && el.id;
+        document.querySelector('#ring').classList.remove('open'); document.querySelector('#' + id).classList.remove('open');
+        return r;
+      }, id);
+      ok(top === 'rClose', '#' + id + ' を開いたままでも、鳴る画面の「OK」が一番前', top);
+    }
+    ok(errors.length === 0, '重なりの確認で pageerror 0 件', errors);
+    await ctx.close();
+  }
+  // (信頼性) 本当に鳴らす：1分後のアラーム・サーバーはテスト用の返事・APIキーの取り方（#mGuide）を開いたまま
+  //   REAL_FIRE=1 の時は実際の時計で1分待つ（ふだんは Playwright の時計で早送り）
+  {
+    const real = process.env.REAL_FIRE === '1';
+    let start;
+    if (real) { start = new Date(); } else { const d = new Date(); start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 8, 0, 50); }
+    const at = new Date(start.getTime() + 60 * 1000);
+    const hhmm = String(at.getHours()).padStart(2, '0') + ':' + String(at.getMinutes()).padStart(2, '0');
+    const A = Object.assign({}, ALARM, { id: 'afire1', mode: 'everyday', time: hhmm, savedAt: start.getTime() - 1000 });
+    const { ctx, page, errors, ev } = await open('/', { seed: { alarms: [A], settings: SEEN }, viewport: { width: 390, height: 844 }, clock: real ? undefined : start });
+    await page.evaluate(() => openGuide());
+    ok(await isOpen(page, '#mGuide') && !(await isOpen(page, '#ring')), '鳴る前：#mGuide が開いている・#ring は閉じている');
+    if (real) {
+      const ms = at.getTime() - Date.now();
+      console.log('       (実際の時計で ' + Math.round(ms / 1000) + ' 秒待ちます：アラーム ' + hhmm + ')');
+      await page.waitForFunction(() => document.querySelector('#ring').classList.contains('open'), null, { timeout: ms + 15000, polling: 500 }).catch(() => {});
+    } else {
+      await page.clock.fastForward(15000);
+      await page.waitForFunction(() => document.querySelector('#ring').classList.contains('open'), null, { timeout: 5000 }).catch(() => {});
+    }
+    ok(await isOpen(page, '#ring'), 'アラームの時刻に #ring が開く（' + (real ? '実際の時計' : '早送り') + '・' + hhmm + '）');
+    await page.waitForFunction(() => /テストのライブ配信/.test(document.querySelector('#rName').textContent), null, { timeout: 5000 }).catch(() => {});
+    ok((await page.textContent('#rName')).includes('テストのライブ配信'), '  テスト用サーバーの返事のライブ配信を流す', await page.textContent('#rName'));
+    const top = await page.evaluate(() => { const r = [], pts = [[0.5, 0.15], [0.5, 0.5]]; for (const [x, y] of pts) { const el = document.elementFromPoint(innerWidth * x, innerHeight * y); r.push(!!(el && el.closest('#ring'))); } const b = document.querySelector('#rClose').getBoundingClientRect(); const c = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); r.push(c && c.id); return r; });
+    ok(top[0] && top[1] && top[2] === 'rClose', '  #mGuide を開いたままでも、鳴る画面が一番前（中央・上・「OK」ボタン）', top);
+    ok(await isOpen(page, '#mGuide'), '  #mGuide は閉じられていない（鳴る処理は変えていない）');
+    await flush(page);
+    ok(ev.some(x => x.n === 'alarm_fire' && x.p.ch === CH), '  統計 alarm_fire を送る');
+    await page.click('#rClose');
+    await page.waitForTimeout(200);
+    ok(!(await isOpen(page, '#ring')), '  「OK」で鳴る画面を閉じられる');
+    ok(errors.length === 0, '本当に鳴らす確認で pageerror 0 件', errors);
     await ctx.close();
   }
 }
@@ -522,6 +722,7 @@ function testGoodsImages() {
     await testHpStats(browser, base);
     await testGuides(browser, base);
     await testChLink(browser, base);
+    await testActivation(browser, base);
     testSnsLinks();
     testGoodsImages();
   } catch (e) {
