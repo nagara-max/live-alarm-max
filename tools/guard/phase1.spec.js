@@ -204,7 +204,7 @@ async function testPolicyAbout(browser, base) {
     }
     const body = await page.evaluate(() => document.body.innerText);
     ok(body.includes('現在、アプリの画面に広告はありません'), 'アプリの画面に広告がないことを明記している');
-    ok(body.includes('最終更新：2026年11月21日'), '最終更新が 2026年11月21日');
+    ok(body.includes('最終更新：2026年11月22日'), '最終更新が 2026年11月22日');
     ok(!body.includes('紹介ページの一部（「朝を気持ちよく始めるアイテム」のページ）には'), '「紹介リンクは goods.html だけ」の古い文言がない');
     ok(body.includes('ガイド記事の一部'), '紹介リンクがガイド記事の一部にもあることを明記');
     ok(/IP ?アドレス/.test(body) && body.includes('各社には、通信の仕組み上、IP アドレス'), '表の下に「各社には通信の仕組み上 IP アドレス…」');
@@ -269,7 +269,7 @@ async function testAppBoot(browser, base) {
       .some(el => el.querySelector('#lnkTip, #lnkGoods, #boxSupport, a[href*="goods.html"]')));
     ok(mixed === false, u + ' の #ring・#standby の中に応援・グッズの要素がない');
     const ver = await page.evaluate(() => { const m = document.documentElement.innerHTML.match(/const APP_VERSION = '([\d.]+)'/); return m && m[1]; });
-    ok(ver === '1.14.2', u + ' の APP_VERSION が 1.14.2', ver);
+    ok(ver === '1.14.3', u + ' の APP_VERSION が 1.14.3', ver);
     await ctx.close();
   }
 }
@@ -371,6 +371,133 @@ async function testGuides(browser, base) {
   }
 }
 
+/* 配信者の共有リンク（?ch=）：追加画面がチャンネル入りで開く・自動で保存しない・鳴る画面に触れない */
+async function testChLink(browser, base) {
+  console.log('[Task7] 配信者の共有リンク（?ch=）');
+  const CH_ID = 'UCabcdefghijklmnopqrstuv';
+  const cfg = Object.assign({}, BASE_CFG, { backendUrl: 'https://prod.invalid/x', testBackendUrl: 'https://be.invalid/x' });
+  const ALARM = { id: 'aexist1', enabled: false, label: '既存', channelInput: '@exist', channelId: 'UCzzzzzzzzzzzzzzzzzzzzzz', channelTitle: '既存チャンネル', channelThumb: '',
+    mode: 'weekday', time: '06:30', days: ['', '06:30', '06:30', '06:30', '06:30', '06:30', ''], skipHolidays: false, volume: 60, preferLive: true, play: 'live' };
+  const SEED = JSON.stringify({ alarms: [ALARM], settings: { introSeen: true, consentAt: 1700000000000, stats: true } });
+  async function open(u, seed = SEED) {
+    const r = await newPage(browser, base, { config: cfg });
+    const yt = [], ev = [];
+    await r.page.route('https://prod.invalid/**', route => route.fulfill({ status: 200, body: '' }));
+    await r.page.route('https://be.invalid/**', route => {
+      const req = route.request();
+      if (req.method() === 'POST') { try { (JSON.parse(req.postData() || 'null').e || []).forEach(x => ev.push(x)); } catch (e) {} return route.fulfill({ status: 200, body: '' }); }
+      const q = new URL(req.url()).searchParams, json = b => route.fulfill({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(b) });
+      if (q.get('a') === 'yt') {
+        const p = q.get('p'), params = JSON.parse(q.get('q') || '{}');
+        yt.push({ p, params });
+        if (p === 'channels' && (params.forHandle || params.id === CH_ID)) return json({ ok: true, data: { items: [{ id: CH_ID, snippet: { title: 'テスト配信者', thumbnails: {} } }] } });
+        return json({ ok: true, data: { items: [] } });
+      }
+      if (q.get('a') === 'top') return json({ ok: true, list: [] });
+      return json({ ok: true });
+    });
+    if (seed) await r.page.addInitScript(s => { if (!localStorage.getItem('liveAlarm.test.v1')) localStorage.setItem('liveAlarm.test.v1', s); }, seed);
+    await r.page.goto(base + u, { waitUntil: 'load' });
+    return Object.assign(r, { yt, ev });
+  }
+  const isOpen = (page, sel) => page.evaluate(s => document.querySelector(s).classList.contains('open'), sel);
+  const stored = page => page.evaluate(() => JSON.parse(localStorage.getItem('liveAlarm.test.v1') || '{}').alarms);
+  const ringSb = page => page.evaluate(() => ['#ring', '#standby'].map(s => { const el = document.querySelector(s); return el.className + '|' + el.innerHTML; }));
+  // 比べる元：ch なしで開いた時の #ring・#standby
+  let baseRS;
+  {
+    const { ctx, page } = await open('/');
+    await page.waitForTimeout(400);
+    baseRS = await ringSb(page);
+    ok(await isOpen(page, '#mEdit') === false, 'ch なしでは追加画面は開かない');
+    await ctx.close();
+  }
+  // @handle
+  {
+    const { ctx, page, errors, yt, ev } = await open('/?ch=%40testhandle&utm_source=creator');
+    await page.waitForSelector('#mEdit.open', { timeout: 3000 }).catch(() => {});
+    ok(await isOpen(page, '#mEdit'), '?ch=@handle で追加画面（#mEdit）が開く');
+    ok(await page.inputValue('#fChannel') === '@testhandle', '#fChannel に @testhandle が入る', await page.inputValue('#fChannel'));
+    ok(await page.textContent('#editTitle') === 'アラームを追加', '新しいアラームの追加画面（編集ではない）');
+    await page.waitForFunction(id => editChannel && editChannel.id === id, CH_ID, { timeout: 4000 }).catch(() => {});
+    ok(yt.some(x => x.p === 'channels' && x.params.forHandle === '@testhandle'), 'いつもと同じチャンネル確認（channels forHandle）をサーバー経由で行う', yt);
+    ok(await page.evaluate(id => !!editChannel && editChannel.id === id && editChannel.title === 'テスト配信者', CH_ID), '確認したチャンネルが追加画面で選ばれた状態になる（保存はまだ）');
+    ok(await page.evaluate(() => location.search) === '?utm_source=creator', 'URL から ch だけ消える（utm は残る）', await page.evaluate(() => location.href));
+    await page.waitForTimeout(1200);
+    const al = await stored(page);
+    ok(JSON.stringify(al) === JSON.stringify([ALARM]), '自動で保存しない・既存のアラームは変わらない（保存データ）', al);
+    ok(await page.evaluate(a => state.alarms.length === 1 && JSON.stringify(state.alarms[0]) === JSON.stringify(a), ALARM), '自動で保存しない・既存のアラームは変わらない（画面の状態）');
+    ok(await isOpen(page, '#mEdit'), '保存は利用者が押すまで追加画面のまま');
+    ok(JSON.stringify(await ringSb(page)) === JSON.stringify(baseRS), '#ring・#standby の中身・状態は ch なしの時と同じ');
+    ok(!(await isOpen(page, '#ring')) && !(await isOpen(page, '#standby')), '#ring・#standby は開かない');
+    await page.evaluate(() => flushStats());
+    await page.waitForTimeout(300);
+    const e = ev.find(x => x.n === 'ch_link_open');
+    ok(!!e && e.p.handle === '@testhandle' && e.p.type === 'handle' && e.p.alarms === 1, '統計 ch_link_open { handle, type, alarms } を1回送る', e);
+    ok(ev.filter(x => x.n === 'ch_link_open').length === 1, 'ch_link_open は1回だけ');
+    const ao = ev.find(x => x.n === 'app_open');
+    ok(!!ao && ao.p.src === 'creator', 'app_open の src=creator', ao && ao.p);
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForTimeout(500);
+    ok(await isOpen(page, '#mEdit') === false, '再読み込みしても追加画面は開き直さない');
+    ok(errors.length === 0, '?ch=@handle で pageerror 0 件', errors);
+    await ctx.close();
+  }
+  // チャンネルID・チャンネルURL
+  for (const [q, want, chk] of [
+    [CH_ID, CH_ID, x => x.p === 'channels' && x.params.id === CH_ID],
+    [encodeURIComponent('https://www.youtube.com/channel/' + CH_ID), CH_ID, x => x.p === 'channels' && x.params.id === CH_ID],
+    [encodeURIComponent('https://www.youtube.com/@urlhandle/streams'), '@urlhandle', x => x.p === 'channels' && x.params.forHandle === '@urlhandle'],
+  ]) {
+    const { ctx, page, errors, yt } = await open('/?ch=' + q);
+    await page.waitForSelector('#mEdit.open', { timeout: 3000 }).catch(() => {});
+    ok(await isOpen(page, '#mEdit') && await page.inputValue('#fChannel') === want, '?ch=' + decodeURIComponent(q) + ' → 追加画面に ' + want, await page.inputValue('#fChannel'));
+    await page.waitForFunction(id => editChannel && editChannel.id === id, CH_ID, { timeout: 4000 }).catch(() => {});
+    ok(yt.some(chk), '  チャンネル確認のリクエスト', yt);
+    ok(await page.evaluate(() => !/[?&]ch=/.test(location.search)), '  URL から ch が消える');
+    ok(errors.length === 0, '  pageerror 0 件', errors);
+    await ctx.close();
+  }
+  // 形が正しくない値は使わない
+  for (const bad of ['javascript:alert(1)', 'https://evil.example/@abc', 'https://www.youtube.com.evil.example/@abc', '@a', '<img src=x onerror=alert(1)>', 'UCshort', 'https://www.youtube.com/watch?v=abcdefghijk', 'テストチャンネル', '']) {
+    const { ctx, page, errors, yt } = await open('/?ch=' + encodeURIComponent(bad) + '&utm_source=creator');
+    await page.waitForTimeout(500);
+    ok(await isOpen(page, '#mEdit') === false && yt.length === 0, '?ch=' + JSON.stringify(bad) + ' は無視（追加画面を開かない・確認しない）', yt);
+    ok(await page.evaluate(() => location.search) === '?utm_source=creator', '  URL から ch が消える', await page.evaluate(() => location.search));
+    ok(JSON.stringify(await stored(page)) === JSON.stringify([ALARM]) && errors.length === 0, '  既存のアラームは変わらない・pageerror 0 件', errors);
+    await ctx.close();
+  }
+  // 初めての人：使い方の案内を先に出し、閉じたあとに追加画面をチャンネル入りで開く
+  {
+    const { ctx, page, errors } = await open('/?ch=%40firsthandle', null);
+    await page.waitForTimeout(400);
+    ok(await isOpen(page, '#mIntro') && !(await isOpen(page, '#mEdit')), '初めての人は使い方の案内が先（追加画面はまだ開かない）');
+    ok(await page.evaluate(() => /[?&]ch=/.test(location.search)), '案内の間は URL の ch を残す');
+    for (let i = 0; i < 6 && await isOpen(page, '#mIntro'); i++) { await page.click('#introNext'); await page.waitForTimeout(80); }
+    ok(!(await isOpen(page, '#mIntro')) && await isOpen(page, '#mEdit') && await page.inputValue('#fChannel') === '@firsthandle', '案内を終えると追加画面が @firsthandle 入りで開く', await page.inputValue('#fChannel'));
+    await page.waitForTimeout(800);
+    ok(await page.evaluate(() => state.alarms.length === 0 && !/[?&]ch=/.test(location.search)), '自動で保存しない・URL から ch が消える');
+    ok(errors.length === 0, '初めての人の ?ch= で pageerror 0 件', errors);
+    await ctx.close();
+  }
+}
+
+/* 公式SNS（TikTok・X）へのリンク：HP・グッズ・ガイド記事のフッターに、ふつうのリンクとして置く（埋め込み・外部スクリプトなし） */
+function testSnsLinks() {
+  console.log('[Task8] 公式SNSのリンク');
+  const fs = require('fs');
+  const files = ['about.html', 'goods.html', 'test/about.html', 'test/goods.html'].concat(fs.readdirSync(path.join(ROOT, 'guide')).filter(f => /\.html$/.test(f)).map(f => 'guide/' + f));
+  for (const f of files) {
+    const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    const foot = (html.match(/<footer>[\s\S]*?<\/footer>/) || [''])[0];
+    const sns = (foot.match(/<p class="sns">[\s\S]*?<\/p>/) || [''])[0];
+    ok(/公式SNS/.test(sns)
+      && /<a href="https:\/\/www\.tiktok\.com\/@nagara_create7" target="_blank" rel="noopener"[^>]*>TikTok<\/a>/.test(sns)
+      && /<a href="https:\/\/x\.com\/nagara_protein" target="_blank" rel="noopener"[^>]*>X（Twitter）<\/a>/.test(sns), f + ' のフッターに公式SNS（TikTok・X）のリンク');
+    ok(!/<script[^>]+(tiktok|twitter|x\.com)/i.test(html) && !/<(iframe|blockquote)[^>]+(tiktok|twitter)/i.test(html), f + ' に SNS の埋め込み・外部スクリプトがない');
+  }
+}
+
 /* goods.html が参照する img/ 以下の画像が実在するか（別作業で作成中のため最後に確認） */
 function testGoodsImages() {
   console.log('[Task5] goods.html の画像ファイル');
@@ -394,6 +521,8 @@ function testGoodsImages() {
     await testAppBoot(browser, base);
     await testHpStats(browser, base);
     await testGuides(browser, base);
+    await testChLink(browser, base);
+    testSnsLinks();
     testGoodsImages();
   } catch (e) {
     failed++; console.log('  FAIL 例外: ' + (e && e.stack || e));
