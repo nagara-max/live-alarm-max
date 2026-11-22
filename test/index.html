@@ -721,7 +721,7 @@ const IS_TEST = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /\/test\
 const _burl = String((IS_TEST && CFG.testBackendUrl) || CFG.backendUrl || '').trim();
 const BACKEND = /^https:\/\//.test(_burl) ? _burl : '';
 const PUBLIC = !!BACKEND;
-const APP_VERSION = '1.14.2'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
+const APP_VERSION = '1.14.3'; // ← 公開ファイルを更新するたびに数字を上げる（利用者に更新案内が出ます）
 if (PUBLIC) document.documentElement.classList.add('public');
 const hasApi = () => PUBLIC || !!state.apiKey;
 
@@ -1957,6 +1957,7 @@ function closeModal(id) {
   }
   if (id === 'mInApp') $('#menuArrow').className = '';
   if (id === 'mA2hs') track('a2hs_close', { where: a2Where, sec: Math.round((Date.now() - a2OpenedAt) / 1000) });
+  if (id === 'mIntro' || id === 'mMoved') openChLink();   // 配信者のリンク（?ch=）で来た時：最初の案内を閉じたら追加画面を開く
 }
 $$('.modal').forEach(m => m.addEventListener('click', e => {
   if (e.target === m || e.target.closest('[data-close]')?.closest('.modal') === m) closeModal(m.id);
@@ -2657,7 +2658,7 @@ $('#introNext').addEventListener('click', () => {
   if (!state.settings.introSeen || (PUBLIC && !state.settings.consentAt)) track('intro_done', { consent: PUBLIC });
   if (PUBLIC && !state.settings.consentAt) state.settings.consentAt = Date.now();
   closeModal('mIntro'); state.settings.introSeen = true; save();
-  if (!state.alarms.length) openEditor(null);
+  if (!state.alarms.length && !$('#mEdit').classList.contains('open')) openEditor(null);
 });
 $('#btnHelp').addEventListener('click', () => openIntro(0));
 
@@ -2853,6 +2854,39 @@ $('#inappLater').addEventListener('click', () => { track('inapp_later', { app: i
 $('#inappKeep').addEventListener('click', () => { track('inapp_keep', { app: inAppName() }); inAppOk = true; closeInAppSheet(); startStandby(); });
 $('#inappTry').addEventListener('click', () => track('inapp_try', { app: inAppName() }));
 $('#inappCopy').addEventListener('click', async () => { track('inapp_copy', { app: inAppName() }); await copyText(location.href.replace(/[?&]openExternalBrowser=1/, '')); setTimeout(() => toast('コピーしました。Safari を開いて、アドレス欄に貼り付けてください', 5000), 50); });
+/* ---------- 配信者の共有リンク（?ch=@handle／UC…／youtube.com のチャンネルURL） ----------
+ *  起動して元の画面が出ている時だけ、追加画面をそのチャンネルを入れた状態で開く（貼り付けた時と同じ確認をする）
+ *  保存は利用者が自分で押す。既存のアラーム・鳴る処理には触れない。開いたら URL から ch を消す（再読み込みで開き直さない） */
+function parseChLink(raw) {
+  const s = String(raw || '').trim();
+  if (!s || s.length > 300) return null;
+  const H = /^@[\p{L}\p{M}\p{N}._-]{3,30}$/u, ID = /^UC[\w-]{22}$/;
+  if (H.test(s)) return { v: s, handle: s, type: 'handle' };
+  if (ID.test(s)) return { v: s, id: s, type: 'id' };
+  let u; try { u = new URL(s); } catch (e) { return null; }
+  if (!/^https?:$/.test(u.protocol) || !/^(www\.|m\.)?youtube\.com$/i.test(u.hostname) || u.username || u.password || u.port) return null;
+  const p = u.pathname.split('/').filter(Boolean).map(x => { try { return decodeURIComponent(x); } catch (e) { return ''; } });
+  if (p.length && p.length <= 2 && H.test(p[0])) return { v: p[0], handle: p[0], type: 'url' };
+  if (p.length === 2 && p[0] === 'channel' && ID.test(p[1])) return { v: p[1], id: p[1], type: 'url' };
+  return null;
+}
+const CH_RAW = new URLSearchParams(location.search).get('ch');
+const CH_LINK = CH_RAW === null ? null : parseChLink(CH_RAW);
+let chLinkPending = !!CH_LINK;
+function stripChParam() {
+  try { const u = new URL(location.href); if (!u.searchParams.has('ch')) return; u.searchParams.delete('ch'); history.replaceState(null, '', u.pathname + u.search + u.hash); } catch (e) {}
+}
+function openChLink() {
+  if (!chLinkPending) return false;
+  if (standbyOn || $('#ring').classList.contains('open') || $('#block').classList.contains('open') || $$('.modal.open').length) return false;
+  chLinkPending = false;
+  track('ch_link_open', { ch: CH_LINK.id, handle: CH_LINK.handle, type: CH_LINK.type, alarms: state.alarms.length, first: firstVisit });
+  openEditor(null);
+  const f = $('#fChannel'); f.value = CH_LINK.v;
+  f.dispatchEvent(new Event('input', { bubbles: true })); f.dispatchEvent(new Event('paste-done', { bubbles: true }));   // 貼り付けた時と同じ流れで確認
+  stripChParam();
+  return true;
+}
 function boot() {
   const qp = new URLSearchParams(location.search);
   let tz = ''; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
@@ -2909,6 +2943,8 @@ function boot() {
     track('a2hs_installed', { carried: Math.max(carried, 0), via: carried >= 0 ? 'cookie' : 'none' });
     if (carried > 0) { save(); setTimeout(() => toast(`Safari で作ったアラーム（${carried}件）を引き継ぎました`, 5000), 600); }
   }
+  if (CH_RAW !== null && !CH_LINK) stripChParam();   // 形が正しくない ch= は使わずに消すだけ
+  openChLink();
   setInterval(render, 60 * 1000);
   // 起動時・画面に戻った時・1時間ごとに新しいバージョンを確認
   setTimeout(checkUpdate, 3000);

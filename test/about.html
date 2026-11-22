@@ -163,6 +163,10 @@ section.alt{background:var(--bg2);border-top:1px solid rgba(255,255,255,.04);bor
 .biz p{margin:0 0 10px;color:#c9d0da;font-size:14.8px}
 .biz ul{margin:0 0 4px;padding-left:1.2em;color:#c9d0da;font-size:14.5px}
 .biz li{margin:4px 0}
+.biz .chlink{margin-top:16px;padding-top:14px;border-top:1px dashed rgba(255,95,162,.35)}
+.biz .chlink h4{margin:0 0 6px;font-size:15.5px}
+.biz .chlink pre{margin:8px 0;padding:10px 12px;border-radius:12px;background:#0b0d11;border:1px solid var(--line);overflow-x:auto;white-space:pre-wrap;word-break:break-all;font-size:13.5px;color:#ffd7e8;-webkit-user-select:all;user-select:all}
+.biz .chlink .small{color:var(--muted);font-size:13px;margin:0}
 .biz-cta{text-align:center;margin-top:28px}
 .biz-cta .small{display:block;color:var(--muted);font-size:13px;margin-top:10px}
 @media (max-width:760px){.biz{grid-template-columns:1fr}}
@@ -319,6 +323,12 @@ footer p{margin:4px 0}
           <li>アプリ内のおすすめ欄でのご紹介</li>
           <li>朝の配信・新作公開に合わせた企画</li>
         </ul>
+        <div class="chlink" id="chLinkHow">
+          <h4>配信者さん向け：アラーム追加リンクの作り方</h4>
+          <p>下の <b>@yourhandle</b> を、あなたのチャンネルのハンドル（@から始まる名前）に書きかえるだけです。チャンネルID（UC…）でも作れます。</p>
+          <pre><code>https://nagara-alarm.pages.dev/?ch=@yourhandle&amp;utm_source=creator</code></pre>
+          <p class="small">ファンがこのリンクを開くと、あなたのチャンネルが入った「アラームを追加」画面が開きます。アラームは、ファンが時刻を選んで「保存」を押した時だけ作られます（自動では作られません）。</p>
+        </div>
       </div>
       <div class="box company">
         <h3>🏢 企業・広告のご担当者さま</h3>
@@ -372,6 +382,7 @@ footer p{margin:4px 0}
       <a href="guide/index.html">使い方ガイド・コラム</a>
       <a id="lnkTip" hidden>☕ 開発を応援する（任意。機能は変わりません）</a>
     </div>
+    <p class="sns">公式SNS：<a href="https://www.tiktok.com/@nagara_create7" target="_blank" rel="noopener" data-cta="sns_tiktok">TikTok</a>　<a href="https://x.com/nagara_protein" target="_blank" rel="noopener" data-cta="sns_x">X（Twitter）</a></p>
     <p>映像は YouTube の公式埋め込みプレーヤーで再生します。ご利用には <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">YouTube 利用規約</a>への同意が必要です。</p>
     <p>YouTube は Google LLC の商標です。本サービスは YouTube および Google が提供・承認するものではありません。</p>
     <p>運営：<span id="operator">Live目覚まし運営</span></p>
