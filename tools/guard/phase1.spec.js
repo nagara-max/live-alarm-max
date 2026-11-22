@@ -682,10 +682,11 @@ async function testActivation(browser, base) {
   }
 }
 
-/* SNS：アカウントへのリンクは置かない。about.html の「SNSで紹介しています」に、紹介した投稿を3件（押すまで読み込まないカード） */
+/* SNS：アカウントへのリンクは置かない。about.html の「SNSで紹介しています」に、紹介した投稿を3件
+   X は押すまで読み込まないカード。TikTok は埋め込みで「Video currently unavailable」になったため、リンクで TikTok のサイトを開くだけ（iframe は作らない） */
 const SNS_POSTS = [
-  { kind: 'tiktok', id: '7696157160216087829', where: 'sns_play_tiktok1', url: 'https://www.tiktok.com/@nagara_create7/video/7696157160216087829', src: 'https://www.tiktok.com/player/v1/7696157160216087829?autoplay=0' },
-  { kind: 'tiktok', id: '7694698606955203861', where: 'sns_play_tiktok2', url: 'https://www.tiktok.com/@nagara_create7/video/7694698606955203861', src: 'https://www.tiktok.com/player/v1/7694698606955203861?autoplay=0' },
+  { kind: 'tiktok', id: '7696157160216087829', where: 'sns_open_tiktok1', url: 'https://www.tiktok.com/@nagara_create7/video/7696157160216087829' },
+  { kind: 'tiktok', id: '7694698606955203861', where: 'sns_open_tiktok2', url: 'https://www.tiktok.com/@nagara_create7/video/7694698606955203861' },
   { kind: 'x', id: '2110012194809430042', where: 'sns_play_x1', url: 'https://x.com/nagara_protein/status/2110012194809430042', src: 'https://platform.twitter.com/embed/Tweet.html?id=2110012194809430042&lang=ja' }
 ];
 const SNS_HOST = /^https?:\/\/([^/]+\.)?(tiktok\.com|tiktokcdn\.com|tiktokv\.com|ttwstatic\.com|twitter\.com|twimg\.com|x\.com)(\/|$)/i;
@@ -700,25 +701,36 @@ function testSnsFiles() {
     const rest = html.replace(/https:\/\/www\.tiktok\.com\/@[\w.]+\/video\/\d+/g, '').replace(/https:\/\/x\.com\/\w+\/status\/\d+/g, '');
     ok(!/tiktok\.com\/@/i.test(rest) && !/(\/\/|\.)(x|twitter)\.com\/(?!intent\/|embed\/Tweet\.html)\w/i.test(rest), f + ' に SNS アカウント（プロフィール）へのリンクがない（投稿へのリンクと「Xで共有」は除く）');
     ok(!/<script[^>]+(tiktok|twitter|x\.com)/i.test(html) && !/<(iframe|blockquote)[^>]+(tiktok|twitter|x\.com)/i.test(html) && !/embed\.js|widgets\.js/.test(html), f + ' に SNS の外部スクリプト・最初からの埋め込みがない');
+    ok(!/tiktok\.com\/(player|embed)/i.test(html), f + ' に TikTok の埋め込みプレーヤー（player/v1・embed）の URL がない');
   }
   const pv = fs.readFileSync(path.join(ROOT, 'privacy.html'), 'utf8');
-  ok(/<tr><td>紹介ページの SNS 投稿（TikTok・X）<\/td><td>[^<]*「▶ ここで再生する」を押した時だけ各社のプレーヤーを読み込み、IP アドレス・閲覧情報・Cookie 等が各社に送られます（押すまでは送信しません）/.test(pv), 'privacy.html の表に「紹介ページの SNS 投稿（TikTok・X）」の行（押した時だけ送信）');
+  const row = (pv.match(/<tr><td>紹介ページの SNS 投稿（TikTok・X）<\/td><td>[^<]*<\/td>/) || [''])[0];
+  ok(/X の投稿は、「▶ ここで再生する」を押した時だけ X のプレーヤーを読み込み、IP アドレス・閲覧情報・Cookie 等が X に送られます（押すまでは送信しません）/.test(row), 'privacy.html の表に「紹介ページの SNS 投稿（TikTok・X）」の行（X は押した時だけ送信）', row);
+  ok(/TikTok の投稿は紹介ページでは読み込まず、「TikTok で見る」のリンクを開いた時だけ TikTok のサイトで情報を扱います/.test(row), 'privacy.html：TikTok はリンクを開いた時だけ TikTok のサイトで扱う', row);
   ok(!/公式アカウント/.test(pv), 'privacy.html に「公式アカウント」の古い行がない');
   const about = fs.readFileSync(path.join(ROOT, 'about.html'), 'utf8');
   const sec = (about.match(/<section id="sns"[\s\S]*?<\/section>/) || [''])[0];
   ok(/SNSで[\s\S]{0,40}紹介[\s\S]{0,20}しています/.test(sec), 'about.html に「SNSで紹介しています」の章');
+  ok(sec.includes('X の投稿は「▶ ここで再生する」を押した時だけ読み込みます。TikTok は TikTok のサイトで開きます。'), 'about.html の章の説明文（X は押した時だけ・TikTok はサイトで開く）');
   const order = ['id="how"', 'id="features"', 'id="sns"', 'id="faq"'].map(k => about.indexOf(k));
   ok(order.every((v, i) => v > 0 && (i === 0 || v > order[i - 1])), '「SNSで紹介しています」は使い方・できることの後、よくある質問の前', order);
   for (const p of SNS_POSTS) {
-    const card = (sec.match(new RegExp('<div class="snscard" data-sns="' + p.kind + '" data-id="' + p.id + '">[\\s\\S]*?</a>\\s*</div>')) || [''])[0];
+    const head = '<div class="snscard" data-sns="' + p.kind + '" data-id="' + p.id + '">';
+    const at = sec.indexOf(head), next = at < 0 ? -1 : sec.indexOf('<div class="snscard"', at + head.length);
+    const card = at < 0 ? '' : sec.slice(at, next < 0 ? sec.length : next);
     ok(!!card, '  ' + p.id + ' のカード（data-sns=' + p.kind + '）');
-    ok(/<button type="button" class="play" data-cta="[^"]+">▶ ここで再生する<\/button>/.test(card) && card.includes('data-cta="' + p.where + '"'), '  ' + p.id + '：「▶ ここで再生する」ボタン（data-cta=' + p.where + '）');
-    const label = p.kind === 'x' ? 'X で見る' : 'TikTok で見る';
-    ok(card.includes('<a class="ext" href="' + p.url + '" target="_blank" rel="noopener"') && card.includes('>' + label + '</a>'), '  ' + p.id + '：「' + label + '」の普通のリンク（target=_blank rel=noopener）');
+    if (p.kind === 'x') {
+      ok(/<button type="button" class="play" data-cta="[^"]+">▶ ここで再生する<\/button>/.test(card) && card.includes('data-cta="' + p.where + '"'), '  ' + p.id + '：「▶ ここで再生する」ボタン（data-cta=' + p.where + '）');
+      ok(card.includes('<a class="ext" href="' + p.url + '" target="_blank" rel="noopener"') && card.includes('>X で見る</a>'), '  ' + p.id + '：「X で見る」の普通のリンク（target=_blank rel=noopener）');
+    } else {
+      ok(card.includes('<span class="plat">TikTok</span>') && /<p class="cap">[^<]+<\/p>/.test(card), '  ' + p.id + '：TikTok の表示と説明文');
+      ok(card.includes('<a class="open" href="' + p.url + '" target="_blank" rel="noopener" data-cta="' + p.where + '">▶ TikTok で見る</a>'), '  ' + p.id + '：大きい「▶ TikTok で見る」リンク（target=_blank rel=noopener data-cta=' + p.where + '）');
+      ok(!/<button/.test(card) && !/class="play"/.test(card) && !/class="ext"/.test(card) && !/class="small"/.test(card) && (card.match(/<a /g) || []).length === 1, '  ' + p.id + '：再生ボタン・小さい説明・2つ目のリンクがない');
+    }
   }
 }
 async function testSnsFacade(browser, base) {
-  console.log('[Task8] SNS：押すまで TikTok・X に接続しない・押すと正しい iframe');
+  console.log('[Task8] SNS：読み込み時に TikTok・X に接続しない・X は押すと正しい iframe・TikTok はリンクで開くだけ');
   const STATS = 'https://stats.invalid/hp';
   const cfg = Object.assign({}, BASE_CFG, { backendUrl: 'https://prod.invalid/hp', testBackendUrl: STATS });
   for (const vw of [{ width: 360, height: 780 }, { width: 390, height: 844 }, { width: 1280, height: 900 }]) {
@@ -726,8 +738,10 @@ async function testSnsFacade(browser, base) {
     const sns = [], got = [];
     page.on('request', r => { if (SNS_HOST.test(r.url())) sns.push(r.url()); });
     await page.route('https://stats.invalid/**', route => { try { got.push(JSON.parse(route.request().postData() || 'null')); } catch (e) {} return route.fulfill({ status: 200, body: '' }); });
-    // 実際の TikTok・X には接続しない（iframe の中身はテスト用の空ページ）
-    await page.route(SNS_HOST, route => route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>stub</title>' }));
+    // 実際の TikTok・X には接続しない（iframe・新しいタブの中身はテスト用の空ページ）
+    const stub = route => route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>stub</title>' });
+    await page.route(SNS_HOST, stub);
+    await ctx.route(SNS_HOST, stub);
     await page.goto(base + '/about.html', { waitUntil: 'load' });
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(300);
@@ -746,23 +760,31 @@ async function testSnsFacade(browser, base) {
     for (let i = 0; i < SNS_POSTS.length; i++) {
       const p = SNS_POSTS[i];
       const card = page.locator('.snscard').nth(i);
-      await card.locator('.play').click();
-      await page.waitForTimeout(250);
-      const src = await card.locator('iframe').getAttribute('src').catch(() => null);
-      ok(!!src && src.startsWith(p.src) && (p.kind !== 'x' || /[?&]lang=ja(&|$)/.test(src)), tag + '：' + p.where + ' を押すと iframe ' + p.src, src);
-      ok(await card.locator('.play').count() === 0 && await page.$$eval('iframe', fs => fs.length) === i + 1, tag + '：  押したカードだけ iframe に置きかわる');
       if (p.kind === 'tiktok') {
-        const r = await card.locator('iframe').evaluate(e => { const b = e.getBoundingClientRect(); return { w: Math.round(b.width), h: Math.round(b.height) }; });
-        ok(r.w > 0 && r.w <= 326 && Math.abs(r.h / r.w - 16 / 9) < 0.03, tag + '：  TikTok は縦長（9:16・幅 325px まで）', r);
+        const link = card.locator('a.open');
+        ok(await card.locator('.play').count() === 0 && await link.count() === 1, tag + '：' + p.where + '：再生ボタンはなく「▶ TikTok で見る」リンクだけ');
+        const at = await link.evaluate(a => ({ href: a.getAttribute('href'), target: a.target, rel: a.rel, text: a.textContent.trim(), vis: a.getBoundingClientRect().width > 0 }));
+        ok(at.href === p.url && at.target === '_blank' && at.rel === 'noopener' && at.text === '▶ TikTok で見る' && at.vis, tag + '：  リンク先は投稿の URL（target=_blank rel=noopener）', at);
+        const [pop] = await Promise.all([page.waitForEvent('popup', { timeout: 5000 }).catch(() => null), link.click()]);
+        await page.waitForTimeout(250);
+        ok(!!pop && pop.url() === p.url, tag + '：  押すと新しいタブで TikTok の投稿を開く', pop && pop.url());
+        if (pop) await pop.close();
+        ok(await page.$$eval('iframe', fs => fs.length) === 0 && await card.locator('a.open').count() === 1, tag + '：  押しても iframe は作らない（カードはそのまま）');
       } else {
+        await card.locator('.play').click();
+        await page.waitForTimeout(250);
+        const src = await card.locator('iframe').getAttribute('src').catch(() => null);
+        ok(!!src && src.startsWith(p.src) && /[?&]lang=ja(&|$)/.test(src), tag + '：' + p.where + ' を押すと iframe ' + p.src, src);
+        ok(await card.locator('.play').count() === 0 && await page.$$eval('iframe', fs => fs.length) === 1, tag + '：  押したカードだけ iframe に置きかわる');
         const h = await card.locator('iframe').evaluate(e => Math.round(e.getBoundingClientRect().height));
         ok(h >= 400, tag + '：  X の iframe に高さがある', h);
       }
     }
-    ok(sns.length >= 3 && sns.every(u => SNS_POSTS.some(p => u.startsWith(p.src))), tag + '：押した後の通信は押した投稿のプレーヤーだけ', sns);
+    const xp = SNS_POSTS.find(p => p.kind === 'x');
+    ok(sns.length >= 1 && sns.every(u => u.startsWith(xp.src)), tag + '：このページからの通信は押した X の投稿のプレーヤーだけ（TikTok への通信 0 件）', sns);
     await page.waitForTimeout(300);
     const where = got.filter(b => b && b.e).map(b => b.e[0]).filter(e => e.n === 'hp_cta').map(e => e.p.where);
-    ok(SNS_POSTS.every(p => where.includes(p.where)), tag + '：統計 hp_cta { where: sns_play_… } を送る', where);
+    ok(SNS_POSTS.every(p => where.includes(p.where)), tag + '：統計 hp_cta { where: sns_open_tiktok… / sns_play_x1 } を送る', where);
     const ov2 = await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
     ok(ov2, tag + '：再生後も横にはみ出さない');
     ok(errors.length === 0, tag + '：about.html（SNS）で pageerror 0 件', errors);
